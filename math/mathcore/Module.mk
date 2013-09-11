@@ -25,8 +25,10 @@ MATHCOREDH1  := $(MODDIRI)/TComplex.h \
 MATHCOREDH2  := $(MODDIRI)/TRandom.h \
                 $(MODDIRI)/TRandom1.h \
                 $(MODDIRI)/TRandom2.h \
-                $(MODDIRI)/TRandom3.h \
+		$(MODDIRI)/TRandom3.h \
+		$(MODDIRI)/TRandom4.h \
                 $(MODDIRI)/TStatistic.h \
+                $(MODDIRI)/TVirtualFitter.h \
                 $(MODDIRI)/TKDTree.h \
                 $(MODDIRI)/TKDTreeBinning.h \
                 $(MODDIRI)/Math/KDTree.h \
@@ -43,7 +45,6 @@ MATHCOREDH2  := $(MODDIRI)/TRandom.h \
                 $(MODDIRI)/Math/BasicMinimizer.h \
                 $(MODDIRI)/Math/IntegratorOptions.h \
                 $(MODDIRI)/Math/IOptions.h \
-                $(MODDIRI)/Math/GenAlgoOptions.h \
                 $(MODDIRI)/Math/Integrator.h \
                 $(MODDIRI)/Math/VirtualIntegrator.h \
                 $(MODDIRI)/Math/AllIntegrationTypes.h \
@@ -126,15 +127,15 @@ $(MATHCORELIB): $(MATHCOREO) $(MATHCOREDO) $(ORDER_) $(MAINLIBS)
 $(call pcmrule,MATHCORE)
 	$(noop)
 
-$(MATHCOREDS):  $(MATHCOREDH1) $(MATHCOREDH2) $(MATHCOREDH3) $(MATHCOREL0) $(MATHCORELS) $(ROOTCLINGEXE) $(call pcmdep,MATHCORE)
+$(MATHCOREDS):  $(MATHCOREDH1) $(MATHCOREDH2) $(MATHCOREDH3) $(MATHCOREL0) $(MATHCORELS) $(ROOTCINTTMPDEP) $(call pcmdep,MATHCORE)
 		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
-		$(ROOTCLINGSTAGE2) -f $@ $(call dictModule,MATHCORE) -c -writeEmptyRootPCM -I$(ROOT_SRCDIR) $(MATHCOREDH1) $(MATHCOREDH2) $(MATHCOREDH3) $(MATHCOREL0)
+		$(ROOTCINTTMP) -f $@ $(call dictModule,MATHCORE) -c -I$(ROOT_SRCDIR) $(MATHCOREDH1) $(MATHCOREDH2) $(MATHCOREDH3) $(MATHCOREL0)
 
-$(MATHCOREMAP): $(MATHCOREDH1) $(MATHCOREDH2) $(MATHCOREDH3) $(MATHCOREL0) $(MATHCORELS) $(ROOTCLINGEXE) $(call pcmdep,MATHCORE)
+$(MATHCOREMAP): $(MATHCOREDH1) $(MATHCOREDH2) $(MATHCOREDH3) $(MATHCOREL0) $(MATHCORELS) $(ROOTCINTTMPDEP) $(call pcmdep,MATHCORE)
 		$(MAKEDIR)
 		@echo "Generating rootmap $@..."
-		$(ROOTCLINGSTAGE2) -r $(MATHCOREDS) $(call dictModule,MATHCORE) -c -I$(ROOT_SRCDIR) $(MATHCOREDH1) $(MATHCOREDH2) $(MATHCOREDH3) $(MATHCOREL0)
+		$(ROOTCINTTMP) -r $(MATHCOREDS) $(call dictModule,MATHCORE) -c -I$(ROOT_SRCDIR) $(MATHCOREDH1) $(MATHCOREDH2) $(MATHCOREDH3) $(MATHCOREL0)
 
 all-$(MODNAME): $(MATHCORELIB)
 
