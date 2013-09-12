@@ -21,14 +21,18 @@
 
 #include "TRandom4.h"
 
+#include "Random123.h"
+
+
 ClassImp(TRandom4)
 
 //______________________________________________________________________________
-TRandom4::TRandom4(UInt_t seed)
+TRandom4::TRandom4(UInt_t seed) 
 {
 //*-*-*-*-*-*-*-*-*-*-*default constructor*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                  ===================
 
+   fRandom123 = new ROOT::Math::Random123();
    SetName("Random4");
    SetTitle("Random number generator: Threefry");
    SetSeed(seed);
@@ -39,15 +43,13 @@ TRandom4::~TRandom4()
 {
 //*-*-*-*-*-*-*-*-*-*-*default destructor*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                  ==================
-
+   if (fRandom123) delete fRandom123; 
 }
 
 //______________________________________________________________________________
 Double_t TRandom4::Rndm(Int_t)
 {
-   fCtr.v[0]++;
-   fCtr = threefry2x32(fCtr, fKey);
-   return fCtr.v[0] * R123_0x1p_32f;
+   return (*fRandom123)();
 }
 
 //______________________________________________________________________________
@@ -55,7 +57,7 @@ void TRandom4::RndmArray(Int_t n, Double_t *array)
 {
   // Return an array of n random numbers uniformly distributed in ]0,1]
 
-  for(Int_t i=0; i<n; i++) array[i]=Rndm();
+   for(Int_t i=0; i<n; i++) array[i]=(*fRandom123)();
 }
 
 //______________________________________________________________________________
@@ -63,12 +65,17 @@ void TRandom4::RndmArray(Int_t n, Float_t *array)
 {
   // Return an array of n random numbers uniformly distributed in ]0,1]
 
-  for(Int_t i=0; i<n; i++) array[i]=(Float_t)Rndm();
+  for(Int_t i=0; i<n; i++) array[i]=(Float_t)(*fRandom123)();
+}
+
+//______________________________________________________________________________
+UInt_t TRandom4::GetSeed() const
+{
+   return fRandom123->GetSeed();
 }
 
 //______________________________________________________________________________
 void TRandom4::SetSeed(UInt_t seed)
 {
-   fKey = (r123array2x32){{seed, 0xdecafbad}};
-   fCtr = (r123array2x32){{0, 0xf00dcafe}};
+   fRandom123->SetSeed(seed);
 }

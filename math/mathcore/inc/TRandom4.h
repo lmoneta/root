@@ -17,38 +17,30 @@
 // TRandom4                                                             //
 //                                                                      //
 // random number generator class (periodicity > 2**128)                 //
-//                                                                      //
+//  based on Random123                                                  //
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef ROOT_TRandom
 #include "TRandom.h"
 #endif
 
-#ifdef __CINT__
-struct r123array2x32 {
-   UInt_t v[2];
-   UInt_t & operator[](UInt_t i){return v[i];}
-};
-
-typedef r123array2x32 threefry2x32_ctr_t;
-typedef r123array2x32 threefry2x32_key_t;
-typedef r123array2x32 threefry2x32_ukey_t;
-#else
-#include <Random123/threefry.h>
-#include <Random123/u01.h>
-#endif
+namespace ROOT {
+   namespace Math { 
+      class Random123; 
+   }
+}
 
 class TRandom4 : public TRandom {
 
 private:
-   threefry2x32_key_t fKey;
-   threefry2x32_ctr_t fCtr;
+
+   ROOT::Math::Random123 * fRandom123;
 
 public:
    TRandom4(UInt_t seed=4357);
    virtual ~TRandom4();
    // get the current seed (only first element of the seed table)
-   virtual  UInt_t    GetSeed() const { return fKey.v[0];}
+   virtual  UInt_t    GetSeed() const;
    virtual  Double_t  Rndm(Int_t i=0);
    virtual  void      RndmArray(Int_t n, Float_t *array);
    virtual  void      RndmArray(Int_t n, Double_t *array);

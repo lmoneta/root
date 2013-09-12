@@ -1,0 +1,17 @@
+***************
+*** 94,99 ****
+    install(DIRECTORY test/      DESTINATION test COMPONENT tests PATTERN ".svn" EXCLUDE)
+    install(DIRECTORY tutorials/ DESTINATION tutorials COMPONENT tests PATTERN ".svn" EXCLUDE)
+    install(DIRECTORY cmake/modules DESTINATION cmake PATTERN ".svn" EXCLUDE)
+  endif()
+  
+  #---Configure Testing using CTest----------------------------------------------------------------
+--- 94,101 ----
+    install(DIRECTORY test/      DESTINATION test COMPONENT tests PATTERN ".svn" EXCLUDE)
+    install(DIRECTORY tutorials/ DESTINATION tutorials COMPONENT tests PATTERN ".svn" EXCLUDE)
+    install(DIRECTORY cmake/modules DESTINATION cmake PATTERN ".svn" EXCLUDE)
++   install(DIRECTORY random123/docs/ DESTINATION docs PATTERN ".svn" EXCLUDE)
++   install(DIRECTORY random123/include/ DESTINATION include PATTERN ".svn" EXCLUDE)
+  endif()
+  
+  #---Configure Testing using CTest----------------------------------------------------------------
