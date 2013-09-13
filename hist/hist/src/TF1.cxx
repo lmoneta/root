@@ -917,8 +917,7 @@ void TF1::Copy(TObject &obj) const
    }
    if(fFormula)
    {
-      TFormula *f = new TFormula(*fFormula);
-      ((TF1&)obj).fFormula = f;
+      ((TF1&)obj).fFormula = fFormula;
    }
 }
 
