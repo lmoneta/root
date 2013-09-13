@@ -27,6 +27,7 @@ MATHCOREDH2  := $(MODDIRI)/TRandom.h \
                 $(MODDIRI)/TRandom2.h \
 		$(MODDIRI)/TRandom3.h \
 		$(MODDIRI)/TRandom4.h \
+		$(MODDIRI)/TRandom5.h \
                 $(MODDIRI)/TStatistic.h \
                 $(MODDIRI)/TVirtualFitter.h \
                 $(MODDIRI)/TKDTree.h \

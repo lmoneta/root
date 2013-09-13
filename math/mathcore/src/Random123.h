@@ -1,8 +1,8 @@
-// Random123 file implementation
+// MixMax random number  implementation
 //
 
-#ifndef ROOT_Math_Random123
-#define ROOT_Math_Random123
+#ifndef ROOT_Math_RandomMixMax
+#define ROOT_Math_RandomMixMax
 
 #include "random123/include/Random123/threefry.h"
 #include "random123/include/Random123/u01.h"

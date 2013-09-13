@@ -38,6 +38,7 @@
 #include <TRandom2.h>
 #include <TRandom3.h>
 #include <TRandom4.h>
+#include <TRandom5.h>
 #include <TStopwatch.h>
 #include <TF1.h>
 #include <TUnuran.h>
@@ -45,29 +46,29 @@
 #include <TFile.h>
 
 
-const int N = 5000000;
+const int N = 2000000;
 float cpn = 1000000000./N;
 
 void testRndm(TRandom * r) { 
    TStopwatch sw; 
    sw.Start();
    double x; 
-   for (int i=0;i<N;i++) {
+   for (int i=0;i< 5*N;i++) {
       x = r->Rndm(i);
    }
-   printf(" %8.3f",sw.CpuTime()*cpn);
+   printf(" %8.3f",sw.CpuTime()*cpn/5);
 }
 
 void testRndmArray(TRandom * r) { 
 
    TStopwatch sw; 
-   const int NR = 1000;
+   const int NR = 100;
    double rn[NR];
    sw.Start();
-   for (int i=0;i<N/NR;i++) {
+   for (int i=0;i< 5*N/NR;i++) {
       r->RndmArray(NR,rn);
    }
-   printf(" %8.3f",sw.CpuTime()*cpn);
+   printf(" %8.3f",sw.CpuTime()*cpn/5);
 }
 
 void testGaus(TRandom * r) { 
@@ -211,17 +212,18 @@ void testUnuranBinomial(TRandom * r, int n, double p) {
 
 void testAll() {
   TRandom *rsave = gRandom;
-  const int NGEN = 5; 
+  const int NGEN = 6; 
   TRandom * r[NGEN]; 
   r[0] = new TRandom();
   r[1] = new TRandom1();
   r[2] = new TRandom2();
   r[3] = new TRandom3();
   r[4] = new TRandom4();
+  r[5] = new TRandom5();
 
   TStopwatch sw;
   printf("Distribution            nanoseconds/call\n");
-  printf("                    TRandom  TRandom1 TRandom2 TRandom3 TRandom4\n");
+  printf("                    TRandom  TRandom1 TRandom2 TRandom3 TRandom4 TRandom5\n");
 
   printf("Rndm..............");
   for (int i = 0; i < NGEN; ++i) {
