@@ -69,6 +69,10 @@ HSIMPLEO      = hsimple.$(ObjSuf)
 HSIMPLES      = hsimple.$(SrcSuf)
 HSIMPLE       = hsimple$(ExeSuf)
 
+TFORMULAO      = TFormulaNewTests.$(ObjSuf)
+TFORMULAS      = TFormulaNewTests.$(SrcSuf)
+TFORMULA       = TFormulaNewTests$(ExeSuf)
+
 MINEXAMO      = minexam.$(ObjSuf)
 MINEXAMS      = minexam.$(SrcSuf)
 MINEXAM       = minexam$(ExeSuf)
@@ -276,36 +280,27 @@ STRESSHISTO   = stressHistogram.$(ObjSuf)
 STRESSHISTS   = stressHistogram.$(SrcSuf)
 STRESSHIST    = stressHistogram$(ExeSuf)
 
-ifeq ($(shell $(RC) --has-sqlite),yes)
-SQLITETESTO   = sqlitetest.$(ObjSuf)
-SQLITETESTS   = sqlitetest.$(SrcSuf)
-SQLITETEST    = sqlitetest$(ExeSuf)
-endif
 
-
-OBJS          = $(EVENTO) $(MAINEVENTO) $(EVENTMTO) $(HWORLDO) $(HSIMPLEO) \
-                $(MINEXAMO) \
+OBJS          = $(EVENTO) $(MAINEVENTO) $(EVENTMTO) $(HWORLDO) $(HSIMPLEO) $(TFORMULAO) $(MINEXAMO) \
                 $(TSTRINGO) $(TCOLLEXO) $(VVECTORO) $(VMATRIXO) $(VLAZYO) \
                 $(HELLOO) $(ACLOCKO) $(STRESSO) $(TBENCHO) $(BENCHO) \
                 $(STRESSSHAPESO) $(TCOLLBMO) $(STRESSGEOMETRYO) $(STRESSLO) \
-                $(STRESSGO) $(STRESSSPO) $(TESTBITSO) \
+                $(STRESSGO) $(STRESSSPO) $(TESTBITSO)  \
                 $(CTORTUREO) $(QPRANDOMO) $(THREADSO) $(STRESSVECO) \
-                $(STRESSMATHO) $(STRESSFITO) $(STRESSHISTOFITO) \
-                $(STRESSHEPIXO) $(STRESSENTRYLISTO) $(STRESSROOFITO) \
-                $(STRESSROOSTATSO) $(STRESSPROOFO) $(STRESSMATHMOREO) \
-                $(STRESSTMVAO) $(STRESSINTERPO) $(STRESSITERO) \
-                $(STRESSHISTO) $(STRESSGUIO) $(SQLITETESTO)
+                $(STRESSMATHO) $(STRESSFITO) $(STRESSHISTOFITO) $(STRESSHEPIXO) \
+                $(STRESSENTRYLISTO) $(STRESSROOFITO) $(STRESSROOSTATSO) $(STRESSPROOFO) \
+                $(STRESSMATHMOREO) $(STRESSTMVAO) $(STRESSINTERPO) $(STRESSITERO) \
+                $(STRESSHISTO) $(STRESSGUIO)
 
-PROGRAMS      = $(EVENT) $(EVENTMTSO) $(HWORLD) $(HSIMPLE) $(MINEXAM) \
-                $(TSTRING) $(TCOLLEX) $(TCOLLBM) $(VVECTOR) $(VMATRIX) \
-                $(VLAZY) $(HELLOSO) $(ACLOCKSO) $(STRESS) $(TBENCHSO) $(BENCH) \
+PROGRAMS      = $(EVENT) $(EVENTMTSO) $(HWORLD) $(HSIMPLE) $(TFORMULA) $(MINEXAM) $(TSTRING) \
+                $(TCOLLEX) $(TCOLLBM) $(VVECTOR) $(VMATRIX) $(VLAZY) \
+                $(HELLOSO) $(ACLOCKSO) $(STRESS) $(TBENCHSO) $(BENCH) \
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
                 $(STRESSVEC) $(STRESSFIT) $(STRESSHISTOFIT) $(STRESSHEPIX) \
-                $(STRESSENTRYLIST) $(STRESSROOFIT) $(STRESSROOSTATS) \
-                $(STRESSPROOF) $(STRESSMATH) \
-                $(STRESSMATHMORE) $(STRESSTMVA) $(STRESSINTERP) $(STRESSITER) \
-                $(STRESSHIST) $(STRESSGUI) $(SQLITETEST)
+                $(STRESSENTRYLIST) $(STRESSROOFIT) $(STRESSROOSTATS) $(STRESSPROOF) $(STRESSMATH) \
+                $(STRESSMATHMORE) $(STRESSTMVA) $(STRESSINTERP)  $(STRESSITER) \
+                $(STRESSHIST) $(STRESSGUI)
 
 
 OBJS         += $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
@@ -392,6 +387,11 @@ $(CTORTURE):    $(CTORTUREO)
 		@echo "$@ done"
 
 $(HSIMPLE):     $(HSIMPLEO)
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
+		$(MT_EXE)
+		@echo "$@ done"
+
+$(TFORMULA):     $(TFORMULAO)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"
@@ -728,11 +728,6 @@ $(STRESSHIST):  $(STRESSHISTO)
 		$(MT_EXE)
 		@echo "$@ done"
 
-$(SQLITETEST):  $(SQLITETESTO)
-		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
-		$(MT_EXE)
-		@echo "$@ done"
-
 clean:
 		@rm -f $(OBJS) $(TRACKMATHSRC) core *Dict.*
 
@@ -740,7 +735,7 @@ distclean:      clean
 		-@(mv -f stressRooStats_ref.root stressRooStats_ref.root- >/dev/null 2>&1;true)
 		@rm -f $(PROGRAMS) $(EVENTSO) $(EVENTLIB) *Dict.* *.def *.exp \
 		   *.root *.ps *.so *.lib *.dll *.d *.log .def so_locations \
-		   files/* *.pcm testdb.sqlite
+		   files/* *.pcm
 		@rm -rf cxx_repository
 		-@(mv -f stressRooStats_ref.root- stressRooStats_ref.root >/dev/null 2>&1;true)
 		-@cd RootShower && $(MAKE) distclean

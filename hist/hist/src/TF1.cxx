@@ -463,7 +463,8 @@ TF1::TF1(const char *name,const char *formula, Double_t xmin, Double_t xmax)
    SetFillStyle(0);
    SetName(name);
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(f1old);
+   if(f1old)
+      gROOT->GetListOfFunctions()->Remove(f1old);
    gROOT->GetListOfFunctions()->Add(this);
 }
 
@@ -519,7 +520,8 @@ TF1::TF1(const char *name, Double_t xmin, Double_t xmax, Int_t npar,Int_t ndim)
    fMethodCall = 0;
 
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(f1old);
+   if(f1old)
+      gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
 
    if (gStyle) {
@@ -596,11 +598,12 @@ TF1::TF1(const char *name,Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin
    fHistogram  = 0;
    fMinimum    = -1111;
    fMaximum    = -1111;
+   SetName(name);
 
    // Store formula in linked list of formula in ROOT
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(f1old);
-   SetName(name);
+   if(f1old)
+      gROOT->GetListOfFunctions()->Remove(f1old);
    gROOT->GetListOfFunctions()->Add(this);
 
    if (!gStyle) return;
@@ -665,7 +668,8 @@ TF1::TF1(const char *name,Double_t (*fcn)(const Double_t *, const Double_t *), D
 
    // Store formula in linked list of formula in ROOT
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(f1old);
+   if(f1old)
+      gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
@@ -749,7 +753,8 @@ void TF1::CreateFromFunctor(const char *name, Int_t npar,Int_t ndim)
 
    // Store formula in linked list of formula in ROOT
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(f1old);
+   if(f1old)
+      gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
@@ -788,7 +793,6 @@ TF1::~TF1()
    if (fSave)      delete [] fSave;
    delete fHistogram;
    delete fMethodCall;
-   
 
    if (fParent) fParent->RecursiveRemove(this);
 }
@@ -917,6 +921,7 @@ void TF1::Copy(TObject &obj) const
    }
    if(fFormula)
    {
+      
       ((TF1&)obj).fFormula = fFormula;
    }
 }
@@ -2781,7 +2786,12 @@ void TF1::Paint(Option_t *option)
 
 
 
-
+void TF1::Print(Option_t *option) const
+{
+   // Dump this function with its attributes.
+   if (fFormula) fFormula->Print(option);
+   if (fHistogram) fHistogram->Print(option);
+}
 //______________________________________________________________________________
 void TF1::ReleaseParameter(Int_t ipar)
 {

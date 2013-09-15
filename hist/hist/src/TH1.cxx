@@ -3126,10 +3126,8 @@ void TH1::FillRandom(const char *fname, Int_t ntimes)
    Int_t bin, binx, ibin, loop;
    Double_t r1, x;
 //   - Search for fname in the list of ROOT defined functions
-   printf("hop\n");
-   TF1 *f1 = (TF1*)gROOT->GetListOfFunctions()->FindObject(fname);
+   TF1 *f1 = (TF1*)gROOT->GetFunction(fname);
    if (!f1) { Error("FillRandom", "Unknown function: %s",fname); return; }
-   printf("myk\n");
 //   - Allocate temporary space to store the integral and compute integral
 
    TAxis * xAxis = &fXaxis;
@@ -3141,7 +3139,6 @@ void TH1::FillRandom(const char *fname, Int_t ntimes)
       Info("FillRandom","Using function axis and range [%g,%g]",xmin, xmax);
       xAxis = f1->GetHistogram()->GetXaxis(); 
    }
-   printf("chuj\n");
    Int_t first  = xAxis->GetFirst();
    Int_t last   = xAxis->GetLast();
    Int_t nbinsx = last-first+1;

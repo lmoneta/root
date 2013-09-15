@@ -141,8 +141,9 @@ TFormula::~TFormula()
 {
    if(fMethod)
    {  
-      fMethod->Delete();
+     delete fMethod;
    }
+   gROOT->GetListOfFunctions()->Remove(this);
 }
 
 TFormula::TFormula(const char *name, Int_t nparams, Int_t ndims)
@@ -544,12 +545,17 @@ void TFormula::HandleParametrizedFunctions(TString &formula)
          }
          else
          {
-            counter = TString(formula(openingBracketPos,formula.Index(')',funPos) - openingBracketPos)).Atoi(); 
+            Int_t tmp = openingBracketPos+1;
+            while(formula[tmp] != ')')
+            {
+               tmp++;
+            }
+            counter = TString(formula(openingBracketPos + 1,tmp - openingBracketPos-1  )).Atoi(); 
          }
          for(int i = 0 ; i < body.Length() ; ++i)
          {
             if(body[i] == '{')
-            {
+            {  
                body.Replace(i,3,variable,variable.Length());
                i += variable.Length();
             }
@@ -582,6 +588,10 @@ void TFormula::HandleParametrizedFunctions(TString &formula)
                            (isNormalized ? "n" : ""),
                            counter);
          TString replacement = body;
+         if(!defaultVariable)
+         {
+            funPos -= variable.Length(); 
+         }
          formula.Replace(funPos,pattern.Length(),replacement,replacement.Length());
 
          funPos = formula.Index(funName);
@@ -687,6 +697,8 @@ void TFormula::HandleLinear(TString &formula)
       fLinearParts.Add(lin1);
       fLinearParts.Add(lin2);
       linPos = formula.Index("@");
+      delete lin1;
+      delete lin2;
    }
 }
 
@@ -853,6 +865,7 @@ void TFormula::ProcessFormula(TString &formula)
                   break;
                }
             }
+            delete tclass;
          }
          if(!fun.fFound)
          {
@@ -926,7 +939,7 @@ void TFormula::ProcessFormula(TString &formula)
          break;
       }
    }
-   fAllParametersSetted = (fParams.size() == 0);
+   //fAllParametersSetted = (fParams.size() == 0);
    if(!fReadyToExecute && allFunctorsMatched)
    {
       fReadyToExecute = true;
@@ -1061,14 +1074,14 @@ void TFormula::SetVariables(const pair<TString,Double_t> *vars, const Int_t size
    }
 }
 
-Double_t TFormula::GetVariableValue(const TString &name)
+Double_t TFormula::GetVariable(const TString &name)
 {
    //*-*    
    //*-*    Returns variable value.
    //*-*    
    if(fVars.find(name) == fVars.end())
    {
-      Error("GetVariableValue","Variable %s is not defined.",name.Data());
+      Error("GetVariable","Variable %s is not defined.",name.Data());
       return -1;
    }
    return fVars[name].fValue;
@@ -1163,6 +1176,7 @@ void TFormula::SetParameter(const TString &name, Double_t value)
       Error("SetParameter","Parameter %s is not defined.",name.Data());
       return;
    }
+
    fParams[name].fValue = value;
    fParams[name].fFound = true;
    fClingParameters[fParams[name].fArrayPos] = value;
@@ -1215,6 +1229,7 @@ void TFormula::SetParameters(Double_t p0,Double_t p1,Double_t p2,Double_t p3,Dou
                    Double_t p5,Double_t p6,Double_t p7,Double_t p8,
                    Double_t p9,Double_t p10)
 {
+   
    if(fNpar >= 1) SetParameter(0,p0);
    if(fNpar >= 2) SetParameter(1,p1);
    if(fNpar >= 3) SetParameter(2,p2);
@@ -1254,11 +1269,13 @@ void TFormula::SetParName(Int_t ipar, const char * name)
 }
 void TFormula::SetParameters(const Double_t *params, Int_t size)
 {
+   if(!params ||size < 0 || size > fNpar) return;
    for(Int_t i = 0; i < size; ++i)
    {
       TString name = TString::Format("%d",i);
       SetParameter(name,params[i]);
    }
+
 }
 Double_t TFormula::EvalPar(const Double_t *x,const Double_t *params)
 {
