@@ -102,7 +102,8 @@ public:
 
    /// return parameter name (from TF1)
    std::string ParameterName(unsigned int i) const { 
-      return std::string(fFunc->GetParName(i)); 
+      std::string name(fFunc->GetParName(i));
+      return name; 
    } 
 
    /// evaluate the derivative of the function with respect to the parameters
