@@ -271,7 +271,7 @@ void SetParsLimits(vector<ParLimit>& v, TF1* func)
 //     parLimits limits of the parameters to be set before fitting
 class fitFunctions {
 public:
-   const char* name;
+   TString name;
    double (*func)(double*, double*);
    unsigned int npars;
    vector<double> origPars;

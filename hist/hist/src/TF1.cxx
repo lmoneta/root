@@ -600,7 +600,7 @@ TF1::TF1(const char *name,Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin
    // Store formula in linked list of formula in ROOT
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(GetName());
    gROOT->GetListOfFunctions()->Remove(f1old);
-   
+   SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
    if (!gStyle) return;
@@ -789,6 +789,9 @@ TF1::~TF1()
    if (fSave)      delete [] fSave;
    delete fHistogram;
    delete fMethodCall;
+
+   // this was before in TFormula destructor
+   if (gROOT) gROOT->GetListOfFunctions()->Remove(this);
    
    if (fParent) fParent->RecursiveRemove(this);
 }
