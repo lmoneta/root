@@ -3419,7 +3419,7 @@ TFitResultPtr TH1::Fit(const char *fname ,Option_t *option ,Option_t *goption, D
    }
 
    else{
-      f1 = (TF1*)gROOT->GetListOfFunctions()->FindObject(fname);
+      f1 = (TF1*)gROOT->GetFunction(fname);
       if (!f1) { Printf("Unknown function: %s",fname); return -1; }
       return Fit(f1,option,goption,xxmin,xxmax);
    }
