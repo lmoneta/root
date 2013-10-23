@@ -2,11 +2,11 @@
  *  mixmax.c
  *  A Pseudo-Random Number Generator
  *
- *  Created by Kosta on Sun Feb 22 2004.
- *  As of version 0.99, the code is being released under GNU Lesser General Public License v3
+ *  Created by Konstantin Savvidy on Sun Feb 22 2004.
+ *  As of version 0.99 and later, the code is being released under GNU Lesser General Public License v3
  *
  *	Generator described in 
- *	N.Z.Akopov,G.K.Savvidy and N.G.Ter-Arutyunian, Matrix Generator of Pseudorandom Numbers, 
+ *	N.Z.Akopov, G.K.Savvidy and N.G.Ter-Arutyunian, Matrix Generator of Pseudorandom Numbers, 
  *	J.Comput.Phys. 97, 573 (1991); 
  *	Preprint EPI-867(18)-86, Yerevan Jun.1986;
  */
@@ -14,117 +14,120 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
-#include "mixmax.h"  // stdint.h is included there
+#define __MIXMAX_C  // do NOT define it in your own program, just include mixmax.h
 
-void iterate(rng_state_t *X){
-	int i;
-	myuint temp2, temp3, temp4;
-	
-	//myuint temp1 = X->V[1];
-	temp2 = X->V[2]; temp3 = X->V[3]; temp4 = X->V[4];
+#include "mixmax.h"
+
+int iterate(rng_state_t* X){
 	X->counter = 0;
-	X->V[1] = MOD_MERSENNE(X->V[1] + X->partial[N]);
-	X->V[2] = MOD_MERSENNE(X->V[1] + X->partial[2]);  // order matters here, first calculate new X, then update the partial sum, next X uses its own partial
-	X->V[3] = MOD_MERSENNE(X->V[2] + X->partial[3]);  
-	X->V[4] = MOD_MERSENNE(X->V[3] + X->partial[4]);  
-	X->V[5] = MOD_MERSENNE(X->V[4] + X->partial[5]);  
-	X->V[6] = MOD_MERSENNE(X->V[5] + X->partial[6]);  
-#if (N==60 && BITS==61)                                  /* the special entries of the matrix are taken care of here! */
-	X->V[3] = MOD_DBL(X->V[3] + 4*temp2 );              	/* The maximal period matrix for N=60 has 737 pattern instead of 3's in these places, 4=7-3 */
-	X->V[5] = MOD_DBL(X->V[5] + 4*temp4 );
-#else
-#ifdef SPECIAL
-	X->V[3] = MOD_MERSENNE(X->V[3] + MOD_MULSPEC(temp2) );        /* all the newly recommended N have just one special entry, here we add SPECIAL*V[2] */
-#else
-	X->V[3] = MOD_MERSENNE(X->V[3] + MERSBASE - temp2);          /* the old matrix had a 2 instead of 3 there, substract V[2] */
+	X->sumtot = iterate_raw_vec(X->V, X->sumtot);
+	return 0;
+}
+ 
+inline myuint iterate_raw_vec(myuint* Y, uint64_t sumtotOld){
+	// operates with a raw vector, uses known sum of elements of Y
+	int i;
+	myuint  tempP, tempV;
+#if (SPECIAL != 0)
+	myuint temp2 = Y[1];
 #endif
-#endif
-	X->partial[1] = ZERO;	
-	X->partial[2] = MOD_MERSENNE(X->partial[1] + X->V[2]);  
-	X->partial[3] = MOD_MERSENNE(X->partial[2] + X->V[3]);  
-	X->partial[4] = MOD_MERSENNE(X->partial[3] + X->V[4]);  
-	X->partial[5] = MOD_MERSENNE(X->partial[4] + X->V[5]);  
-	X->partial[6] = MOD_MERSENNE(X->partial[5] + X->V[6]);  
-	for (i=7; i<=N; i++){
-		X->V[i] = MOD_MERSENNE(X->V[i-1] + X->partial[i]);   
-		X->partial[i] = MOD_MERSENNE(X->partial[i-1] + X->V[i]);   // precalculate for next iteration
+	Y[0] = (tempV = MOD_MERSENNE(Y[0] + sumtotOld));
+	__uint128_t sumtot = 0; // will keep a running sum of all new elements (except Y[0])
+	tempP = 0;              // will keep a partial sum of all old elements (except Y[0])
+	for (i=1; i<N; i++){
+		tempP = MOD_MERSENNE(tempP + Y[i]);
+		Y[i] = (tempV = MOD_MERSENNE(tempV + tempP) );   
+		sumtot += tempV;
 	}
+#if (SPECIAL != 0)
+	temp2 = MOD_MULSPEC(temp2);
+	Y[2] = MOD_MERSENNE( Y[2] + temp2 );
+	sumtot += temp2;
+#endif
+	return mod128(sumtot);
 }
 
-#define WPRECALC  
-// 10% faster overall, and no waiting for a full iteration in between spitting out 
 
-#ifdef WPRECALC
-myuint get_next(rng_state_t *X){
-	// (void *vstate){  
-	// rng_state_t *X = (rng_state_t *) vstate;
-	
-	myuint temp;
+void iterate_and_fill_array(rng_state_t* X, int stride, double *array){
+	myuint* Y=X->V;
 	int i;
-
-	i=X->counter;
-	if (i>=N) {i=1;}else{i++;};
-	temp = X->V[i];                                  // hold the old X
-	if (i <= 6){
-		if (i==1){
-			X->V[1] = MOD_MERSENNE(X->V[1] + X->partial[N]);
-			X->temp = X->V[1];
-			X->partial[1] = ZERO;	
-		} else {
-			// precalculate for next iteration	
-			X->V[i] = MOD_MERSENNE(X->temp + X->partial[i]);  // use uncorected X[i-1], is held in X->temp , very important
-			X->temp = X->V[i];                               // hold it 
-#if (N==60 && BITS==61)                              /* the special entries of the matrix are taken care of here! */
-			if (i==3 || i==5) { X->V[i] = MOD_DBL(X->V[i] + 4*X->PrevValue );}        /* The maximal period matrix for N=60 has 7 instead of 3 in these places, 4=7-3 */
-#elif ( (N==3150 || N==1260 || N==508 || N==256 || N==240 ) && BITS==61)
-			if (i==3) { X->V[3] = MOD_MERSENNE(X->V[3] + MOD_MULSPEC(X->PrevValue)  );} 
-			// the charpoly is irreducible for these N and has maximal period for N=508, 256, half period for 1260, and 1/12 period for 3150
-#else
-			if (i==3) { X->V[3] = MOD_MERSENNE(X->V[3] + MERSBASE - X->PrevValue );}     /* the old matrix has a 2 instead of 3 there, substract old X[2] */
-#endif	
-			X->PrevValue = temp;  // store it for later
-			X->partial[i] = MOD_MERSENNE(X->partial[i-1] + X->V[i]); // use actual new value for partial sum     	
-		}
-	}else{
-		X->V[i] = MOD_MERSENNE(X->temp + X->partial[i]);
-		X->temp = X->V[i];
-		X->partial[i] = MOD_MERSENNE(X->partial[i-1] + X->V[i]);   // precalculate for next iteration
+	myuint  tempP, tempV;
+#if (SPECIAL != 0)
+	myuint temp2 = Y[1];
+#endif
+	Y[0] = (tempV = MOD_MERSENNE(Y[0] + X->sumtot));
+	array[0+stride*N] = (double)tempV * (double)(INV_MERSBASE);
+	__uint128_t sumtot = 0; // will keep a running sum of all new elements (except Y[0])
+	tempP = 0;             // will keep a partial sum of all old elements (except Y[0])
+	for (i=1; i<N; i++){
+		tempP = MOD_MERSENNE(tempP + Y[i]);
+		Y[i] = (tempV = MOD_MERSENNE(tempV + tempP) );   
+		sumtot += tempV;
+		array[i+stride*N] = (double)tempV * (double)(INV_MERSBASE);
 	}
-	X->counter = i;
-	return temp ;
+#if (SPECIAL != 0)
+	temp2 = MOD_MULSPEC(temp2);
+	Y[2] = MOD_MERSENNE( Y[2] + temp2 );
+	array[2+stride*N] = (double)Y[2] * (double)(INV_MERSBASE);
+	sumtot += temp2;
+#endif
+	X->sumtot = mod128(sumtot);
+	X->counter = 0;
 }
-#else
-myuint get_next(rng_state_t *X){
-	// (void *vstate){  
-	// rng_state_t *X = (rng_state_t *) vstate;
-	
+
+
+
+
+myuint get_next(rng_state_t* X){	
 	int i;
 	i=X->counter;
-	if (i>=N){
-		i=1;
-		IT(X);
-	} else {
-		i++;
+	if (i>=(N) ){
+		i=0;
+		iterate(X);
+		X->counter=1;
+		return X->V[0];
 	}
-	X->counter = i;       // beware, i points to the X which is already output, below
+	else{
+	X->counter++;
+  }
 	return X->V[i];
 }
-#endif
 
-double get_next_float(rng_state_t *X){
-	return ( ( (double)get_next(X) ) * (double)(INV_MERSBASE));
+
+
+double get_next_float(rng_state_t* X){
+	return ( ( get_next(X) ) * (INV_MERSBASE));
 }
+
+void fill_array(rng_state_t* X, unsigned int n, double *array)
+{
+	// Return an array of n random numbers uniformly distributed in 0,1]
+	unsigned int i=0,j;
+	while ( i<(n/N) ){
+		iterate_and_fill_array(X, i, array);
+		i++;
+	}
+	if ((n % N)) {
+	iterate(X);
+	for (j=0; j< (n % N); j++){
+		array[N*i+j] = X->V[j] * (double)(INV_MERSBASE);
+	}
+	}
+//	X->counter = j; // set this if you want to continue with single fetches from the exact spot, but it is not usually necessary 
+}
+
 
 rng_state_t* rng_alloc() 
 {
 /* allocate the state */
-	rng_state_t  *p = (rng_state_t*)malloc(sizeof(rng_state_t)); // 1 for counter, N for the vector 1..N, 2 more for temps, and N for partial sums 1..N
-	p->fh=stdout; // by defualt, set the output file handle to stdout  
+	rng_state_t  *p = (rng_state_t*)malloc(sizeof(rng_state_t)); 
+	p->fh=stdout; // by default, set the output file handle to stdout  
 	return p;
 }
 
-int rng_free(rng_state_t *X) /* free memory occupied by the state */
+int rng_free(rng_state_t* X) /* free the memory occupied by the state */
 {
 	free(X);
 	return 0;
@@ -132,166 +135,267 @@ int rng_free(rng_state_t *X) /* free memory occupied by the state */
 
 rng_state_t*  rng_copy(myuint *Y)
 {
-	int i;
-	/* copy the state Y, returns pointer to the newly allocated and initialized state,  
-	 it is users responsibility  to make sure Y is properly allocated with rng_alloc, then pass Y->V or is an array -- myuint Y[N+1] and Y[1]...Y[N] are set to legal values */
-	/* partial sums on this new state are recalculated, and counter set to zero, if get_next is used will output all values in it until... */
-	rng_state_t *X = rng_alloc();
+	/* copy the vector stored at Y, and return pointer to the newly allocated and initialized state.  
+	 It is the user's responsibility  to make sure that Y is properly allocated with rng_alloc, 
+	 then pass Y->V or it can also be an array -- such as myuint Y[N+1] and Y[1]...Y[N] have been set to legal values [0 .. MERSBASE-1]
+	 Partial sums on this new state are recalculated, and counter set to zero, so that when get_next is called, 
+	 it will output the initial vector before any new numbers are produced, call iterate(X) if you want to advance right away */
+	rng_state_t* X = rng_alloc();
+	__uint128_t sumtmp;
+
 	X->counter = 0;
-	X->partial[1] = ZERO;
-	X->V[1] = Y[1];
-	for (i=2; i <= N; i++){
+	sumtmp = 0;
+	X->V[0] = Y[0];
+	for (int i=1; i < N; i++){
 		X->V[i] = Y[i]; 
-		X->partial[i] = MOD_MERSENNE(X->partial[i-1] + X->V[(i)]); 
+		sumtmp +=  X->V[(i)] ; 
 	}
-	if (X->fh==NULL){X->fh=stdout;}
+	X->sumtot = mod128(sumtmp);
 	return X;
 }
 
-void seedvielbein(rng_state_t *X, unsigned int seed)	
+void seed_vielbein(rng_state_t* X, unsigned int index)	
 {
 int i;
-	if (seed<=N && seed>=1){
-		for (i=0; i <= N; i++){
+	if (index<N){
+		for (i=0; i < N; i++){
 			X->V[i] = ZERO; 
 		}
-		X->V[seed] = SEEDVAL;
+		X->V[index] = SEEDVAL;
 	}else{
-		fprintf(stderr, "Out of bounds seed index, is not ( <=n and >=1 )\n"); exit(-1);
+		fprintf(stderr, "Out of bounds index, is not ( 0 <= index < N  )\n"); exit(-1);
 	}
-	X->temp=ZERO; 
-	X->PrevValue=ZERO;
 	X->counter = N;  // set the counter to N if iteration should happen right away
-	precalc(X);
+	//precalc(X);
+	X->sumtot = (index ? 1:0);
 	if (X->fh==NULL){X->fh=stdout;}	
 }
 
-int seed_lcg(rng_state_t *X, myuint seed)	/* an LCG(MULT, 2^61-1) generator of Wu is used to seed */
+void seed_lcg(rng_state_t* X, myuint seed)	/* an LCG(MULT, 2^61-1) generator of Wu is used to seed */
 {
 #define MULT 1073217536
 	int i;
 	myuint temp;
+	__uint128_t sumtmp;
+	sumtmp = 0; 
 	if (seed == 0){
+		fprintf(stderr, " try seeding with nonzero seed next time!");
 		seed = SEEDVAL;
 	}
 
 	temp =  (myuint)seed;
-	X->V[1] = temp & MERSBASE;
-	if (X->fh==NULL){X->fh=stdout;} // if the filehandle is not set, make it stdout
-	fprintf(X->fh, "Seed vector was: %llu",X->V[1]);
-	for (i=2; i <= N; i++){
+	X->V[0] = temp & MERSBASE;
+	if (X->fh==NULL){X->fh=stdout;} // if the filehandle is not yet set, make it stdout
+	fprintf(X->fh, "Seed vector of the RNG was: {%llu",X->V[0]);
+	for (i=1; i < N; i++){
 		X->V[i] = modmulM61(X->V[i-1], MULT);
-		fprintf(X->fh, ",  %llu",X->V[i]);
+		fprintf(X->fh, ", %llu",X->V[i]);
+		sumtmp += (X->V[i]);
 	}
-	fprintf(X->fh,"\n");
-	precalc(X);
-	X->temp=ZERO; 
-	X->PrevValue=ZERO;
-	X->counter = N;  // set the counter to N so that iteration happens right away
-	return 0;
+	fprintf(X->fh," }\n");
+	X->counter = 0;  // set the counter to N if we want  iteration to happen right away
+	X->sumtot= mod128(sumtmp);
 }
 
-int precalc(rng_state_t *X){
+void seed_spbox(rng_state_t* X, uint64_t seed)
+{ // a 64-bit LCG from Knuth line 26, in combination with a bit swap is used to seed
+	const uint64_t MULT64=6364136223846793005ULL; 
 	int i;
-	X->partial[0] = ZERO;
-	X->partial[1] = ZERO;
-	for (i=2; i <= N; i++){
-		X->partial[i] = MOD_MERSENNE(X->partial[i-1] + X->V[(i)]);  //partial sums, excluding X[1]
+	__uint128_t sumtmp;
+	if (seed == 0){
+		fprintf(stderr, " try seeding with nonzero seed next time!");
+		exit(-1);
 	}
+	
+	uint64_t l = seed;
+	sumtmp = 0; 
+
+	X->V[0] = l & MERSBASE;
+	if (X->fh==NULL){X->fh=stdout;} // if the filehandle is not yet set, make it stdout
+	for (i=1; i < N; i++){
+		l*=MULT64; l = (l << 32) ^ (l>>32);
+		X->V[i] = l & MERSBASE;
+		sumtmp += (X->V[i]);
+	}
+	X->counter = 0;  // set the counter to N if iteration should happen right away
+	X->sumtot= mod128(sumtmp);
+}
+
+int precalc(rng_state_t* X){
+	int i;
+	myuint temp;
+	temp = ZERO; 
+	for (i=1; i < N; i++){
+		temp = MOD_MERSENNE(temp + X->V[i]);
+	}	
+	X->sumtot = temp; 
 	return 0;
 }
 
-
-#if __LP64__
-#if ((N==60) && BITS==61)
-rng_state_t *skip_1M(rng_state_t *X){
-	/*
-	 * Skips 2^20 = 1048576 steps, by applying a precomputed matrix to X
-	 */
-#if (N==60)
-	__uint128_t skipMat[N][N] = 
-#include "skip1M_N60.c"
-	;
-#endif
-	int i,j;
-	__uint128_t temp, Y[N+1];
-	//__uint64_t *ptr, t1,t2;
-	Y[0]=0;
-	for (i=0; i<N; i++){
-		Y[i+1] = 0;
-		for (j=0; j<N; j++){
-			temp = Y[i+1] + ( skipMat[j][i] * (__uint128_t)X->V[j+1]) ;
-			Y[i+1] = temp - (temp>>BITS)*MERSBASE;
-		}
-	}
-	for (j=0; j<=N; j++){ X->V[j] = (myuint)Y[j];}
-	precalc(X);
-	return X;
-}
-
-rng_state_t *skip_1G(rng_state_t *X){
-	/*
-	 * Skips 2^30 = 1073741824 steps, by applying a precomputed matrix to X
-	 */
-#if (N==60) 
-__uint128_t skipMat[N][N] = 
-#include "skip1G_N60.c"
-	;
-#endif
-	int i,j;
-	__uint128_t temp, Y[N+1];
-	//__uint64_t *ptr, t1,t2;
-	Y[0]=0;
-	for (i=0; i<N; i++){
-		Y[i+1] = 0;
-		for (j=0; j<N; j++){
-			/*
-			 temp = ( skipMat[j][i] * (__uint128_t)X->V[j+1]);
-			temp = Y[i+1] + temp;
-			ptr = &temp; // the only place where endianness matters
-			t1 = *ptr;
-			ptr++;
-			t2 = *ptr;
-			//			fprintf(stderr, "Lower and upper parts are %llu , %llu\n", t1, t2);
-			//			fprintf(stderr, "Will sub 2^61-1 x n, n=%llu", 8*t2 + (t1>>61));
-			temp = temp - ((1<<(64-BITS))*t2 + (t1>>BITS))*MERSBASE;
-			Y[i+1] = (temp); 
-			 */
-			temp = Y[i+1] + ( skipMat[j][i] * (__uint128_t)X->V[j+1]) ;
-			Y[i+1] = temp - (temp>>BITS)*MERSBASE;
-		}
-	}
-	for (j=0; j<=N; j++){ X->V[j] = (myuint)Y[j];}
-	precalc(X);
-	return X;
-}
-#endif
-#endif
 
 int rng_get_N(void){return N;}
 
-void printbitssimple(uint32_t n) {
-	uint8_t i = 32 ; // (sizeof(n) * 8 - 1);
-	register uint32_t tmp=n;
-	do {
-		i--;
-		putchar(0x30 + (tmp&1) ); /* 0 is ASCII 0x30 and 1 is ASCII 0x31  */
-		tmp=tmp>>1;
-	} while (i > 0);
-	putchar(0x0A);//putchar(0x0C);// newline 0A, carriage return 0D, form feed 0C
+#define MASK32 0xFFFFFFFFULL
+
+inline uint64_t mod128(__uint128_t s){
+	uint64_t s1;
+	s1 = ( (  ((uint64_t)s)&MERSBASE )    + (  ((uint64_t)(s>>64)) * 8 )  + ( ((uint64_t)s) >>BITS) );
+	return	MOD_MERSENNE(s1);
 }
 
-inline uint64_t modmulM61(uint64_t s, uint64_t a)
-{
-#define MASK32 0xFFFFFFFFULL
-	register uint64_t o,ph,pl,ah,al,tmp;
-	o=(s)*a;
-	ph = ((s)>>32);
-	pl = (s) & MASK32;
-	ah = a>>32;
-	al = a & MASK32;
-	o = (o & M61) + ((ph*ah)<<3) + ((ah*pl+al*ph + ((al*pl)>>32))>>29) ;
-	if (o >= M61){ tmp = o-M61; o = tmp; } // "c" putchar(0x63); 	
-    return o;
+inline uint64_t modmulM61(uint64_t a, uint64_t b){
+	// my best modmul so far
+	__uint128_t temp;
+	temp = (__uint128_t)a*(__uint128_t)b;
+	return mod128(temp);
 }
+
+
+inline uint64_t fmodmulM61(uint64_t cum, uint64_t a, uint64_t b){
+	__uint128_t temp;
+	temp = (__uint128_t)a*(__uint128_t)b + cum;
+	return mod128(temp);
+}
+
+void print_state(rng_state_t* X){
+    int j;
+	for (j=0; (j< (rng_get_N()-1) ); j++) {
+		fprintf(X->fh, "%llu, ", X->V[j] );
+	}
+	fprintf(X->fh, "%llu", X->V[rng_get_N()-1] );
+}
+
+#define FUSEDMODMULVEC \
+{ for (i =0; i<N; i++){         \
+cum[i] = MOD_MERSENNE(cum[i] + modmulM61( coeff ,  Y[i] )) ; \
+} }
+
+
+#define SKIPISON 1
+
+#if ( ( (N==88)||(N==256) ) && BITS==61 && SKIPISON!=0)
+void seed_uniquestream( rng_state_t* Xin, myID_t clusterID, myID_t machineID, myID_t runID, myID_t  streamID ){
+	FILE* fin; 
+	if(  ( fin = fopen("motherseed.conf", "r") ) ){
+		char l=0;
+		while ( l != 0x7B ) {
+			l=fgetc(fin); // proceed until hitting opening bracket
+		}
+		l=0;
+		for(int i = 0; i < rng_get_N(); i++){
+			fscanf(fin, "%llu, ", &Xin->V[i]);
+		}
+		fscanf(fin, "%llu", &Xin->V[rng_get_N()-1]);
+		//printf("read in successfully\n\n"); print_state(X);
+		if (clusterID || machineID){printf("Please dont try to reapply skipping with non-zero clusterID/machineID to your mother seed in motherseed.conf\n");}
+		Xin->sumtot = apply_bigskip(Xin->V, Xin->V,  clusterID,  machineID,  runID,   streamID );
+	}else{
+		//printf("could not open the file for reading in the mother seed, we apply it ourself\n" );
+		seed_vielbein(Xin,0);
+		Xin->sumtot = apply_bigskip(Xin->V, Xin->V,  clusterID,  machineID,  runID,   streamID );
+	}
+}
+
+void branch_inplace( rng_state_t* Xin, myID_t* IDvec ){
+	Xin->sumtot = apply_bigskip(Xin->V, Xin->V,  IDvec[3],  IDvec[2],  IDvec[1],   IDvec[0] );
+}
+
+uint64_t apply_bigskip(myuint* Vout, myuint* Vin, myID_t clusterID, myID_t machineID, myID_t runID, myID_t  streamID ){
+	/*
+	 makes a derived state vector, Vout, from the mother state vector Vin
+	 by skipping a large number of steps, determined by the given seeding ID's
+	 
+	 it is mathematically guaranteed that the substreams derived in this way from the SAME (!!!) Vin will not collide provided
+	 1) at least one bit of ID is different
+	 2) less than 10^100 numbers are drawn from the stream 
+	 (this is good enough : a single CPU will not exceed this in the lifetime of the universe, 10^19 sec, 
+	 even if it had a clock cycle of Planch time, 10^44 Hz )
+	 
+	 Caution: never apply this to a derived vector, just choose some mother vector Vin, for example the unit vector by seed_vielbein(X,0), 
+	 and use it in all your runs, just change runID to get completely nonoverlapping streams of random numbers on a different day.
+	 
+	 clusterID and machineID are provided for the benefit of large organizations who wish to ensure that a simulation 
+	 which is running in parallel on a large number of  clusters and machines will have non-colliding source of random numbers.
+	 
+	 did i repeat it enough times? the non-collision guarantee is absolute, not probabilistic
+	 
+	 */
+	
+	
+	const	uint64_t skipMat[128][N] = 
+	
+#if (N==88) 
+#include "mixmax_skip_N88.c"  // to make this file, delete all except some chosen 128 rows of the coefficients table
+#elif (N==256) 
+#include "mixmax_skip_N256.c"
+//#include "mixmax_skip_N256.dev.c"
+#endif
+	;
+	
+	myID_t IDvec[4] = {streamID, runID, machineID, clusterID};
+	int r,i,j,  IDindex;
+	myID_t id;
+	myuint Y[N], cum[N];
+	myuint coeff;
+	myuint* rowPtr;
+	__uint128_t sumtot = 0;
+	
+	for (i=0; i<N; i++) { Y[i] = Vin[i]; sumtot += Vin[i]; } ; sumtot -= Vin[0]; sumtot = mod128(sumtot) ;
+	for (IDindex=0; IDindex<4; IDindex++) { // go from lower order to higher order ID
+		id=IDvec[IDindex];
+		//printf("now doing ID at level %d, with ID = %d\n", IDindex, id);     
+		r = 0;
+		while (id){
+			if (id & 1) { 
+				rowPtr = (uint64_t*)skipMat[r + IDindex*8*sizeof(myID_t)];
+				//printf("free coeff for row %d is %llu\n", r, rowPtr[0]);
+				for (i=0; i<N; i++){ cum[i] = 0; }    
+				for (j=0; j<N; j++){              // j is lag, enumerates terms of the poly
+					// for zero lag Y is already given
+					coeff = rowPtr[j]; // same coeff for all i
+					FUSEDMODMULVEC;
+					sumtot = iterate_raw_vec(Y, sumtot); 
+				}
+				sumtot=0;
+				for (i=0; i<N; i++){ Y[i] = cum[i]; sumtot += cum[i]; } sumtot -= Y[0]; sumtot = mod128(sumtot) ;	
+			}
+		id = (id >> 1); r++; // bring up the r-th bit in the ID		
+		}		
+	}
+	sumtot=0;
+	for (i=0; i<N; i++){ Vout[i] = Y[i]; sumtot += Y[i]; } ; sumtot -= Y[0]; // returns sumtot, and copy the vector over to Vout 
+	return mod128(sumtot) ;
+}
+
+
+#endif
+
+void seed_CTR_1x64(rng_state_t* X, uint64_t a){
+	// X needs to be allocated before calling this, we take care of the rest	
+	seed_spbox(X, a);
+	doRounds(X);
+}
+
+void seed_CTR_1x128(rng_state_t* X, __uint128_t a){
+	// X needs to be allocated before calling this, we take care of the rest
+	__uint128_t l=a ;
+	__uint128_t sumtmp=0;
+
+	const __uint128_t MULT128 = ((__uint128_t)6364136223846793005<<64) + ((__uint128_t)1745191708<<32) + ((__uint128_t)1546275797); 
+	// MULT has been checked to be a bi-jection on Z/2^128*Z
+	X->V[0]=l&MERSBASE;
+	int index=1;
+	while (index<N){ // Fill up
+		l*=MULT128; l = (l << 64) ^ (l>>64); // we do need something nonlinear so long as it does not create collisions
+		X->V[index] = ((uint64_t)l) & MERSBASE;
+		sumtmp += (X->V[index]);
+		index++;
+	}
+	X->sumtot = mod128(sumtmp);
+	doRounds(X);
+	
+}
+
+
+void doRounds(rng_state_t* X) {iterate(X);}
 

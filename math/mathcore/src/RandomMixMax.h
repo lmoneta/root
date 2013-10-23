@@ -1,11 +1,14 @@
-// MixMax random number  implementation
-//
+/*  MixMax random number  implementation
+*	Generator described in 
+*	N.Z.Akopov, G.K.Savvidy and N.G.Ter-Arutyunian, Matrix Generator of Pseudorandom Numbers, 
+*	J.Comput.Phys. 97, 573 (1991); 
+*	Preprint EPI-867(18)-86, Yerevan Jun.1986;
+*/
 
 #ifndef ROOT_Math_RandomMixMax
 #define ROOT_Math_RandomMixMax
 
 #include "mixmax.h"
-//include "mixmax.c"
 
 
 namespace ROOT { 
@@ -26,12 +29,21 @@ namespace ROOT {
          }
 
 
-         void SetSeed(unsigned int seed) { 
+		  void SeedUniqueStream(UInt_t clusterID, UInt_t machineID, UInt_t runID, UInt_t  streamID) { 
+			  seed_uniquestream(fRngState, clusterID,  machineID,  runID,   streamID);
+		  }
+
+		  void SetSeed(UInt_t seed) { 
+			  seed_spbox(fRngState, seed); iterate(fRngState);			  
             //seed_lcg(fRngState, seed); 
-            seedvielbein(fRngState, seed);
+            //seed_vielbein(fRngState, seed);
          }
 
-         unsigned int GetSeed() const { 
+		  void SetSeed64(ULong64_t seed) { 
+			  seed_spbox(fRngState, seed); iterate(fRngState);			  
+		 }
+
+		 unsigned int GetSeed() const { 
             return get_next(fRngState);
          }
          
@@ -41,6 +53,11 @@ namespace ROOT {
             return get_next_float(fRngState);
          }
 
+		  
+		virtual  void  RndmArray(Int_t n, Double_t *array){
+			 // Return an array of n random numbers uniformly distributed in ]0,1]
+			  fill_array(fRngState, n,  array);
+		  }
 
       private: 
 
