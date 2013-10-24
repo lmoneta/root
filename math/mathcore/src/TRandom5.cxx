@@ -84,11 +84,11 @@ void TRandom5::SetSeed(UInt_t seed)
 
 void TRandom5::SetSeed64(ULong64_t seed)
 {
-	fRng->SetSeed64(seed);
+   fRng->SetSeed64(seed);
 }
 
 //______________________________________________________________________________
 void TRandom5::SeedUniqueStream(UInt_t clusterID, UInt_t machineID, UInt_t runID, UInt_t  streamID)
 {
-	fRng->SeedUniqueStream(clusterID,  machineID,  runID,   streamID);
+   fRng->SeedUniqueStream(clusterID,  machineID,  runID,   streamID);
 }

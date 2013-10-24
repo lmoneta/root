@@ -53,10 +53,10 @@ void testRndm(TRandom * r) {
    TStopwatch sw; 
    sw.Start();
    double x; 
-   for (int i=0;i< 5*N;i++) {
+   for (int i=0;i< 50*N;i++) {
       x = r->Rndm(i);
    }
-   printf(" %8.3f",sw.CpuTime()*cpn/5);
+   printf(" %8.3f",sw.CpuTime()*cpn/50);
 }
 
 void testRndmArray(TRandom * r) { 
@@ -65,20 +65,20 @@ void testRndmArray(TRandom * r) {
    const int NR = 100;
    double rn[NR];
    sw.Start();
-   for (int i=0;i< 5*N/NR;i++) {
+   for (int i=0;i< 50*N/NR;i++) {
       r->RndmArray(NR,rn);
    }
-   printf(" %8.3f",sw.CpuTime()*cpn/5);
+   printf(" %8.3f",sw.CpuTime()*cpn/50);
 }
 
 void testGaus(TRandom * r) { 
    TStopwatch sw; 
    sw.Start();
    double x;
-   for (int i=0;i<N;i++) {
+   for (int i=0;i<5*N;i++) {
       x = r->Gaus(0,1);
    }
-   printf(" %8.3f",sw.CpuTime()*cpn);
+   printf(" %8.3f",sw.CpuTime()*cpn/5);
 }
 
 void testRannor(TRandom * r) { 
