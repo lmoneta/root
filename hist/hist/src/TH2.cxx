@@ -550,8 +550,9 @@ void TH2::FillRandom(const char *fname, Int_t ntimes)
    for (biny=1;biny<=nbinsy;biny++) {
       for (binx=1;binx<=nbinsx;binx++) {
          ibin++;
-         Double_t fint = f1->Integral(fXaxis.GetBinLowEdge(binx), fXaxis.GetBinUpEdge(binx), fYaxis.GetBinLowEdge(biny), fYaxis.GetBinUpEdge(biny));
-         integral[ibin] = integral[ibin-1] + fint;
+         //        Double_t fint = f1->Integral(fXaxis.GetBinLowEdge(binx), fXaxis.GetBinUpEdge(binx), fYaxis.GetBinLowEdge(biny), fYaxis.GetBinUpEdge(biny));
+//         integral[ibin] = integral[ibin-1] + fint;
+         integral[ibin] = integral[ibin-1] + f1->Eval( fXaxis.GetBinCenter(binx), fYaxis.GetBinCenter(biny));
       }
    }
 
