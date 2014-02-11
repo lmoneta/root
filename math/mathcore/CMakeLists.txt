@@ -6,7 +6,7 @@ ROOT_USE_PACKAGE(core)
 include_directories(${CMAKE_SOURCE_DIR}/hist/hist/inc ${CMAKE_SOURCE_DIR}/random123/include)  # Explicit to avoid circular dependencies mathcore <--> hist :-(
 
 set(MATHCORE_HEADERS TRandom.h 
-  TRandom1.h TRandom2.h TRandom3.h TRandom4.h TVirtualFitter.h TKDTree.h TKDTreeBinning.h TStatistic.h 
+  TRandom1.h TRandom2.h TRandom3.h TRandom4.h TRandom5.h TVirtualFitter.h TKDTree.h TKDTreeBinning.h TStatistic.h 
   Math/IParamFunction.h Math/IFunction.h Math/ParamFunctor.h Math/Functor.h 
   Math/Minimizer.h Math/MinimizerOptions.h Math/IntegratorOptions.h Math/IOptions.h 
   Math/BasicMinimizer.h Math/MinimTransformFunction.h Math/MinimTransformVariable.h   
