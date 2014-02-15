@@ -57,7 +57,9 @@ void TRandom4::RndmArray(Int_t n, Double_t *array)
 {
   // Return an array of n random numbers uniformly distributed in ]0,1]
 
-   for(Int_t i=0; i<n; i++) array[i]=(*fRandom123)();
+   //for(Int_t i=0; i<n; i++) array[i]=(*fRandom123)();
+   fRandom123->GenerateArray(array, array+n);
+   //for(Int_t i=0; i<n; i++) array[i]=(*fRandom123)();
 }
 
 //______________________________________________________________________________
@@ -65,7 +67,8 @@ void TRandom4::RndmArray(Int_t n, Float_t *array)
 {
   // Return an array of n random numbers uniformly distributed in ]0,1]
 
-  for(Int_t i=0; i<n; i++) array[i]=(Float_t)(*fRandom123)();
+   fRandom123->GenerateArray(array, array+n);
+//  for(Int_t i=0; i<n; i++) array[i]=(Float_t)(*fRandom123)();
 }
 
 //______________________________________________________________________________

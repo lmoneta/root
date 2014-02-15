@@ -79,6 +79,7 @@ UInt_t TRandom5::GetSeed() const
 //______________________________________________________________________________
 void TRandom5::SetSeed(UInt_t seed)
 {
+   if (seed == 0) seed = 1;///temp solution t.b.f
    fRng->SetSeed(seed);
 }
 

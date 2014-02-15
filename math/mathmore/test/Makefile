@@ -7,8 +7,11 @@
 # Author: Fons Rademakers, 29/2/2000
 
 
-include $(ROOTSYS)/config/Makefile.config
-include $(ROOTSYS)/etc/Makefile.arch
+#include $(ROOTSYS)/config/Makefile.config
+#include $(ROOTSYS)/etc/Makefile.arch
+
+include ../../../config/Makefile.config
+include ../../../etc/Makefile.arch
 
 #------------------------------------------------------------------------------
 

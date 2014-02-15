@@ -49,14 +49,32 @@
 const int N = 2000000;
 float cpn = 1000000000./N;
 
-void testRndm(TRandom * r) { 
+template<class R>
+void testRndmNV() { 
+   R r; 
+   double SF = 50;
+   if (r.IsA()==TRandom1::Class() ) SF = 10;
+   int nevt = SF*N; 
    TStopwatch sw; 
    sw.Start();
    double x; 
-   for (int i=0;i< 50*N;i++) {
-      x = r->Rndm(i);
+   for (int i=0;i< nevt;i++) {
+      x = r.R::Rndm();
    }
-   printf(" %8.3f",sw.CpuTime()*cpn/50);
+   printf(" %8.3f",sw.CpuTime()*cpn/SF);
+}
+
+void testRndm(TRandom * r) { 
+   double SF = 50;
+   if (r->IsA()==TRandom1::Class() ) SF = 10;
+   int nevt = SF*N; 
+   TStopwatch sw; 
+   sw.Start();
+   double x; 
+   for (int i=0;i< nevt;i++) {
+      x = r->Rndm();
+   }
+   printf(" %8.3f",sw.CpuTime()*cpn/SF);
 }
 
 void testRndmArray(TRandom * r) { 
@@ -64,11 +82,14 @@ void testRndmArray(TRandom * r) {
    TStopwatch sw; 
    const int NR = 100;
    double rn[NR];
+   double SF = 50;
+   if (r->IsA()==TRandom1::Class() ) SF = 10;
+   int nevt = SF*N/NR; 
    sw.Start();
-   for (int i=0;i< 50*N/NR;i++) {
+   for (int i=0;i< nevt;i++) {
       r->RndmArray(NR,rn);
    }
-   printf(" %8.3f",sw.CpuTime()*cpn/50);
+   printf(" %8.3f",sw.CpuTime()*cpn/SF);
 }
 
 void testGaus(TRandom * r) { 
@@ -235,6 +256,18 @@ void testAll() {
      testRndmArray(r[i]);
   }
   printf("\n");
+
+//#ifndef __CINT__
+  printf("Rndm (No Virt.Fun)");
+  testRndmNV<TRandom>();  
+  testRndmNV<TRandom1>();  
+  testRndmNV<TRandom2>();  
+  testRndmNV<TRandom3>();  
+  testRndmNV<TRandom4>();  
+  testRndmNV<TRandom5>();  
+  printf("\n");
+
+//#endif
 
   printf("Gaus..............");
   for (int i = 0; i < NGEN; ++i) {

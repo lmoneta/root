@@ -3,6 +3,8 @@
 #include "Math/DistFunc.h"
 #include "TStopwatch.h"
 #include "TRandom3.h"
+#include "TRandom4.h"
+#include "TRandom5.h"
 #include "TRandom2.h"
 #include "TCanvas.h"
 #include "TH1D.h"
@@ -30,6 +32,10 @@
 #include "CLHEP/Random/MTwistEngine.h"
 #endif
 
+//C++ 11 random
+#if __cplusplus >= 201103 /*C++11*/
+#include <random>
+#endif
 
 #ifndef PI
 #define PI       3.14159265358979323846264338328      /* pi */
@@ -46,6 +52,55 @@
 using namespace ROOT::Math;
 #ifdef HAVE_CLHEP
 using namespace CLHEP;
+#endif
+
+// wrapper for C++ 11 engines
+#if __cplusplus >= 201103 /*C++11*/
+
+struct Cpp11Engine {
+
+   Cpp11Engine(int seed = 0) { 
+      first = true; 
+      SetSeed(seed); 
+   }
+   
+   void Initialize() {  first = true; }
+
+   double operator() () { return Rndm(); }
+   double Rndm() { 
+      return udist(mteng);
+   }
+
+   int Poisson(double mu) { 
+      if (first) {
+         poisson_dist = std::poisson_distribution<int>(mu); 
+         first = false; 
+      }
+      return poisson_dist(mteng);
+   }
+
+   double GaussianZig(double sigma) { return Gauss(0,sigma); }
+   double Gaussian(double sigma) { return Gauss(0,sigma); }
+
+   double Gauss(double mu , double sigma) { 
+      if (first) {
+         gauss_dist = std::normal_distribution<double>(mu, sigma); 
+         first = false; 
+      }
+      return gauss_dist(mteng);
+   }
+
+   void Terminate() {}
+
+   void SetSeed(int seed)  { mteng.seed(seed); }
+
+   bool first; 
+   std::mt19937 mteng;
+   std::uniform_real_distribution<double> udist;
+   std::poisson_distribution<int> poisson_dist;
+   std::normal_distribution<double> gauss_dist;
+}; 
+
 #endif
 
 static bool fillHist = false;
@@ -83,6 +138,8 @@ std::string findName( const R & r) {
     return "TRandom           "; 
   else if (type.find("UnuRan") != std::string::npos )
     return "UnuRan            "; 
+  else if (type.find("Cpp11") != std::string::npos )
+    return "C++11            "; 
   else if (type.find("Rand") != std::string::npos )
     return "CLHEP             "; 
   
@@ -671,7 +728,7 @@ int testRandomDist(int nevt = 0) {
 
 
   Random<GSLRngMT>         r;
-  TRandom3                 tr;
+  TRandom5                 tr;
 #ifdef HAVE_UNURAN
   UnuRanDist               ur; 
 #else 
@@ -687,7 +744,7 @@ int testRandomDist(int nevt = 0) {
 
   testFlat(r,hf1);
   testFlat(tr,hf2);
-  testDiff(hf1,hf2,"Flat ROOT-GSL");
+
 
 #ifdef HAVE_CLHEP
   //HepJamesRandom eng; 
@@ -695,15 +752,24 @@ int testRandomDist(int nevt = 0) {
   RandFlat crf(eng);
   TH1D hf3("hf3","Flat CLHEP",nch,xmin,xmax);
   testFlatCLHEP<RandFlat>(crf,hf3);
-  testDiff(hf3,hf1,"Flat CLHEP-GSL");
 #endif
 
+//cp11
+#if __cplusplus >= 201103 
+  Random<Cpp11Engine>  sr; 
+  TH1D hf4("hf4","Flat CP11",nch,xmin,xmax);
+  testFlat(sr,hf4);
+#endif
 
+  // test differences
+  testDiff(hf1,hf2,"Flat ROOT-GSL");
+  testDiff(hf3,hf1,"Flat CLHEP-ROOT");
+  testDiff(hf4,hf1,"Flat CP11-ROOT");
 
   // Poisson 
   std::cout << std::endl; 
 
-  double mu = 100; 
+  double mu = 90; 
   xmin = std::floor(std::max(0.0,mu-5*std::sqrt(mu) ) );
   xmax = std::floor( mu+5*std::sqrt(mu) );
   nch = std::min( int(xmax-xmin),1000);
@@ -725,6 +791,12 @@ int testRandomDist(int nevt = 0) {
   TH1D hp6("hp6","PoissonT CLHEP",nch,xmin,xmax);
   testPoissonCLHEP(crpT,mu,hp6);
 #endif
+//cp11
+#if __cplusplus >= 201103 
+  TH1D hp7("hp7","Poisson CP11",nch,xmin,xmax);
+  testPoisson(sr,mu,hp7);
+#endif
+
   //testPoisson2(tr,mu,h2);
   // test differences 
   testDiff(hp1,hp2,"Poisson ROOT-GSL");
@@ -733,6 +805,9 @@ int testRandomDist(int nevt = 0) {
   testDiff(hp1,hp4,"Poisson ROOT-CLHEP");
   testDiff(hp1,hp5,"PoissonQ ROOT-CLHEP");
   testDiff(hp1,hp6,"PoissonT ROOT-CLHEP");
+#endif
+#if __cplusplus >= 201103 
+  testDiff(hp1,hp7,"Poisson  ROOT-CPP11");
 #endif
 
   // Gaussian
@@ -758,6 +833,11 @@ int testRandomDist(int nevt = 0) {
   TH1D hg6("hg6","Gauss CLHEP",nch,xmin,xmax);
   testGausCLHEP(crgT,mu,sqrt(mu),hg6);
 #endif
+//cp11
+#if __cplusplus >= 201103 
+  TH1D hg7("hg7","Gauss CP11",nch,xmin,xmax);
+  testGaus(sr,mu,sqrt(mu),hg7);
+#endif
 
 
   testDiff(hg1,hg2,"Gaussian ROOT-GSL");
@@ -766,6 +846,9 @@ int testRandomDist(int nevt = 0) {
   testDiff(hg1,hg4,"Gaussian ROOT-CLHEP");
   testDiff(hg1,hg5,"GaussianQ ROOT-CLHEP");
   testDiff(hg1,hg6,"GaussianT ROOT-CLHEP");
+#endif
+#if __cplusplus >= 201103 
+  testDiff(hg1,hg7,"Gaussian  ROOT-CPP11");
 #endif
 
   // Landau
@@ -793,7 +876,7 @@ int testRandomDist(int nevt = 0) {
   std::cout << std::endl; 
 
   int ntot = 100;
-  double p =0.1;
+  double p =0.3;
   xmin = 0;
   xmax = ntot+1;
   nch = std::min(1000,ntot+1);
