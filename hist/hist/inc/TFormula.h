@@ -190,10 +190,14 @@ public:
    void           SetParameter(Int_t param, Double_t value);
    void           SetParameters(const Double_t *params);
    //void           SetParameters(const pair<TString,Double_t> *params, const Int_t size);
+   template<typename... Args>
+   void           SetMultipleParameters(Args... args);
    void           SetParameters(Double_t p0,Double_t p1,Double_t p2=0,Double_t p3=0,Double_t p4=0,
                                      Double_t p5=0,Double_t p6=0,Double_t p7=0,Double_t p8=0,
                                      Double_t p9=0,Double_t p10=0); // *MENU*
    void           SetParName(Int_t ipar, const char *name);
+   template<typename... Args>
+   void           SetMultipleParNames(Args... args);
    void           SetParNames(const char *name0="p0",const char *name1="p1",const char
                              *name2="p2",const char *name3="p3",const char
                              *name4="p4", const char *name5="p5",const char *name6="p6",const char *name7="p7",const char

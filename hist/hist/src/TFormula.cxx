@@ -136,6 +136,22 @@ End_Html
    
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
+namespace detail
+{
+template <bool ...>
+struct all_true;
+
+template<>
+struct all_true<> : std::true_type{};
+
+template<bool... Conds>
+struct all_true<false, Conds...> : std::false_type{};
+
+template<bool... Conds>
+struct all_true<true, Conds...> : all_true<Conds...>{};
+}
+
+
 // prefix used for function name passed to Cling
 static const TString gNamePrefix = "T__";
 // function index number used to append in cling name to avoid a clash
@@ -2170,6 +2186,18 @@ void TFormula::SetParameters(const Double_t *params)
    // apart if the users has defined explicitly the parameter names 
    DoSetParameters(params,fNpar);
 }
+
+template <typename... Args>
+void TFormula::SetMultipleParameters(Args... args)
+{
+    static_assert(detail::all_true<std::is_same<Args,Double_t>::value...>::value, "All parameters should be of type Double_t");
+    std::vector<Double_t> params = { args... };
+    for(int i = 0; i < (int)params.size(); ++i)
+    {
+        if(fNpar >= i+1) SetParameter(i, params[i]);
+    }
+}
+
 void TFormula::SetParameters(Double_t p0,Double_t p1,Double_t p2,Double_t p3,Double_t p4,
                    Double_t p5,Double_t p6,Double_t p7,Double_t p8,
                    Double_t p9,Double_t p10)
@@ -2177,17 +2205,7 @@ void TFormula::SetParameters(Double_t p0,Double_t p1,Double_t p2,Double_t p3,Dou
    // Set a list of parameters.
    // The order is by default the aphabetic order given to the parameters
    // apart if the users has defined explicitly the parameter names 
-   if(fNpar >= 1) SetParameter(0,p0);
-   if(fNpar >= 2) SetParameter(1,p1);
-   if(fNpar >= 3) SetParameter(2,p2);
-   if(fNpar >= 4) SetParameter(3,p3);
-   if(fNpar >= 5) SetParameter(4,p4);
-   if(fNpar >= 6) SetParameter(5,p5);
-   if(fNpar >= 7) SetParameter(6,p6);
-   if(fNpar >= 8) SetParameter(7,p7);
-   if(fNpar >= 9) SetParameter(8,p8);
-   if(fNpar >= 10) SetParameter(9,p9);
-   if(fNpar >= 11) SetParameter(10,p10);
+   SetMultipleParameters(p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
 }
 void TFormula::SetParameter(Int_t param, Double_t value)
 {
@@ -2200,21 +2218,24 @@ void TFormula::SetParameter(Int_t param, Double_t value)
    // TString name = TString::Format("%d",param);
    // SetParameter(name,value);
 }
+
+template<typename... Args>
+void TFormula::SetMultipleParNames(Args... args)
+{
+    static_assert(detail::all_true<std::is_same<Args,const char*>::value...>::value,
+                  "All parameters should be of type const char*");
+    std::vector<const char*> params = { args... };
+    for(int i = 0; i < (int)params.size(); ++i)
+    {
+        if(fNpar >= i+1) SetParName(i, params[i]);
+    }
+}
+
 void TFormula::SetParNames(const char *name0,const char *name1,const char *name2,const char *name3,
                  const char *name4, const char *name5,const char *name6,const char *name7,
                  const char *name8,const char *name9,const char *name10)
 {
-  if(fNpar >= 1) SetParName(0,name0);
-  if(fNpar >= 2) SetParName(1,name1);
-  if(fNpar >= 3) SetParName(2,name2);
-  if(fNpar >= 4) SetParName(3,name3);
-  if(fNpar >= 5) SetParName(4,name4);
-  if(fNpar >= 6) SetParName(5,name5);
-  if(fNpar >= 7) SetParName(6,name6);
-  if(fNpar >= 8) SetParName(7,name7);
-  if(fNpar >= 9) SetParName(8,name8);
-  if(fNpar >= 10) SetParName(9,name9);
-  if(fNpar >= 11) SetParName(10,name10);
+    SetMultipleParNames(name0, name1, name2, name3, name4, name5, name6, name7, name8, name9, name10);
 }
 void TFormula::SetParName(Int_t ipar, const char * name)
 {
