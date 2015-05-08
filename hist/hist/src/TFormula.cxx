@@ -2188,10 +2188,11 @@ void TFormula::SetParameters(const Double_t *params)
 }
 
 template <typename... Args>
-void TFormula::SetMultipleParameters(Args... args)
+void TFormula::SetMultipleParameters(Args&&... args)
 {
-    static_assert(detail::all_true<std::is_same<Args,Double_t>::value...>::value, "All parameters should be of type Double_t");
-    std::vector<Double_t> params = { args... };
+    static_assert(detail::all_true<std::is_same<typename std::remove_reference<Args>::type,Double_t>::value...>::value,
+                  "All parameters should be of type Double_t");
+    std::vector<Double_t> params = { std::forward<Double_t>(args)... };
     for(int i = 0; i < (int)params.size(); ++i)
     {
         if(fNpar >= i+1) SetParameter(i, params[i]);
@@ -2220,11 +2221,11 @@ void TFormula::SetParameter(Int_t param, Double_t value)
 }
 
 template<typename... Args>
-void TFormula::SetMultipleParNames(Args... args)
+void TFormula::SetMultipleParNames(Args&&... args)
 {
-    static_assert(detail::all_true<std::is_same<Args,const char*>::value...>::value,
+    static_assert(detail::all_true<std::is_same<typename std::remove_reference<Args>::type,const char*>::value...>::value,
                   "All parameters should be of type const char*");
-    std::vector<const char*> params = { args... };
+    std::vector<const char*> params = { std::forward<const char*>(args)... };
     for(int i = 0; i < (int)params.size(); ++i)
     {
         if(fNpar >= i+1) SetParName(i, params[i]);
