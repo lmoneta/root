@@ -16,8 +16,12 @@
 #include<RExports.h>
 #endif
 
-#ifndef ROOT_R_TRObjectProxy
-#include<TRObjectProxy.h>
+#ifndef ROOT_R_TRObject
+#include<TRObject.h>
+#endif
+
+#ifndef ROOT_R_TRFunctionImport
+#include<TRFunctionImport.h>
 #endif
 
 //________________________________________________________________________________________________________
@@ -61,19 +65,24 @@ public:
             if(found) fDf[fName.Data()]=var;
             else
             {
-                Rcpp::List nDf(size+1);
-                Rcpp::CharacterVector nnames(size+1);
-                for(i=0; i<size; i++) {
-                    nDf[i] = fDf[i] ;
-                    nnames[i] = names[i];
+                if(size==0)
+                {
+                    fDf=Rcpp::DataFrame::create(ROOT::R::Label[fName.Data()]=var);
+                }else
+                {
+                    Rcpp::List nDf(size+1);
+                    Rcpp::CharacterVector nnames(size+1);
+                    for(i=0; i<size; i++) {
+                        nDf[i] = fDf[i] ;
+                        nnames[i] = names[i];
+                    }
+                    nDf[size]=var;
+                    nnames[size]=fName.Data();
+                    nDf.attr("class") = fDf.attr("class") ;
+                    nDf.attr("row.names") = fDf.attr("row.names") ;
+                    nDf.attr("names") = nnames ;
+                    fDf=nDf;
                 }
-                nDf[size]=var;
-                nnames[size]=fName.Data();
-
-                nDf.attr("class") = fDf.attr("class") ;
-                nDf.attr("row.names") = fDf.attr("row.names") ;
-                nDf.attr("names") = nnames ;
-                fDf=nDf;
             }
             return *this;
         }
@@ -166,8 +175,10 @@ public:
     };
 
     TRDataFrame();
+    TRDataFrame(SEXP obj){df=Rcpp::as<Rcpp::DataFrame>(obj);}
     TRDataFrame(const TRDataFrame &_df);
     TRDataFrame(const Rcpp::DataFrame &_df):df(_df){};
+    
 #include <TRDataFrame__ctors.h>
     Binding operator[](const TString &name);
     
@@ -179,8 +190,33 @@ public:
             df=obj.df;
             return *this;
          }
+    TRDataFrame& operator=(SEXP obj) {
+            df=Rcpp::as<Rcpp::DataFrame>(obj);
+            return *this;
+    }
+    
     int GetNcols(){return df.size();}
     int GetNrows(){return df.nrows();}
+    TVectorString GetColNames()
+    {
+            Rcpp::CharacterVector names=df.attr("names");
+            TVectorString rnames(GetNcols());
+            for(int i=0;i<GetNcols();i++)rnames[i]=names[i];
+            return rnames;
+    }
+    
+    template<class T> TMatrixT<T> AsMatrix()
+    {
+        TRFunctionImport asMatrix("as.matrix");
+        return Rcpp::as<TMatrixT<T> >(asMatrix(df));
+    }
+    
+    void Print(TString label="")
+    {
+        TRFunctionImport print("print");
+        if(label=="") print(df);
+        else print(df[label.Data()]);
+    }
     ClassDef(TRDataFrame, 0) //
 };
 }

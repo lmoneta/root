@@ -12,16 +12,20 @@
 #ifndef ROOT_R_TRInterface
 #define ROOT_R_TRInterface
 
-#ifndef ROOT_R_TRObjectProxy
-#include<TRObjectProxy.h>
+#ifndef ROOT_R_TRObject
+#include<TRObject.h>
 #endif
 
 #ifndef ROOT_R_TRDataFrame
 #include<TRDataFrame.h>
 #endif
 
-#ifndef ROOT_R_TFunction
-#include<TRFunction.h>
+#ifndef ROOT_R_TFunctionExport
+#include<TRFunctionExport.h>
+#endif
+
+#ifndef ROOT_R_TFunctionImport
+#include<TRFunctionImport.h>
 #endif
 
 #ifndef ROOT_TThread
@@ -70,15 +74,25 @@ namespace ROOT {
                fInterface->Assign<T>(data, fName);
                return *this;
             }
-            Binding &operator=(const TRFunction &fun) {
+            Binding &operator=(const TRFunctionExport &fun) {
                //The method assign is not a template for a function
                fInterface->Assign(fun, fName);
                return *this;
             }
 
-            Binding &operator<<(const TRFunction &fun) {
+            Binding &operator<<(const TRFunctionExport &fun) {
                //The method assign is not a template for a function
                fInterface->Assign(fun, fName);
+               return *this;
+            }
+            
+            Binding &operator=(const TRDataFrame &df) {
+               fInterface->Assign(df, fName);
+               return *this;
+            }
+            
+            Binding &operator<<(const TRDataFrame &df) {
+               fInterface->Assign(df, fName);
                return *this;
             }
 
@@ -106,11 +120,11 @@ namespace ROOT {
          ~TRInterface();
 
          void SetVerbose(Bool_t status);
-         Int_t Eval(const TString &code, TRObjectProxy  &ans); // parse line, returns in ans; error code rc
+         Int_t Eval(const TString &code, TRObject  &ans); // parse line, returns in ans; error code rc
          
          void  Execute(const TString &code);
 
-         TRObjectProxy Eval(const TString &code);
+         TRObject Eval(const TString &code);
 
          static void LoadModule(TString name);
 
@@ -121,7 +135,8 @@ namespace ROOT {
             // the TString's name is the name of the variable in the R enviroment.
             fR->assign<T>(var, name.Data());
          }
-         void Assign(const TRFunction &fun, const TString &name);
+         void Assign(const TRFunctionExport &fun, const TString &name);
+         void Assign(const TRDataFrame &df, const TString &name);
 
          void Interactive();
          void ProcessEventsLoop();

@@ -24,8 +24,8 @@
 #include<TVector.h>
 #endif
 
-#ifndef ROOT_TMatrix
-#include<TMatrix.h>
+#ifndef ROOT_TMatrixT
+#include<TMatrixT.h>
 #endif
 
 #ifndef ROOT_TArrayD
@@ -61,12 +61,17 @@
 #endif
 
 
+//Some useful typedefs
+typedef std::vector<TString> TVectorString;
+
+
 #include<RcppCommon.h>
 namespace ROOT {
    namespace R {
-      class TRFunction;
+      class TRFunctionExport;
+      class TRFunctionImport;
       class TRDataFrame;
-      class TRObjectProxy;
+      class TRObject;
    }
 }
 
@@ -99,8 +104,13 @@ namespace Rcpp {
    template<> SEXP wrap(const ROOT::R::TRDataFrame &o);
    template<> ROOT::R::TRDataFrame as(SEXP) ;
    
-   template<> SEXP wrap(const ROOT::R::TRObjectProxy &o);
-   template<> ROOT::R::TRObjectProxy as(SEXP) ;
+//TRObject
+   template<> SEXP wrap(const ROOT::R::TRObject &o);
+   template<> ROOT::R::TRObject as(SEXP) ;
+
+//TRFunctionImport
+   template<> SEXP wrap(const ROOT::R::TRFunctionImport &o);
+   template<> ROOT::R::TRFunctionImport as(SEXP) ;
 
    template<class T, size_t i> std::array<T, i> as(SEXP &obj)
    {
