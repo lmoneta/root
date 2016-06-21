@@ -13,6 +13,8 @@
 #ifndef ROOT_Math_TRandomEngine
 #define ROOT_Math_TRandomEngine
 
+#include <vector>
+
 
 
 namespace ROOT {
@@ -42,6 +44,13 @@ namespace ROOT {
 
          virtual ~LCGEngine() {}
 
+         static int Size() { return 1; }
+         int Counter() const { return 0; } // not used
+
+         void SetState(const std::vector<unsigned int> & state) { SetSeed(state[0]); }
+
+         void GetState(std::vector<unsigned int> & state) const {state[0] = fSeed;  }
+
          void SetSeed(unsigned int seed) { fSeed = seed; }
          
          virtual double Rndm() {
@@ -56,6 +65,11 @@ namespace ROOT {
          }
          inline double operator() () { return Rndm_impl(); }
 
+         /// maximum integer taht can be generated
+         static unsigned int MaxInt() {
+            return 0xffffffff; // 2^32 -1
+         }
+         
          unsigned int IntRndm() {
             fSeed = (1103515245 * fSeed + 12345) & 0x7fffffffUL;
             return fSeed; 

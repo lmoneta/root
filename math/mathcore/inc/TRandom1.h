@@ -26,8 +26,16 @@
 #include "TRandom.h"
 #endif
 
+namespace ROOT{
+   namespace Math{
+      class RanLuxEngine;
+   }
+}
+
 class TRandom1 : public TRandom {
 
+   friend class ROOT::Math::RanLuxEngine;
+   
 protected:
   Int_t           fNskip;
   Int_t           fLuxury;

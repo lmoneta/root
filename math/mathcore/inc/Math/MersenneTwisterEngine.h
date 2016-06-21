@@ -18,6 +18,7 @@
 #endif
 
 #include <stdint.h>
+#include <vector>
 
 namespace ROOT {
 
@@ -57,23 +58,42 @@ namespace ROOT {
 
          virtual ~MersenneTwisterEngine() {}
 
+         static int Size() { return 624; }
+
          void SetSeed(unsigned int seed);
 
+         void SetState(const std::vector<uint32_t> & state) {
+            for (unsigned int i = 0; i < 624; ++i)
+               fMt[i] = state[i];
+            fCount624 = 624; // to make sure we re-iterate on the new state
+         }
+         void GetState(std::vector<uint32_t> & state) {
+            state.resize(624);
+            for (unsigned int i = 0; i < 624; ++i)
+               state[i] = fMt[i];
+         }
 
          virtual double Rndm() {
             return Rndm_impl();
          }
          inline double operator() () { return Rndm_impl(); }
 
+         /// maximum integer taht can be generated
+         static unsigned int MaxInt() { return 0xffffffff; }  //  2^32 -1 
+         
          unsigned int IntRndm() {
             // fSeed = (1103515245 * fSeed + 12345) & 0x7fffffffUL;
             // return fSeed;
-            return (int) Rndm_impl(); // t.b. impl
+            return IntRndm_impl();
          }
+
+         int Counter() const { return fCount624; }
 
       private:
 
          double Rndm_impl();
+
+         uint32_t IntRndm_impl(); 
 
          
          uint32_t  fMt[624];

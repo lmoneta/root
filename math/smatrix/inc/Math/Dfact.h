@@ -84,11 +84,15 @@ static bool Dfact(MatRepStd<T,n,idim>& rhs, T& det) {
       const unsigned int jj = j + ji;
 
       k = j;
-      p = std::abs(rhs[jj + arrayOffset]);
+      p = rhs[jj + arrayOffset];
+      if (p < 0) p = -p;  
+//      p = std::abs(rhs[jj + arrayOffset]);
 
       if (j != n) {
          for (i = j + 1; i <= n; ++i) {
-            q = std::abs(rhs[i + ji + arrayOffset]);
+      //q = std::abs(rhs[i + ji + arrayOffset]);
+            q = (rhs[i + ji + arrayOffset]);
+            if (q < 0) q = -q; 
             if (q > p) {
                k = i;
                p = q;

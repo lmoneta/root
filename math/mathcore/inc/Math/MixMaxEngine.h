@@ -14,6 +14,7 @@
 #define ROOT_Math_MixMaxEngine
 
 #include <cstdint>
+#include <vector>
 
 #ifndef ROOT_Math_TRandomEngine
 #include "Math/TRandomEngine.h"
@@ -62,11 +63,27 @@ namespace ROOT {
 
          virtual ~MixMaxEngine();
 
+         /// get the state of the generator
+         void GetState(std::vector<uint64_t> & state) const;
+
+         /// Get the counter (between 0 and Size-1)
+         int Counter() const;
+
+         /// Get the size of the generator
+         static int Size();
+
          /// set the generator seed 
          void  SetSeed(unsigned int seed);
 
          /// set the generator seed using a 64 bits integer
          void SetSeed64(uint64_t seed);
+
+         ///set the full initial generator state and warm up generator by doing some iterations
+         void SetState(const std::vector<uint64_t> & state, bool warmup = true);
+
+         void SetCounter(int val);
+         
+         static void SetSpecialNumber(uint64_t val); 
 
          // generate a random number (virtual interface)
          virtual double Rndm() { return Rndm_impl(); }
@@ -77,6 +94,9 @@ namespace ROOT {
          /// generate an array of random numbers 
          void RndmArray (int n, double * array); 
 
+         /// maximum integer that can be generated. For MIXMAX is 2^61-1         
+         static uint64_t MaxInt() { return  0x1fffffffffffffff; } //  2^61 -1 
+
          /// generate a 64  bit integer number
          uint64_t IntRndm();
 
@@ -86,6 +106,8 @@ namespace ROOT {
          double Rndm_impl();
 
          rng_state_t * fRngState;  // mix-max generator state
+
+         
          
       };
 

@@ -16,8 +16,8 @@
 //
 #include "Math/MixMaxEngine.h"
 
-#include "mixmax.h"
 
+#include "mixmax.h"
 
 namespace ROOT {
 namespace Math {
@@ -38,12 +38,41 @@ namespace Math {
 
    void MixMaxEngine::SetSeed(unsigned int seed) { 
       seed_spbox(fRngState, seed);
-      iterate(fRngState);                    
+      //iterate(fRngState);                    
    }
 
    void MixMaxEngine::SetSeed64(uint64_t seed) { 
       seed_spbox(fRngState, seed);
-      iterate(fRngState);                    
+      //iterate(fRngState);                    
+   }
+
+   void MixMaxEngine::SetState(const std::vector<uint64_t> & state, bool warmup) {
+      if (fRngState) rng_free(fRngState);
+      fRngState = rng_copy(const_cast<uint64_t*>(state.data()) );
+      if (warmup) iterate(fRngState); 
+   }
+
+   void MixMaxEngine::GetState(std::vector<uint64_t> & state) const {
+      int n =  rng_get_N(); 
+      state.resize(n);
+      for (int i = 0; i < n; ++i)
+         state[i] = fRngState->V[i];
+   }
+
+   int MixMaxEngine::Size()  {
+      return rng_get_N(); 
+   }
+
+   int MixMaxEngine::Counter() const {
+      return fRngState->counter; 
+   }
+
+   void MixMaxEngine::SetCounter(int val) {
+      fRngState->counter = val; 
+   }
+
+   void MixMaxEngine::SetSpecialNumber(uint64_t val) {
+      set_special_number(val); 
    }
 
    // unsigned int MixMaxEngine::GetSeed() const { 

@@ -37,6 +37,46 @@
 #include "mixmax.h"
 
 
+#if (N==256)
+#define SPECIALMUL 0
+//#define SPECIAL 487013230256099064ULL // s=487013230256099064, m=1 -- good old MIXMAX
+//#define SPECIAL 487013230256099063ULL // s=487013230256099064, m=1 -- good old MIXMAX
+#define SPECIAL special_number
+#define MOD_MULSPEC(k) fmodmulM61( 0, SPECIAL , (k) );
+    
+#elif (N==17)
+#define SPECIALMUL 36 // m=2^37+1
+
+#elif (N==8)
+#define SPECIALMUL 53 // m=2^53+1
+
+#elif (N==40)
+#define SPECIALMUL 42 // m=2^42+1
+
+#elif (N==96)
+#define SPECIALMUL 55 // m=2^55+1
+
+#elif (N==64)
+#define SPECIALMUL 55 // m=2^55 (!!!) and m=2^37+2
+    
+#elif (N==120)
+#define SPECIALMUL 51   // m=2^51+1 and a SPECIAL=+1 (!!!)
+#define SPECIAL 1
+#define MOD_MULSPEC(k) (k);
+
+#else
+#warning Not a verified N, you are on your own!
+#define SPECIALMUL 58
+    
+#endif // list of interesting N for modulus M61 ends here
+
+
+
+myuint special_number = 487013230256099064ULL;
+
+void set_special_number(myuint value) { special_number = value; }
+
+
 int iterate(rng_state_t* X){
 	X->sumtot = iterate_raw_vec(X->V, X->sumtot);
 	return 0;
@@ -52,45 +92,49 @@ inline uint64_t MULWU (uint64_t k){ (void)k; return 0;}
 
 myuint iterate_raw_vec(myuint* Y, myuint sumtotOld){
 	// operates with a raw vector, uses known sum of elements of Y
-	int i;
+   int i;
+
+   printf("iterate the generator  .... %ld \n",Y[0] );
+
 #ifdef SPECIAL
-    myuint temp2 = Y[1];
+   myuint temp2 = Y[1];
 #endif
-	myuint  tempP, tempV;
-    Y[0] = ( tempV = sumtotOld);
-    myuint sumtot = Y[0], ovflow = 0; // will keep a running sum of all new elements (except Y[0])
-	tempP = 0;              // will keep a partial sum of all old elements (except Y[0])
-	for (i=1; i<N; i++){
+   myuint  tempP, tempV;
+   Y[0] = ( tempV = sumtotOld);
+   myuint sumtot = Y[0], ovflow = 0; // will keep a running sum of all new elements (except Y[0])
+   tempP = 0;              // will keep a partial sum of all old elements (except Y[0])
+   for (i=1; i<N; i++){
 #if (SPECIALMUL!=0)
-        myuint tempPO = MULWU(tempP);
-        tempP = modadd(tempP,Y[i]);
-        tempV = MOD_MERSENNE(tempV + tempP + tempPO); // edge cases ?
+      myuint tempPO = MULWU(tempP);
+      tempP = modadd(tempP,Y[i]);
+      tempV = MOD_MERSENNE(tempV + tempP + tempPO); // edge cases ?
 #else
-        tempP = modadd(tempP , Y[i]);
-        tempV = modadd(tempV , tempP);
+      tempP = modadd(tempP , Y[i]);
+      tempV = modadd(tempV , tempP);
 #endif
-        Y[i] = tempV;
-		sumtot += tempV; if (sumtot < tempV) {ovflow++;}
-	}
+      Y[i] = tempV;
+      sumtot += tempV; if (sumtot < tempV) {ovflow++;}
+   }
 #ifdef SPECIAL
-    temp2 = MOD_MULSPEC(temp2);
-    Y[2] = modadd( Y[2] , temp2 );
-    sumtot += temp2; if (sumtot < temp2) {ovflow++;}
+   temp2 = MOD_MULSPEC(temp2);
+   Y[2] = modadd( Y[2] , temp2 );
+   sumtot += temp2; if (sumtot < temp2) {ovflow++;}
 #endif
-	return MOD_MERSENNE(MOD_MERSENNE(sumtot) + (ovflow <<3 ));
+   return MOD_MERSENNE(MOD_MERSENNE(sumtot) + (ovflow <<3 ));
 }
 
 myuint get_next(rng_state_t* X) {
     int i;
     i=X->counter;
     
-    if (i<(N) ){
+    if (i<=(N-1) ){
         X->counter++;
         return X->V[i];
     }else{
+       printf("iterate raw vec\n");
         X->sumtot = iterate_raw_vec(X->V, X->sumtot);
-        X->counter=1;
-        return X->V[0];
+        X->counter=2;
+        return X->V[1];
     }
 }
 
@@ -198,7 +242,8 @@ rng_state_t*  rng_copy(myuint *Y)
 	 it will output the initial vector before any new numbers are produced, call iterate(X) if you want to advance right away */
 	rng_state_t* X = rng_alloc();
     myuint sumtot=0,ovflow=0;
-	X->counter = 2;
+    //X->counter = 2;
+	X->counter = 0;
     int i;
 	for ( i=0; i < N; i++){
 		X->V[i] = Y[i];

@@ -44,9 +44,11 @@
 #pragma link C++ class ROOT::Math::LCGEngine+;
 #pragma link C++ class ROOT::Math::MersenneTwisterEngine+;
 #pragma link C++ class ROOT::Math::MixMaxEngine+;
+#pragma link C++ class ROOT::Math::RanLuxEngine+;
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::LCGEngine>+;
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::MersenneTwisterEngine>+;
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::MixMaxEngine>+;
+#pragma link C++ class ROOT::Math::Random<ROOT::Math::RanLuxEngine>+;
 
 
 #pragma link C++ typedef ROOT::Math::RandomMixMax;

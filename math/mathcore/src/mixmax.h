@@ -40,7 +40,7 @@ extern "C" {
 #endif
 	
 #ifndef _N
-#define N 256 
+#define N 256
 /* The currently recommended N are 3150, 1260, 508, 256, 240, 88
    Since the algorithm is linear in N, the cost per number is almost independent of N.
  */
@@ -113,6 +113,7 @@ myuint apply_bigskip(myuint* Vout, myuint* Vin, myID_t clusterID, myID_t machine
 // applies a skip of some number of steps calculated from the four IDs
 void branch_inplace( rng_state_t* Xin, myID_t* ID ); // almost the same as apply_bigskip, but in-place and from a vector of IDs
 
+void set_special_number(myuint value); 
 
 #define BITS  61
 
@@ -133,37 +134,6 @@ void branch_inplace( rng_state_t* Xin, myID_t* ID ); // almost the same as apply
 
 
 // the charpoly is irreducible for the combinations of N and SPECIAL and has maximal period for N=508, 256, half period for 1260, and 1/12 period for 3150
-
-#if (N==256)
-#define SPECIALMUL 0
-#define SPECIAL 487013230256099064ULL // s=487013230256099064, m=1 -- good old MIXMAX
-#define MOD_MULSPEC(k) fmodmulM61( 0, SPECIAL , (k) );
-    
-#elif (N==17)
-#define SPECIALMUL 36 // m=2^37+1
-
-#elif (N==8)
-#define SPECIALMUL 53 // m=2^53+1
-
-#elif (N==40)
-#define SPECIALMUL 42 // m=2^42+1
-
-#elif (N==96)
-#define SPECIALMUL 55 // m=2^55+1
-
-#elif (N==64)
-#define SPECIALMUL 55 // m=2^55 (!!!) and m=2^37+2
-    
-#elif (N==120)
-#define SPECIALMUL 51   // m=2^51+1 and a SPECIAL=+1 (!!!)
-#define SPECIAL 1
-#define MOD_MULSPEC(k) (k);
-
-#else
-#warning Not a verified N, you are on your own!
-#define SPECIALMUL 58
-    
-#endif // list of interesting N for modulus M61 ends here
 
 
 #ifndef __MIXMAX_C // c++ can put code into header files, why cant we? (with the inline declaration, should be safe from duplicate-symbol error)
