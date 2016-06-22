@@ -68,12 +68,14 @@ namespace ROOT {
          unsigned int IntRndm() {
             // fSeed = (1103515245 * fSeed + 12345) & 0x7fffffffUL;
             // return fSeed;
-            return (int) Rndm_impl(); // t.b. impl
+            return Int_rndm_impl();
          }
 
-      private:
+      protected:
 
-         double Rndm_impl();
+         uint32_t Int_rndm_impl();
+
+         double Rndm_impl(); 
 
          
          uint32_t  fMt[624];

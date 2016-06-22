@@ -61,7 +61,7 @@ namespace ROOT {
             return fSeed; 
          }
 
-      private:
+      protected:
          unsigned int fSeed; 
       };
       
