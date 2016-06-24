@@ -92,6 +92,10 @@ namespace Math {
       fRngState->counter = val; 
    }
 
+   void MixMaxEngine::Iterate() {
+      iterate(fRngState);
+   }
+
    // void MixMaxEngine::SetSpecialNumber(uint64_t /* val */ ) {
    //    //set_special_number(val); 
    // }

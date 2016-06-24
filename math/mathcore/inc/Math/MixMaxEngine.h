@@ -117,6 +117,9 @@ namespace ROOT {
          /// generate a 64  bit integer number
          uint64_t IntRndm();
 
+         /// iterate the internal state
+         void Iterate(); 
+
       private:
 
          /// implementation function to generrate the random number
