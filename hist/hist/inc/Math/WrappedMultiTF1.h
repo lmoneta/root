@@ -133,7 +133,7 @@ public:
    
    
 
-private:
+protected:
 
    /// evaluate function passing coordinates x and vector of parameters
    double DoEvalPar (const double * x, const double * p ) const {
@@ -154,7 +154,7 @@ private:
    /// evaluate the partial derivative with respect to the parameter
    double DoParameterDerivative(const double * x, const double * p, unsigned int ipar) const;
 
-
+private:
    bool fLinear;                 // flag for linear functions
    bool fPolynomial;             // flag for polynomial functions
    bool fOwnFunc;                 // flag to indicate we own the TF1 function pointer
@@ -165,7 +165,66 @@ private:
    static double fgEps;          // epsilon used in derivative calculation h ~ eps |p|
 };
 
-   } // end namespace Fit
+template<class Backend>
+class WrappedMultiTF1Templ: public WrappedMultiTF1, public IParametricFunctionMultiDimTempl<Backend>{
+public:
+   WrappedMultiTF1Templ (TF1 & f, unsigned int dim = 0 ):WrappedMultiTF1(f, dim){
+       this->fFunc = &f;
+   }
+    /** @name interface inherited from IParamFunction */
+
+   /// get the parameter values (return values from TF1)
+   const double * Parameters() const {
+  //return  (fParams.size() > 0) ? &fParams.front() : 0;
+      return  fFunc->GetParameters();
+   }
+
+   /// set parameter values (only the cached one in this class,leave unchanges those of TF1)
+   void SetParameters(const double * p) { 
+      //std::copy(p,p+fParams.size(),fParams.begin());
+      fFunc->SetParameters(p); 
+   } 
+
+   /// return number of parameters
+   unsigned int NPar() const {
+      // return fParams.size();
+      return fFunc->GetNpar(); 
+   }
+   
+   typename Backend::Double_v operator() (const typename Backend::Double_v * x, const double *  p ) const {
+      return DoEvalParVec(x, p);
+   }
+   
+private:
+   /// evaluate function passing coordinates x and vector of parameters   
+   typename Backend::Double_v DoEvalParVec (const typename Backend::Double_v * x, const double * p ) const {
+      return fFunc->EvalParVec(x,p);
+   }
+   
+   /// evaluate function using the cached parameter values (of TF1)
+   /// re-implement for better efficiency
+   typename Backend::Double_v DoEvalVec (const typename Backend::Double_v * x) const { 
+      return fFunc->EvalParVec(x, 0 ); 
+   }
+   
+   /// evaluate function passing coordinates x and vector of parameters
+   double DoEvalPar (const double * x, const double * p ) const {
+      if (fFunc->GetMethodCall() )  fFunc->InitArgs(x,p);  // needed for interpreted functions
+      return fFunc->EvalPar(x,p);
+   }
+
+   /// evaluate function using the cached parameter values (of TF1)
+   /// re-implement for better efficiency
+   double DoEval (const double* x) const { 
+      // no need to call InitArg for interpreted functions (done in ctor)
+
+      //const double * p = (fParams.size() > 0) ? &fParams.front() : 0;
+      return fFunc->EvalPar(x, 0 ); 
+   }
+   
+    TF1 * fFunc;                   // pointer to ROOT function
+};
+   } // end namespace Math
 
 } // end namespace ROOT
 

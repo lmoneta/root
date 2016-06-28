@@ -129,7 +129,7 @@ public:
    using BaseFunc::operator();
 
 
-private:
+protected:
 
    /**
       Implementation of the evaluation function using the x values and the parameters.
@@ -143,8 +143,40 @@ private:
    virtual double DoEval(const double *x) const {
       return DoEvalPar( x, Parameters() );
    }
-
 };
+
+//___________________________________________________________________
+/**
+   Specialized IParamFunction interface (abstract class) for SIMD vectorized parametric functions
+   templated on the backend used.
+   @ingroup  ParamFunc
+*/
+
+template<class Backend>
+class IParametricFunctionMultiDimTempl: virtual public IParametricFunctionMultiDim {
+ public:
+     typename Backend::Double_v operator() (const typename Backend::Double_v * x, const double *  p ) const {
+      return DoEvalParVec(x, p);
+   }
+
+   using BaseFunc::operator();
+
+private:
+
+   /**
+      Implementation of the evaluation function using the x values and the parameters.
+      Must be implemented by derived classes
+   */
+   virtual typename Backend::Double_v DoEvalParVec(const typename Backend::Double_v * x, const double * p) const = 0;
+
+   /**
+      Implement the ROOT::Math::IBaseFunctionMultiDim interface DoEval(x) using the cached parameter values
+   */
+   virtual typename Backend::Double_v DoEvalVec(const typename Backend::Double_v *x) const {
+      return DoEvalParVec( x, Parameters() );
+   }
+};
+
 
 //___________________________________________________________________
 /**
@@ -282,6 +314,9 @@ private:
 
 
 };
+
+template<class T>
+class IParametricGradFunctionMultiDimTempl:public IParametricGradFunctionMultiDim, public IParametricFunctionMultiDimTempl<T>{};
 
 //_______________________________________________________________________________
 /**

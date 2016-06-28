@@ -89,7 +89,7 @@ public:
       return fParameters.data();
    }
    const std::vector<double> & ParamsVec() const { return fParameters; }
-   
+
    Int_t GetParNumber(const char * name) const;
 
    const char *GetParName(Int_t iparam) const {
@@ -135,8 +135,8 @@ private:
 };
 
 namespace ROOT {
-   namespace Internal { 
-      /// Internal class used by TF1 for defining 
+   namespace Internal {
+      /// Internal class used by TF1 for defining
       /// template specialization for different TF1 constructors
       template<class Func>
       struct TF1Builder {
@@ -152,38 +152,50 @@ class TF1 : public TNamed, public TAttLine, public TAttFill, public TAttMarker {
    friend struct ROOT::Internal::TF1Builder;
 
 protected:
-   Double_t    fXmin;        //Lower bounds for the range
-   Double_t    fXmax;        //Upper bounds for the range
-   Int_t       fNpar;        //Number of parameters
-   Int_t       fNdim;        //Function dimension
-   Int_t       fNpx;         //Number of points used for the graphical representation
-   Int_t       fType;        //(=0 for standard functions, 1 if pointer to function)
-   Int_t       fNpfits;      //Number of points used in the fit
-   Int_t       fNDF;         //Number of degrees of freedom in the fit
-   Double_t    fChisquare;   //Function fit chisquare
-   Double_t    fMinimum;     //Minimum value for plotting
-   Double_t    fMaximum;     //Maximum value for plotting
-   std::vector<Double_t>    fParErrors;  //Array of errors of the fNpar parameters
-   std::vector<Double_t>    fParMin;     //Array of lower limits of the fNpar parameters
-   std::vector<Double_t>    fParMax;     //Array of upper limits of the fNpar parameters
-   std::vector<Double_t>    fSave;       //Array of fNsave function values
-   std::vector<Double_t>    fIntegral;   //!Integral of function binned on fNpx bins
-   std::vector<Double_t>    fAlpha;      //!Array alpha. for each bin in x the deconvolution r of fIntegral
-   std::vector<Double_t>    fBeta;       //!Array beta.  is approximated by x = alpha +beta*r *gamma*r**2
-   std::vector<Double_t>    fGamma;      //!Array gamma.
-   TObject     *fParent;     //!Parent object hooking this function (if one)
-   TH1         *fHistogram;  //!Pointer to histogram used for visualisation
-   TMethodCall *fMethodCall; //!Pointer to MethodCall in case of interpreted function
-   Bool_t      fNormalized;  //Normalization option (false by default)
-   Double_t    fNormIntegral;//Integral of the function before being normalized
-   ROOT::Math::ParamFunctor fFunctor;   //! Functor object to wrap any C++ callable object
-   TFormula    *fFormula;    //Pointer to TFormula in case when user define formula
-   TF1Parameters *fParams;   //Pointer to Function parameters object (exusts only for not-formula functions)
-
-   static Bool_t fgAbsValue;  //use absolute value of function when computing integral
-   static Bool_t fgRejectPoint;  //True if point must be rejected in a fit
-   static Bool_t fgAddToGlobList; //True if we want to register the function in the global list
-   static TF1   *fgCurrent;   //pointer to current function being processed
+ Double_t    fXmin;        //Lower bounds for the range
+ Double_t    fXmax;        //Upper bounds for the range
+ Int_t       fNpar;        //Number of parameters
+ Int_t       fNdim;        //Function dimension
+ Int_t       fNpx;         //Number of points used for the graphical representation
+ Int_t       fType;        //(=0 for standard functions, 1 if pointer to function)
+ Int_t       fNpfits;      //Number of points used in the fit
+ Int_t       fNDF;         //Number of degrees of freedom in the fit
+ Double_t    fChisquare;   //Function fit chisquare
+ Double_t    fMinimum;     //Minimum value for plotting
+ Double_t    fMaximum;     //Maximum value for plotting
+ std::vector<Double_t>    fParErrors;  //Array of errors of the fNpar parameters
+ std::vector<Double_t>    fParMin;     //Array of lower limits of the fNpar parameters
+ std::vector<Double_t>    fParMax;     //Array of upper limits of the fNpar parameters
+ std::vector<Double_t>    fSave;       //Array of fNsave function values
+ std::vector<Double_t>    fIntegral;   //!Integral of function binned on fNpx bins
+ std::vector<Double_t>    fAlpha;      //!Array alpha. for each bin in x the deconvolution r of fIntegral
+ std::vector<Double_t>    fBeta;       //!Array beta.  is approximated by x = alpha +beta*r *gamma*r**2
+ std::vector<Double_t>    fGamma;      //!Array gamma.
+ TObject     *fParent;     //!Parent object hooking this function (if one)
+ TH1         *fHistogram;  //!Pointer to histogram used for visualisation
+ TMethodCall *fMethodCall; //!Pointer to MethodCall in case of interpreted function
+ Bool_t      fNormalized;  //Normalization option (false by default)
+ Double_t    fNormIntegral;//Integral of the function before being normalized
+ ROOT::Math::ParamFunctor fFunctor;   //! Functor object to wrap any C++ callable object
+ TFormula    *fFormula;    //Pointer to TFormula in case when user define formula
+ TF1Parameters *fParams;   //Pointer to Function parameters object (exusts only for not-formula functions)
+ 
+ struct TF1FunctionPointer{};
+ 
+ template<class T>
+ struct TF1FunctionPointerImpl: TF1FunctionPointer{
+   TF1FunctionPointerImpl(std::function<T (const T * f, const Double_t *param)> *func){
+          fimpl = (std::function<T (const T * f, const Double_t *param)> *) func; 
+   };
+   std::function<T (const T * f, const Double_t *param)> *fimpl;
+ };
+ 
+ TF1FunctionPointer *fFunctp;
+ 
+ static Bool_t fgAbsValue;  //use absolute value of function when computing integral
+ static Bool_t fgRejectPoint;  //True if point must be rejected in a fit
+ static Bool_t fgAddToGlobList; //True if we want to register the function in the global list
+ static TF1   *fgCurrent;   //pointer to current function being processed
 
 
    //void CreateFromFunctor(const char *name, Int_t npar, Int_t ndim = 1);
@@ -212,7 +224,29 @@ public:
    TF1(const char *name, Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0, Int_t ndim = 1);
    TF1(const char *name, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1);
 #endif
-
+ 
+ template<class T>
+ TF1(const char *name, std::function<T (const T * func, const Double_t *param)> * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1):
+//  TF1(const char *name, (T(*)(const T*, Double_t * param)) * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1): 
+ TNamed(name,name), TAttLine(), TAttFill(), TAttMarker(),
+ fXmin(xmin), fXmax(xmax),
+ fNpar(npar), fNdim(ndim),
+ fNpx(100), fType(1),
+ fNpfits(0), fNDF(0), fChisquare(0),
+ fMinimum(-1111), fMaximum(-1111),
+ fParErrors(std::vector<Double_t>(npar)),
+ fParMin(std::vector<Double_t>(npar)),
+ fParMax(std::vector<Double_t>(npar)),
+ fParent(0), fHistogram(0),
+ fMethodCall(0),
+ fNormalized(false), fNormIntegral(0),
+ fFormula(0),
+ fParams(new TF1Parameters(npar) )
+ {
+  DoInitialize();
+  fFunctp = new TF1FunctionPointerImpl<T>(fcn);
+ }  
+ 
    // Constructors using functors (compiled mode only)
    TF1(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin = 0, Double_t xmax = 1, Int_t npar = 0,Int_t ndim = 1);
 
@@ -323,8 +357,10 @@ public:
    virtual void     DrawF1(Double_t xmin, Double_t xmax, Option_t *option="");
    virtual Double_t Eval(Double_t x, Double_t y=0, Double_t z=0, Double_t t=0) const;
    virtual Double_t EvalPar(const Double_t *x, const Double_t *params=0);
+   template<class T> T EvalParVec(const T *data, const Double_t *params=0);
    virtual Double_t operator()(Double_t x, Double_t y=0, Double_t z = 0, Double_t t = 0) const;
    virtual Double_t operator()(const Double_t *x, const Double_t *params=0);
+   template<class T> T operator()(const T *data, const Double_t *params);
    virtual void     ExecuteEvent(Int_t event, Int_t px, Int_t py);
    virtual void     FixParameter(Int_t ipar, Double_t value);
        Double_t     GetChisquare() const {return fChisquare;}
@@ -538,6 +574,15 @@ inline Double_t TF1::operator()(const Double_t *x, const Double_t *params)
       return EvalPar(x,params);
    }
 
+template<class T>
+inline T TF1::operator()(const T * data, const Double_t *params){
+      return EvalParVec(data, params);
+}
+
+template<class T>
+inline T TF1::EvalParVec(const T * data, const Double_t *params){
+    return (*((TF1FunctionPointerImpl<T> *)(fFunctp))->fimpl)( data, params);
+}
 
 inline void TF1::SetRange(Double_t xmin, Double_t,  Double_t xmax, Double_t)
    { TF1::SetRange(xmin, xmax); }

@@ -25,12 +25,21 @@ namespace ROOT {
       class IParametricGradFunctionOneDim;
       class IParametricFunctionMultiDim;
       class IParametricGradFunctionMultiDim;
-
+      template<class T>
+      class IParametricFunctionMultiDimTempl;
+      template<class T>
+      class IParametricGradFunctionMultiDimTempl;
+      
+      
       typedef IParametricFunctionOneDim        IParamFunction;
       typedef IParametricFunctionMultiDim      IParamMultiFunction;
+      template<class T>
+      using IParamMultiFunctionTempl = IParametricFunctionMultiDimTempl<T>;
 
       typedef IParametricGradFunctionOneDim        IParamGradFunction;
       typedef IParametricGradFunctionMultiDim      IParamMultiGradFunction;
+      template<class T>
+      using IParamMultiGradFunctionTempl =IParametricGradFunctionMultiDimTempl<T>;
 
 
    } // end namespace Math
