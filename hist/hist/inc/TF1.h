@@ -42,6 +42,9 @@
 #include "Math/ParamFunctor.h"
 #endif
 
+#include<iostream>
+using namespace std;
+
 class TF1;
 class TH1;
 class TAxis;
@@ -184,10 +187,8 @@ protected:
  
  template<class T>
  struct TF1FunctionPointerImpl: TF1FunctionPointer{
-   TF1FunctionPointerImpl(std::function<T (const T * f, const Double_t *param)> *func){
-          fimpl = (std::function<T (const T * f, const Double_t *param)> *) func; 
-   };
-   std::function<T (const T * f, const Double_t *param)> *fimpl;
+   TF1FunctionPointerImpl(const std::function<T (const T * f, const Double_t *param)> &&func):fimpl(func){};
+   std::function<T (const T * f, const Double_t *param)> fimpl;
  };
  
  TF1FunctionPointer *fFunctp;
@@ -226,7 +227,7 @@ public:
 #endif
  
  template<class T>
- TF1(const char *name, std::function<T (const T * func, const Double_t *param)> * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1):
+ TF1(const char *name, std::function<T (const T * data, const Double_t *param)> * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1):
 //  TF1(const char *name, (T(*)(const T*, Double_t * param)) * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1): 
  TNamed(name,name), TAttLine(), TAttFill(), TAttMarker(),
  fXmin(xmin), fXmax(xmax),
@@ -245,9 +246,34 @@ public:
  {
   DoInitialize();
   fFunctp = new TF1FunctionPointerImpl<T>(fcn);
- }  
+ }
  
-   // Constructors using functors (compiled mode only)
+ template<class T>
+ TF1(const char *name, T (*fcn)(const T* , const Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1):
+//  TF1(const char *name, (T(*)(const T*, Double_t * param)) * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1): 
+ TNamed(name,name), TAttLine(), TAttFill(), TAttMarker(),
+ fXmin(xmin), fXmax(xmax),
+ fNpar(npar), fNdim(ndim),
+ fNpx(100), fType(1),
+ fNpfits(0), fNDF(0), fChisquare(0),
+ fMinimum(-1111), fMaximum(-1111),
+ fParErrors(std::vector<Double_t>(npar)),
+ fParMin(std::vector<Double_t>(npar)),
+ fParMax(std::vector<Double_t>(npar)),
+ fParent(0), fHistogram(0),
+ fMethodCall(0),
+ fNormalized(false), fNormIntegral(0),
+ fFormula(0),
+ fParams(new TF1Parameters(npar) )
+ {
+  DoInitialize();
+//   std::function<T (const T *, const Double_t *)> *funpt(fcn);  
+  fFunctp = new TF1FunctionPointerImpl<T>(fcn);
+ }
+//  std::function<Vc_1::Vector<double, Vc_1::VectorAbi::Avx>(const Vc_1::Vector<double, Vc_1::VectorAbi::Avx>*, const double*)>
+//  std::function<Vc_1::Vector<double, Vc_1::VectorAbi::Avx>(const Vc_1::Vector<double, Vc_1::VectorAbi::Avx>*, const double*)>*
+//  std::function<Vc_1::Vector<double, Vc_1::VectorAbi::Avx>(const Vc_1::Vector<double, Vc_1::VectorAbi::Avx>*, const double*)>const TF1::TF1FunctionPointerImpl<Vc_1::Vector<double, Vc_1::VectorAbi::Avx> >&
+//    // Constructors using functors (compiled mode only)
    TF1(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin = 0, Double_t xmax = 1, Int_t npar = 0,Int_t ndim = 1);
 
    // Template constructors from any  C++ callable object,  defining  the operator() (double * , double *)
@@ -569,7 +595,6 @@ inline Double_t TF1::operator()(Double_t x, Double_t y, Double_t z, Double_t t) 
    { return Eval(x,y,z,t); }
 inline Double_t TF1::operator()(const Double_t *x, const Double_t *params)
    {
-
       if (fMethodCall) InitArgs(x,params);
       return EvalPar(x,params);
    }
@@ -581,7 +606,8 @@ inline T TF1::operator()(const T * data, const Double_t *params){
 
 template<class T>
 inline T TF1::EvalParVec(const T * data, const Double_t *params){
-    return (*((TF1FunctionPointerImpl<T> *)(fFunctp))->fimpl)( data, params);
+      auto uh = (TF1FunctionPointerImpl<T> *)(fFunctp);
+    return (uh)->fimpl( data, params);
 }
 
 inline void TF1::SetRange(Double_t xmin, Double_t,  Double_t xmax, Double_t)
