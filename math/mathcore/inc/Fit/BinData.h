@@ -18,13 +18,6 @@
 #endif
 
 
-#ifdef USE_BINPOINT_CLASS
-
-#ifndef ROOT_Fit_BinPoint
-#include "Fit/BinPoint.h"
-#endif
-
-#endif
 
 
 namespace ROOT {
@@ -115,7 +108,8 @@ public :
    /**
       constructor from external data for 3D with errors on  coordinate and value
     */
-   BinData(unsigned int n, const double * dataX, const double * dataY, const double * dataZ, const double * val, const double * ex , const double * ey , const double * ez , const double * eval   );
+   BinData(unsigned int n, const double * dataX, const double * dataY, const double * dataZ, 
+    const double * val, const double * ex , const double * ey , const double * ez , const double * eval   );
 
    /**
       copy constructors
@@ -379,57 +373,6 @@ public :
    }
 
 
-#ifdef USE_BINPOINT_CLASS
-   const BinPoint & GetPoint(unsigned int ipoint) const {
-      if (fDataVector) {
-         unsigned int j = ipoint*fPointSize;
-         const std::vector<double> & v = (fDataVector->Data());
-         const double * x = &v[j];
-         double value = v[j+fDim];
-         if (fPointSize > fDim + 2) {
-            const double * ex = &v[j+fDim+1];
-            double err = v[j + 2*fDim +1];
-            fPoint.Set(x,value,ex,err);
-         }
-         else {
-            double invError = v[j+fDim+1];
-            fPoint.Set(x,value,invError);
-         }
-
-      }
-      else {
-         double value = fDataWrapper->Value(ipoint);
-         double e = fDataWrapper->Error(ipoint);
-         if (fPointSize > fDim + 2) {
-            fPoint.Set(fDataWrapper->Coords(ipoint), value, fDataWrapper->CoordErrors(ipoint), e);
-         } else {
-            double invError = ( e != 0 ) ? 1.0/e : 0;
-            fPoint.Set(fDataWrapper->Coords(ipoint), value, invError);
-         }
-      }
-      return fPoint;
-   }
-
-
-   const BinPoint & GetPointError(unsigned int ipoint) const {
-      if (fDataVector) {
-         unsigned int j = ipoint*fPointSize;
-         const std::vector<double> & v = (fDataVector->Data());
-         const double * x = &v[j];
-         double value = v[j+fDim];
-         double invError = v[j+fDim+1];
-         fPoint.Set(x,value,invError);
-      }
-      else {
-         double value = fDataWrapper->Value(ipoint);
-         double e = fDataWrapper->Error(ipoint);
-         double invError = ( e != 0 ) ? 1.0/e : 0;
-         fPoint.Set(fDataWrapper->Coords(ipoint), value, invError);
-      }
-      return fPoint;
-   }
-#endif
-
    /**
       resize the vector to the new given npoints
       if vector does not exists is created using existing point size
@@ -529,14 +472,9 @@ private:
 
    std::vector<double> fBinEdge;  // vector containing the bin upper edge (coordinate will contain low edge)
 
+}; 
 
-#ifdef USE_BINPOINT_CLASS
-   mutable BinPoint fPoint;
-#endif
-
-};
-
-
+  
    } // end namespace Fit
 
 } // end namespace ROOT

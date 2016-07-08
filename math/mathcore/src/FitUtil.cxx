@@ -14,7 +14,6 @@
 
 #include "Fit/BinData.h"
 #include "Fit/UnBinData.h"
-//#include "Fit/BinPoint.h"
 
 #include "Math/IFunctionfwd.h"
 #include "Math/IParamFunction.h"
