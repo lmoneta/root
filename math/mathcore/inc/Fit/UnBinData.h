@@ -17,6 +17,10 @@
 #include "Fit/DataVector.h"
 #endif
 
+#ifndef ROOT_Fit_FitData
+#include "Fit/FitData.h"
+#endif
+
 #ifndef ROOT_Math_Error
 #include "Math/Error.h"
 #endif

@@ -58,69 +58,6 @@ namespace ROOT {
       };
 
 
-/**
-   Base class for all the fit data types
-
-   @ingroup FitData
- */
-
-class FitData {
-
-public:
-
-   /// construct with default option and data range
-   FitData() {}
-
-   /// dummy virtual destructor
-   virtual ~FitData() {}
-
-   /// construct passing options and default data range
-   FitData(const DataOptions & opt) :
-      fOptions(opt)
-   {}
-
-
-   /// construct passing range and default options
-   FitData(const DataRange & range) :
-      fRange(range)
-   {}
-
-   /// construct passing options and data range
-   FitData (const DataOptions & opt, const DataRange & range) :
-      fOptions(opt),
-      fRange(range)
-   {}
-
-   /**
-      access to options
-    */
-   const DataOptions & Opt() const { return fOptions; }
-   DataOptions & Opt() { return fOptions; }
-
-   /**
-      access to range
-    */
-   const DataRange & Range() const { return fRange; }
-
-   // range cannot be modified afterwards
-   // since fit method functions use all data
-
-   /**
-       define a max size to avoid allocating too large arrays
-   */
-   static unsigned int MaxSize()  {
-      return (unsigned int) (-1) / sizeof (double);
-   }
-
-
-private:
-
-      DataOptions fOptions;
-      DataRange   fRange;
-
-};
-
-
 
 /**
    class holding the fit data points. It is template on the type of point,

@@ -17,7 +17,7 @@
 namespace ROOT {
 
    namespace Fit {
-      
+
       class BinData;
       class UnBinData;
 

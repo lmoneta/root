@@ -13,11 +13,13 @@
 #ifndef ROOT_Fit_BinData
 #define ROOT_Fit_BinData
 
+#ifndef ROOT_Fit_FitData
+#include "Fit/FitData.h"
+#endif
+
 #ifndef ROOT_Fit_DataVector
 #include "Fit/DataVector.h"
 #endif
-
-
 
 
 namespace ROOT {
@@ -108,7 +110,7 @@ public :
    /**
       constructor from external data for 3D with errors on  coordinate and value
     */
-   BinData(unsigned int n, const double * dataX, const double * dataY, const double * dataZ, 
+   BinData(unsigned int n, const double * dataX, const double * dataY, const double * dataZ,
     const double * val, const double * ex , const double * ey , const double * ez , const double * eval   );
 
    /**
@@ -410,15 +412,25 @@ public :
        Return a NULL pointer  if the bin width  is not stored
    */
    const double * BinUpEdge(unsigned int icoord) const {
-      if (fBinEdge.size() == 0 || icoord*fDim > fBinEdge.size() ) return 0;
-      return &fBinEdge[ icoord * fDim];
+      if (fBinEdge.empty() || icoord > fBinEdge.front().size())
+        return 0;
+      assert( fpTmpBinEdgeVector );
+      assert( !fBinEdge.empty() );
+      assert( icoord < fMaxPoints );
+
+      for ( unsigned int i=0; i < fDim; i++ )
+      {
+        fpTmpBinEdgeVector[i] = fBinEdge[i][ icoord ];
+      }
+
+      return fpTmpBinEdgeVector;
    }
 
    /**
       query if the data store the bin edges instead of the center
    */
    bool HasBinEdges() const {
-      return fBinEdge.size() > 0 && fBinEdge.size() == fDim*fNPoints;
+      return fBinEdge.size() == fDim && fBinEdge[0].size() >0;
    }
 
    /**
@@ -429,6 +441,7 @@ public :
    */
    void AddBinUpEdge(const double * xup);
 
+   void InitBinEdge();
    /**
        retrieve the reference volume used to normalize the data when the option bin volume is set
     */
@@ -470,17 +483,13 @@ private:
    DataVector * fDataVector;  // pointer to the copied in data vector
    DataWrapper * fDataWrapper;  // pointer to the external data wrapper structure
 
-   std::vector<double> fBinEdge;  // vector containing the bin upper edge (coordinate will contain low edge)
+   std::vector< std::vector< double > > fBinEdge;  // vector containing the bin upper edge (coordinate will contain low edge)
 
-}; 
+   double* fpTmpBinEdgeVector;
+};
 
-  
    } // end namespace Fit
 
 } // end namespace ROOT
 
-
-
 #endif /* ROOT_Fit_BinData */
-
-
