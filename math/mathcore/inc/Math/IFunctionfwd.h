@@ -20,10 +20,15 @@ namespace ROOT {
 
       class IBaseFunctionOneDim;
       class IGradientFunctionOneDim;
-      class IBaseFunctionMultiDim;
+      template<class T>
+      class IBaseFunctionMultiDimTempl;
       class IGradientFunctionMultiDim;
 
-
+      template<class T>
+      using IMultiGenFunctionTempl = IBaseFunctionMultiDimTempl<T>;
+      using IBaseFunctionMultiDim = IBaseFunctionMultiDimTempl<double>;
+      using IMultiGenFunction = IMultiGenFunctionTempl<double>;
+      
       typedef IBaseFunctionOneDim        IGenFunction;
       typedef IBaseFunctionMultiDim      IMultiGenFunction;
 

@@ -77,8 +77,8 @@ public:
 
   /// construct passing options and default data range
   FitData( const DataOptions & opt, unsigned int maxpoints = 0, unsigned int dim = 1 ) :
-    fOptions(opt),
     fMaxPoints(maxpoints),
+    fOptions(opt),
     fCoords(dim),
     fCoordsPtr(dim)
   {
@@ -88,8 +88,8 @@ public:
 
   /// construct passing range and default options
   FitData( const DataRange & range, unsigned int maxpoints = 0, unsigned int dim = 1 ) :
-    fRange(range),
     fMaxPoints(maxpoints),
+    fRange(range),
     fCoords(dim),
     fCoordsPtr(dim)
   {
@@ -99,9 +99,9 @@ public:
   /// construct passing options and data range
   FitData ( const DataOptions & opt, const DataRange & range,
     unsigned int maxpoints = 0, unsigned int dim = 1 ) :
+    fMaxPoints(maxpoints),
     fOptions(opt),
     fRange(range),
-    fMaxPoints(maxpoints),
     fCoords(dim),
     fCoordsPtr(dim)
   {
@@ -130,7 +130,7 @@ public:
 protected:
   void InitCoordsVector ( )
   {
-    for( int i=0; i < fCoords.size(); i++ )
+    for( unsigned int i=0; i < fCoords.size(); i++ )
     {
       fCoords[i].resize( fMaxPoints );
       fCoordsPtr[i] = &fCoords[i].front();

@@ -1,4 +1,4 @@
-// @(#)root/hist:$Id$
+ // @(#)root/hist:$Id$
 // Author: Rene Brun   18/08/95
 
 /*************************************************************************
@@ -13,8 +13,6 @@
 #ifndef ROOT_TF1
 #define ROOT_TF1
 
-
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TF1                                                                  //
@@ -24,7 +22,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "RConfigure.h"
-
+#include <functional>
 #ifndef ROOT_TFormula
 #include "TFormula.h"
 #endif
@@ -160,7 +158,7 @@ protected:
  Int_t       fNpar;        //Number of parameters
  Int_t       fNdim;        //Function dimension
  Int_t       fNpx;         //Number of points used for the graphical representation
- Int_t       fType;        //(=0 for standard functions, 1 if pointer to function)
+ Int_t       fType;        //(=0 for standard functions, 1 if pointer to function, 3 vectorized interface)
  Int_t       fNpfits;      //Number of points used in the fit
  Int_t       fNDF;         //Number of degrees of freedom in the fit
  Double_t    fChisquare;   //Function fit chisquare
@@ -183,6 +181,8 @@ protected:
  TFormula    *fFormula;    //Pointer to TFormula in case when user define formula
  TF1Parameters *fParams;   //Pointer to Function parameters object (exusts only for not-formula functions)
  
+ public:
+ 
  struct TF1FunctionPointer{};
  
  template<class T>
@@ -191,7 +191,7 @@ protected:
    std::function<T (const T * f, const Double_t *param)> fimpl;
  };
  
- TF1FunctionPointer *fFunctp;
+ TF1FunctionPointer *fFunctp; //!Pointer to vectorized function
  
  static Bool_t fgAbsValue;  //use absolute value of function when computing integral
  static Bool_t fgRejectPoint;  //True if point must be rejected in a fit
@@ -232,7 +232,7 @@ public:
  TNamed(name,name), TAttLine(), TAttFill(), TAttMarker(),
  fXmin(xmin), fXmax(xmax),
  fNpar(npar), fNdim(ndim),
- fNpx(100), fType(1),
+ fNpx(100), fType(3),
  fNpfits(0), fNDF(0), fChisquare(0),
  fMinimum(-1111), fMaximum(-1111),
  fParErrors(std::vector<Double_t>(npar)),
@@ -254,7 +254,7 @@ public:
  TNamed(name,name), TAttLine(), TAttFill(), TAttMarker(),
  fXmin(xmin), fXmax(xmax),
  fNpar(npar), fNdim(ndim),
- fNpx(100), fType(1),
+ fNpx(100), fType(3),
  fNpfits(0), fNDF(0), fChisquare(0),
  fMinimum(-1111), fMaximum(-1111),
  fParErrors(std::vector<Double_t>(npar)),
@@ -383,6 +383,7 @@ public:
    virtual void     DrawF1(Double_t xmin, Double_t xmax, Option_t *option="");
    virtual Double_t Eval(Double_t x, Double_t y=0, Double_t z=0, Double_t t=0) const;
    virtual Double_t EvalPar(const Double_t *x, const Double_t *params=0);
+   template<class T> T EvalPar(const T *x, const Double_t *params=0);
    template<class T> T EvalParVec(const T *data, const Double_t *params=0);
    virtual Double_t operator()(Double_t x, Double_t y=0, Double_t z = 0, Double_t t = 0) const;
    virtual Double_t operator()(const Double_t *x, const Double_t *params=0);
@@ -567,7 +568,7 @@ namespace ROOT {
 
       template<class Func>
       void TF1Builder<Func>::Build(TF1 * f, Func func) {
-         f->fType = 1; 
+         f->fType = 1;
          f->fFunctor = ROOT::Math::ParamFunctor(func);
          f->fParams = new TF1Parameters(f->fNpar);
       }
@@ -576,7 +577,7 @@ namespace ROOT {
       template<>
       struct TF1Builder<const char *> {
          static void Build(TF1 * f, const char * formula) {
-            f->fType = 0; 
+            f->fType = 0;
             f->fFormula = new TFormula("tf1lambda",formula,f->fNdim,f->fNpar,false);
             TString formulaExpression(formula);
             Ssiz_t first = formulaExpression.Index("return")+7;
@@ -587,12 +588,10 @@ namespace ROOT {
       };
    }
 }
-   
-
-
 
 inline Double_t TF1::operator()(Double_t x, Double_t y, Double_t z, Double_t t) const
    { return Eval(x,y,z,t); }
+
 inline Double_t TF1::operator()(const Double_t *x, const Double_t *params)
    {
       if (fMethodCall) InitArgs(x,params);
@@ -605,9 +604,16 @@ inline T TF1::operator()(const T * data, const Double_t *params){
 }
 
 template<class T>
+T TF1::EvalPar(const T *x, const Double_t *params)
+{
+   if (fType == 3) {
+      return EvalParVec( x, params);
+   }
+}
+
+template<class T>
 inline T TF1::EvalParVec(const T * data, const Double_t *params){
-      auto uh = (TF1FunctionPointerImpl<T> *)(fFunctp);
-    return (uh)->fimpl( data, params);
+    return ((TF1FunctionPointerImpl<T> *)(fFunctp))->fimpl( data, params);
 }
 
 inline void TF1::SetRange(Double_t xmin, Double_t,  Double_t xmax, Double_t)
@@ -627,8 +633,5 @@ void TF1::SetFunction( PtrObj& p, MemFn memFn )   {
    fType = 1;
    fFunctor = ROOT::Math::ParamFunctor(p,memFn);
 }
-
-
-
 
 #endif

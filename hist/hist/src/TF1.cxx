@@ -609,7 +609,6 @@ TF1::TF1(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin, Double_t x
 /// set the default style
 
 void TF1::DoInitialize() {
-
    fMinimum = -1111;
    fMaximum = -1111;
 
@@ -1220,7 +1219,7 @@ Double_t TF1::Eval(Double_t x, Double_t y, Double_t z, Double_t t) const
 Double_t TF1::EvalPar(const Double_t *x, const Double_t *params)
 {
    //fgCurrent = this;
-
+   
    if (fType == 0)
    {
       assert(fFormula);
@@ -1252,7 +1251,10 @@ Double_t TF1::EvalPar(const Double_t *x, const Double_t *params)
 
       return result;
    }
-
+   
+   if (fType == 3) {
+      return EvalParVec( x, params);
+   }
    return result;
 }
 
