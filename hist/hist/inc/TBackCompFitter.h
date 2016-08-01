@@ -21,10 +21,6 @@
 #include "Fit/Fitter.h"
 #endif
 
-#ifndef ROOT_Fit_DataVector
-#include "Fit/DataVector.h"
-#endif
-
 #ifndef ROOT_Math_IFunctionfwd
 #include "Math/IFunctionfwd.h"
 #endif
@@ -148,8 +144,8 @@ protected:
 private:
 
    //ROOT::Fit::FitData * fFitData;
-   std::shared_ptr<ROOT::Fit::FitData>  fFitData;  //! data of the fit 
-   std::shared_ptr<ROOT::Fit::Fitter>   fFitter;   //! pointer to fitter object 
+   std::shared_ptr<ROOT::Fit::FitData>  fFitData;  //! data of the fit
+   std::shared_ptr<ROOT::Fit::Fitter>   fFitter;   //! pointer to fitter object
    ROOT::Math::Minimizer * fMinimizer;
    ROOT::Math::IMultiGenFunction * fObjFunc;
    ROOT::Math::IParamMultiFunction * fModelFunc;

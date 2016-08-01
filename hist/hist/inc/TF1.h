@@ -180,19 +180,19 @@ protected:
  ROOT::Math::ParamFunctor fFunctor;   //! Functor object to wrap any C++ callable object
  TFormula    *fFormula;    //Pointer to TFormula in case when user define formula
  TF1Parameters *fParams;   //Pointer to Function parameters object (exusts only for not-formula functions)
- 
+
  public:
- 
+
  struct TF1FunctionPointer{};
- 
+
  template<class T>
  struct TF1FunctionPointerImpl: TF1FunctionPointer{
    TF1FunctionPointerImpl(const std::function<T (const T * f, const Double_t *param)> &&func):fimpl(func){};
    std::function<T (const T * f, const Double_t *param)> fimpl;
  };
- 
+
  TF1FunctionPointer *fFunctp; //!Pointer to vectorized function
- 
+
  static Bool_t fgAbsValue;  //use absolute value of function when computing integral
  static Bool_t fgRejectPoint;  //True if point must be rejected in a fit
  static Bool_t fgAddToGlobList; //True if we want to register the function in the global list
@@ -225,10 +225,10 @@ public:
    TF1(const char *name, Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0, Int_t ndim = 1);
    TF1(const char *name, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1);
 #endif
- 
+
  template<class T>
  TF1(const char *name, std::function<T (const T * data, const Double_t *param)> * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1):
-//  TF1(const char *name, (T(*)(const T*, Double_t * param)) * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1): 
+//  TF1(const char *name, (T(*)(const T*, Double_t * param)) * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1):
  TNamed(name,name), TAttLine(), TAttFill(), TAttMarker(),
  fXmin(xmin), fXmax(xmax),
  fNpar(npar), fNdim(ndim),
@@ -247,10 +247,10 @@ public:
   DoInitialize();
   fFunctp = new TF1FunctionPointerImpl<T>(fcn);
  }
- 
+
  template<class T>
  TF1(const char *name, T (*fcn)(const T* , const Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1):
-//  TF1(const char *name, (T(*)(const T*, Double_t * param)) * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1): 
+//  TF1(const char *name, (T(*)(const T*, Double_t * param)) * fcn, Double_t xmin=0, Double_t xmax=1, Int_t npar=0,Int_t ndim = 1):
  TNamed(name,name), TAttLine(), TAttFill(), TAttMarker(),
  fXmin(xmin), fXmax(xmax),
  fNpar(npar), fNdim(ndim),
@@ -267,7 +267,6 @@ public:
  fParams(new TF1Parameters(npar) )
  {
   DoInitialize();
-//   std::function<T (const T *, const Double_t *)> *funpt(fcn);  
   fFunctp = new TF1FunctionPointerImpl<T>(fcn);
  }
 //  std::function<Vc_1::Vector<double, Vc_1::VectorAbi::Avx>(const Vc_1::Vector<double, Vc_1::VectorAbi::Avx>*, const double*)>
@@ -286,7 +285,7 @@ public:
    // See the tutorial math/exampleFunctor.C for an example of using this constructor
    template <typename Func>
    TF1(const char *name, Func f, Double_t xmin, Double_t xmax, Int_t npar,Int_t ndim = 1 );
-   
+
    // backward compatible interface
    template <typename Func>
    TF1(const char *name, Func f, Double_t xmin, Double_t xmax, Int_t npar, const char *   ) :
@@ -495,7 +494,7 @@ public:
    }
    virtual void     SetParameters(const Double_t *params) {
       (fFormula) ? fFormula->SetParameters(params) : fParams->SetParameters(params);
-      Update(); 
+      Update();
    }
    virtual void     SetParameters(Double_t p0,Double_t p1,Double_t p2=0,Double_t p3=0,Double_t p4=0,
                                      Double_t p5=0,Double_t p6=0,Double_t p7=0,Double_t p8=0,
@@ -559,7 +558,7 @@ TF1::TF1(const char *name, Func f, Double_t xmin, Double_t xmax, Int_t npar,Int_
    fFormula(0),
    fParams(0)
 {
-   ROOT::Internal::TF1Builder<Func>::Build(this,f); 
+   ROOT::Internal::TF1Builder<Func>::Build(this,f);
    DoInitialize();
 }
 

@@ -367,9 +367,9 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
 #endif
 
 #ifdef USE_PARAMCACHE
-   IntegralEvaluator<> igEval( func, 0, useBinIntegral); 
+   IntegralEvaluator<> igEval( func, 0, useBinIntegral);
 #else
-   IntegralEvaluator<> igEval( func, p, useBinIntegral); 
+   IntegralEvaluator<> igEval( func, p, useBinIntegral);
 #endif
    double maxResValue = std::numeric_limits<double>::max() /n;
    double wrefVolume = 1.0;
@@ -423,7 +423,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
          // we need first to check if a weight factor needs to be applied
          // weight = sumw2/sumw = error**2/content
          double invWeight = y * invError * invError;
-         if (invError == 0) invWeight = (data.SumOfError2() > 0) ? data.SumOfContent()/ data.SumOfError2() : 1.0;
+        //  if (invError == 0) invWeight = (data.SumOfError2() > 0) ? data.SumOfContent()/ data.SumOfError2() : 1.0;
          // compute expected error  as f(x) / weight
          double invError2 = (fval > 0) ? invWeight / fval : 0.0;
          invError = std::sqrt(invError2);
@@ -646,7 +646,7 @@ double FitUtil::EvaluateChi2Residual(const IModelFunction & func, const BinData 
       // we need first to check if a weight factor needs to be applied
       // weight = sumw2/sumw = error**2/content
       double invWeight = y * invError * invError;
-      if (invError == 0) invWeight = (data.SumOfError2() > 0) ? data.SumOfContent()/ data.SumOfError2() : 1.0;
+      // if (invError == 0) invWeight = (data.SumOfError2() > 0) ? data.SumOfContent()/ data.SumOfError2() : 1.0;
       // compute expected error  as f(x) / weight
       double invError2 = (fval > 0) ? invWeight / fval : 0.0;
       invError = std::sqrt(invError2);
@@ -908,8 +908,8 @@ double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data
    (const_cast<IModelFunction &>(func)).SetParameters(p);
 #endif
 
-   // this is needed if function must be normalized 
-   bool normalizeFunc = false; 
+   // this is needed if function must be normalized
+   bool normalizeFunc = false;
    double norm = 1.0;
    if (normalizeFunc) {
       // compute integral of the function
@@ -1183,8 +1183,8 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
 #ifdef USE_PARAMCACHE
    (const_cast<IModelFunction &>(func)).SetParameters(p);
 #endif
-   
-   double nloglike = 0;  // negative loglikelihood 
+
+   double nloglike = 0;  // negative loglikelihood
    nPoints = 0;  // npoints
 
 
@@ -1193,7 +1193,7 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
    bool useBinIntegral = fitOpt.fIntegral && data.HasBinEdges();
    bool useBinVolume = (fitOpt.fBinVolume && data.HasBinEdges());
    bool useW2 = (iWeight == 2);
-   
+
    // normalize if needed by a reference volume value
    double wrefVolume = 1.0;
    std::vector<double> xc;
@@ -1210,9 +1210,9 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
 #endif
 
 #ifdef USE_PARAMCACHE
-   IntegralEvaluator<> igEval( func, 0, useBinIntegral); 
+   IntegralEvaluator<> igEval( func, 0, useBinIntegral);
 #else
-   IntegralEvaluator<> igEval( func, p, useBinIntegral); 
+   IntegralEvaluator<> igEval( func, p, useBinIntegral);
 #endif
    // double nuTot = 0; // total number of expected events (needed for non-extended fits)
    // double wTot = 0; // sum of all weights
