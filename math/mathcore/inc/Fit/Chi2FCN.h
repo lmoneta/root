@@ -32,7 +32,6 @@
 #ifndef ROOT_Fit_FitUtil
 #include "Fit/FitUtil.h"
 #endif
-
 //#define ROOT_FIT_PARALLEL
 
 #ifdef ROOT_FIT_PARALLEL
@@ -42,6 +41,7 @@
 #endif
 
 #include <memory>
+#include <VecCore/VecCore>
 
 /**
 @defgroup FitMethodFunc Fit Method Classes
@@ -50,13 +50,25 @@ Classes describing Fit Method functions
 @ingroup Fit
 */
 
+using Double_v = typename vecCore::backend::VcVector::Double_v; 
+
 
 namespace ROOT {
 
 
    namespace Fit {
 
+template<class T>
+struct SumOfT{
+  static double Sum(T &x){
+    return x.sum();
+  }
+};
 
+template<>
+struct SumOfT<double>{
+  static double Sum( double &x){return x;}
+};
 
 //___________________________________________________________________________________
 /**
@@ -65,17 +77,18 @@ namespace ROOT {
    @ingroup  FitMethodFunc
 */
 template<class FunType>
-class Chi2FCN : public BasicFCN<FunType,BinData> {
+class Chi2FCN : public BasicFCN<FunType, BinData> {
 
 public:
 
-   typedef  BasicFCN<FunType,BinData> BaseFCN; 
+   typedef typename FunType::BackendType T;
+   typedef  BasicFCN<FunType, BinData> BaseFCN; 
 
    typedef  ::ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction;
    typedef typename  BaseObjFunction::BaseFunction BaseFunction;
 
    //typedef  typename ::ROOT::Math::ParamFunctionTrait<FunType>::PFType IModelFunction;
-   typedef  ::ROOT::Math::IParamMultiFunction IModelFunction;
+   typedef  ::ROOT::Math::IParamMultiFunctionTempl<T> IModelFunction;
    typedef typename BaseObjFunction::Type_t Type_t;
 
    /**
@@ -124,7 +137,8 @@ public:
       clone the function
     */
    virtual BaseFunction * Clone() const {
-      return new Chi2FCN(*this); 
+      // return new Chi2FCN(*this);
+      return nullptr; 
    }
 
 
@@ -135,13 +149,13 @@ public:
    /// i-th chi-square residual
    virtual double DataElement(const double * x, unsigned int i, double * g) const {
       if (i==0) this->UpdateNCalls();
-      return FitUtil::EvaluateChi2Residual(BaseFCN::ModelFunction(), BaseFCN::Data(), x, i, g);
+      return 0.0;//FitUtil::EvaluateChi2Residual(BaseFCN::ModelFunction(), BaseFCN::Data(), x, i, g);
    }
 
    // need to be virtual to be instantiated
    virtual void Gradient(const double *x, double *g) const {
       // evaluate the chi2 gradient
-      FitUtil::EvaluateChi2Gradient(BaseFCN::ModelFunction(), BaseFCN::Data(), x, g, fNEffPoints);
+      // FitUtil::EvaluateChi2Gradient(BaseFCN::ModelFunction(), BaseFCN::Data(), x, g, fNEffPoints);
    }
 
    /// get type of fit method function
@@ -159,18 +173,26 @@ private:
    /**
       Evaluation of the  function (required by interface)
     */
-   virtual double DoEval (const double * x) const {
-      this->UpdateNCalls();
-#ifdef ROOT_FIT_PARALLEL
-      return FitUtilParallel::EvaluateChi2(BaseFCN::ModelFunction(), BaseFCN::Data(), x, fNEffPoints);
-#else
-      if (!BaseFCN::Data().HaveCoordErrors() )
-         return FitUtil::EvaluateChi2(BaseFCN::ModelFunction(), BaseFCN::Data(), x, fNEffPoints);
-      else
-         return FitUtil::EvaluateChi2Effective(BaseFCN::ModelFunction(), BaseFCN::Data(), x, fNEffPoints);
-#endif
+   virtual double DoEval (const double * p) const {
+//       this->UpdateNCalls();
+// #ifdef ROOT_FIT_PARALLEL
+//       return FitUtilParallel::EvaluateChi2(BaseFCN::ModelFunction(), BaseFCN::Data(), x, fNEffPoints);
+// #else
+//       if (!BaseFCN::Data().HaveCoordErrors() )
+//          return FitUtil::EvaluateChi2(BaseFCN::ModelFunction(), BaseFCN::Data(), x, fNEffPoints);
+//       else
+//          return FitUtil::EvaluateChi2Effective(BaseFCN::ModelFunction(), BaseFCN::Data(), x, fNEffPoints);
+// #endif
+    T tmp{};
+    for(int i=0; i<BaseFCN::Data().Size(); i+=4){
+        auto ux = vecCore::FromPtr<T>(BaseFCN::Data().GetCoordComponent(i,0));
+        auto &f = BaseFCN::ModelFunction(); 
+        tmp += f(&ux, p);
+    }
+    return SumOfT<T>::Sum(tmp);
    }
 
+   
    // for derivatives
    virtual double  DoDerivative(const double * x, unsigned int icoord ) const {
       Gradient(x, fGrad.data());

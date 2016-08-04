@@ -111,6 +111,7 @@ class IParametricFunctionMultiDimTempl: virtual public IBaseFunctionMultiDimTemp
 public:
 
   typedef IBaseFunctionMultiDimTempl<T>  BaseFunc;
+  typedef T BackendType;
 
       /**
       Evaluate function at a point x and for given parameters p.

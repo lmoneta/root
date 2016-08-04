@@ -45,11 +45,12 @@ class BasicFCN : public ::ROOT::Math::BasicFitMethodFunction<FunType> {
 
 protected:
 
-   
+   typedef typename FunType::BackendType T;
+
    typedef  ::ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction;
    typedef typename  BaseObjFunction::BaseFunction BaseFunction;
 
-   typedef  ::ROOT::Math::IParamMultiFunction IModelFunction;
+   typedef  ::ROOT::Math::IParamMultiFunctionTempl<T> IModelFunction;
 
    /**
       Constructor from data set  and model function

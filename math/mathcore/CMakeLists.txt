@@ -25,7 +25,7 @@ add_definitions(-DUSE_ROOT_ERROR )
 ROOT_ADD_C_FLAG(_flags -Wno-strict-overflow)  # Avoid what it seems a compiler false positive warning
 set_source_files_properties(src/triangle.c COMPILE_FLAGS "${_flags}")
 
-ROOT_LINKER_LIBRARY(MathCore *.cxx *.c G__MathCore.cxx LIBRARIES ${CMAKE_THREAD_LIBS_INIT} DEPENDENCIES Core)
+ROOT_LINKER_LIBRARY(MathCore *.cxx *.c G__MathCore.cxx LIBRARIES ${CMAKE_THREAD_LIBS_INIT} Vc DEPENDENCIES Core)
 
 ROOT_INSTALL_HEADERS()
 
