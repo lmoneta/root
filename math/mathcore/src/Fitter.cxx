@@ -892,11 +892,11 @@ void Fitter::ExamineFCN()  {
    // thus when the objective function stored is a Chi2Func or a PoissonLikelihood
    // The funciton also set the model function correctly if it has not been set 
 
-   if ( GetDataFromFCN<BasicFCN<ROOT::Math::IMultiGenFunction, BinData> >() ) return;
-   if ( GetDataFromFCN<BasicFCN<ROOT::Math::IMultiGenFunction, UnBinData> >() ) return;
+   if ( GetDataFromFCN<BasicFCN<ROOT::Math::IMultiGenFunction, ROOT::Math::IParamMultiFunction, BinData> >() ) return;
+   if ( GetDataFromFCN<BasicFCN<ROOT::Math::IMultiGenFunction, ROOT::Math::IParamMultiFunction, UnBinData> >() ) return;
 
-   if ( GetDataFromFCN<BasicFCN<ROOT::Math::IMultiGradFunction, BinData> >() ) return;
-   if ( GetDataFromFCN<BasicFCN<ROOT::Math::IMultiGradFunction, UnBinData> >() ) return;
+   if ( GetDataFromFCN<BasicFCN<ROOT::Math::IMultiGradFunction, ROOT::Math::IParamMultiFunction, BinData> >() ) return;
+   if ( GetDataFromFCN<BasicFCN<ROOT::Math::IMultiGradFunction, ROOT::Math::IParamMultiFunction, UnBinData> >() ) return;
 
    //MATH_INFO_MSG("Fitter::ExamineFCN","Objective function is not of a known type - FitData and ModelFunction objects are not available");
    return;

@@ -40,14 +40,14 @@ namespace ROOT {
    It has a reference to the data and th emodel function used in the fit. 
    It cannot be instantiated but constructed from the derived classes 
 */
-template<class FunType, class DataType>
-class BasicFCN : public ::ROOT::Math::BasicFitMethodFunction<FunType> {
+template<class DerivFunType, class ModelFunType, class DataType>
+class BasicFCN : public ::ROOT::Math::BasicFitMethodFunction<DerivFunType> {
 
 protected:
 
-   typedef typename FunType::BackendType T;
+   typedef typename ModelFunType::BackendType T;
 
-   typedef  ::ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction;
+   typedef  ::ROOT::Math::BasicFitMethodFunction<DerivFunType> BaseObjFunction;
    typedef typename  BaseObjFunction::BaseFunction BaseFunction;
 
    typedef  ::ROOT::Math::IParamMultiFunctionTempl<T> IModelFunction;

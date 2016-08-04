@@ -52,14 +52,14 @@ namespace ROOT {
 
    @ingroup  FitMethodFunc
 */
-template<class FunType>
-class PoissonLikelihoodFCN : public BasicFCN<FunType,BinData>  {
+template<class DerivFunType, class ModelFunType = ROOT::Math::IParamMultiFunction>
+class PoissonLikelihoodFCN : public BasicFCN<DerivFunType,ModelFunType,BinData>  {
 
 public:
 
-   typedef  BasicFCN<FunType,BinData> BaseFCN; 
+   typedef  BasicFCN<DerivFunType,ModelFunType,BinData> BaseFCN; 
 
-   typedef  ::ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction;
+   typedef  ::ROOT::Math::BasicFitMethodFunction<DerivFunType> BaseObjFunction;
    typedef typename  BaseObjFunction::BaseFunction BaseFunction;
 
    typedef  ::ROOT::Math::IParamMultiFunction IModelFunction;
@@ -187,8 +187,8 @@ private:
 };
 
       // define useful typedef's
-      typedef PoissonLikelihoodFCN<ROOT::Math::IMultiGenFunction> PoissonLLFunction;
-      typedef PoissonLikelihoodFCN<ROOT::Math::IMultiGradFunction> PoissonLLGradFunction;
+      typedef PoissonLikelihoodFCN<ROOT::Math::IMultiGenFunction, ROOT::Math::IParamMultiFunction> PoissonLLFunction;
+      typedef PoissonLikelihoodFCN<ROOT::Math::IMultiGradFunction, ROOT::Math::IParamMultiFunction> PoissonLLGradFunction;
 
 
    } // end namespace Fit

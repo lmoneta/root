@@ -50,7 +50,7 @@ Classes describing Fit Method functions
 @ingroup Fit
 */
 
-using Double_v = typename vecCore::backend::VcVector::Double_v; 
+//using Double_v = typename vecCore::backend::VcVector::Double_v; 
 
 
 namespace ROOT {
@@ -76,15 +76,15 @@ struct SumOfT<double>{
 
    @ingroup  FitMethodFunc
 */
-template<class FunType>
-class Chi2FCN : public BasicFCN<FunType, BinData> {
+template<class DerivFunType, class ModelFunType = ROOT::Math::IParamMultiFunction>
+class Chi2FCN : public BasicFCN<DerivFunType, ModelFunType, BinData> {
 
 public:
 
-   typedef typename FunType::BackendType T;
-   typedef  BasicFCN<FunType, BinData> BaseFCN; 
+   typedef typename ModelFunType::BackendType T;
+   typedef  BasicFCN<DerivFunType, ModelFunType, BinData> BaseFCN; 
 
-   typedef  ::ROOT::Math::BasicFitMethodFunction<FunType> BaseObjFunction;
+   typedef  ::ROOT::Math::BasicFitMethodFunction<DerivFunType> BaseObjFunction;
    typedef typename  BaseObjFunction::BaseFunction BaseFunction;
 
    //typedef  typename ::ROOT::Math::ParamFunctionTrait<FunType>::PFType IModelFunction;
@@ -208,8 +208,8 @@ private:
 };
 
       // define useful typedef's
-      typedef Chi2FCN<ROOT::Math::IMultiGenFunction> Chi2Function;
-      typedef Chi2FCN<ROOT::Math::IMultiGradFunction> Chi2GradFunction;
+      typedef Chi2FCN<ROOT::Math::IMultiGenFunction,ROOT::Math::IParamMultiFunction> Chi2Function;
+      typedef Chi2FCN<ROOT::Math::IMultiGradFunction, ROOT::Math::IParamMultiFunction> Chi2GradFunction;
 
 
    } // end namespace Fit
