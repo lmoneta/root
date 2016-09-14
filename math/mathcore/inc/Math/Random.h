@@ -240,7 +240,7 @@ namespace Math {
 
    /// Useful typedef definitions
 
-   typedef   Random<ROOT::Math::MixMaxEngine>            RandomMixMax;
+   typedef   Random<ROOT::Math::MixMaxEngine<240,0>>            RandomMixMax;
    typedef   Random<ROOT::Math::MersenneTwisterEngine>   RandomMT19937;
    typedef   Random<ROOT::Math::StdEngine<std::mt19937_64>> RandomStdMT64;
    typedef   Random<ROOT::Math::StdEngine<std::ranlux48>> RandomStdRanlux48;

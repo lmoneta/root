@@ -1,0 +1,153 @@
+// @(#)root/mathcore:$Id$
+// Authors: L. Moneta    8/2015
+
+/**********************************************************************
+ *                                                                    *
+ * Copyright (c) 2015 , ROOT MathLib Team                             *
+ *                                                                    *
+ *                                                                    *
+ **********************************************************************/
+
+// implementation file of MixMax engine
+//
+//
+// Created by: Lorenzo Moneta  : Tue 4 Aug 2015
+//
+//
+#include "Math/MixMaxEngine.h"
+
+#include "Math/mixmax/mixmax.h"
+
+
+namespace ROOT {
+namespace Math {
+
+   template<int N, int S>
+   MixMaxEngine<N,S>::MixMaxEngine(uint64_t seed) { 
+      fRng = new mixmax::mixmax_engine<N>(); 
+      fRng->seed(seed); 
+   }
+
+   template<int N, int S>
+   MixMaxEngine<N,S>::~MixMaxEngine() {
+      if (fRng) delete fRng; 
+   }
+
+
+   // void template<int N, int S>
+   //MixMaxEngine<N,S>::SeedUniqueStream(unsigned int clusterID, unsigned int machineID, unsigned int runID, unsigned int  streamID) { 
+   //    seed_uniquestream(fRngState, clusterID,  machineID,  runID,   streamID);
+   // }
+
+   template<int N, int S>
+   void MixMaxEngine<N,S>::SetSeed(uint64_t seed) { 
+      fRng->seed(seed);
+      fRng->iterate();  // needed ? 
+   }
+
+   // void template<int N, int S>
+   // MixMaxEngine<N,S>::SetSeed64(uint64_t seed) { 
+   //    seed_spbox(fRngState, seed);
+   //    iterate(fRngState);                    
+   // }
+
+   // unsigned int template<int N, int S>
+   // MixMaxEngine<N,S>::GetSeed() const { 
+   //    return get_next(fRngState);
+   // }
+         
+   // generate one random number in interval ]0,1]
+   // apply skipping when needed
+
+   template<int SkipNumber>
+   struct SkipFunction {
+      template<class Engine>
+      static void Apply (Engine * rng, int counter, int n) {
+         // apply skipping
+         if (counter < n) return; 
+         for (int iskip = 0; iskip < SkipNumber; ++iskip)
+            rng->iterate();
+      }
+   };
+   // specialization for SkipNumber = 0
+   template<>
+   struct SkipFunction<0> {
+      template<class Engine>
+      static void Apply (Engine *, int , int ) {
+         // no operation
+      }
+   };
+   
+   template<int N, int S>
+   double MixMaxEngine<N,S>::Rndm_impl()  {
+      int counter = fRng->S.counter;
+      SkipFunction<S>::Apply(fRng, counter, N);
+      return fRng->get_next_float();
+   }
+
+   // generate one integer number 
+   template<int N, int S>
+   uint64_t MixMaxEngine<N,S>::IntRndm() {
+      int counter = fRng->S.counter;
+      SkipFunction<S>::Apply(fRng, counter,N);
+      return fRng->get_next();
+   }
+
+   template<int N, int S>
+   uint64_t MixMaxEngine<N,S>::MaxInt() { 
+      return mixmax::mixmax_engine<N>::max();
+   }
+
+   template<int N, int S>
+   uint64_t MixMaxEngine<N,S>::MinInt() { 
+      return mixmax::mixmax_engine<N>::min();
+   }
+
+   template<int N, int S>
+   void MixMaxEngine<N,S>::RndmArray(int n, double *array){
+      // Return an array of n random numbers uniformly distributed in ]0,1]
+      for (int i = 0; i < n; ++i)
+         array[i] = Rndm_impl();
+   }
+
+   template<int N, int S>
+   void MixMaxEngine<N,S>::SetState(const std::vector<StateInt_t> & state) {
+      assert(state.size() >= N);
+      for (int i = 0; i < N; ++i)
+         fRng->S.V[i] = state[i];
+      //set counter  to fore iteration afterwards
+      fRng->S.counter = N;
+   }
+
+   template<int N, int S>
+   void MixMaxEngine<N,S>::GetState(std::vector<StateInt_t> & state) const {
+      state.resize(N);
+      for (int i = 0; i < N; ++i)
+         state[i] = fRng->S.V[i];
+   }
+
+   template<int N, int S>
+   int MixMaxEngine<N,S>::Size()  {
+      return mixmax::mixmax_engine<N>::rng_get_N(); 
+   }
+
+   template<int N, int S>
+   int MixMaxEngine<N,S>::Counter() const {
+      return fRng->S.counter; 
+   }
+
+   // void template<int N, int S>
+   // MixMaxEngine<N,S>::SetCounter(int val) {
+   //    fRngState->counter = val; 
+   // }
+
+   // void template<int N, int S>
+   //MixMaxEngine<N,S>::SetSpecialNumber(uint64_t /* val */ ) {
+   //    //set_special_number(val); 
+   // }
+
+   
+   } // namespace Math
+} // namespace ROOT
+
+
