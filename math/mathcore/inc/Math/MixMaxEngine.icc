@@ -82,6 +82,9 @@ namespace Math {
    double MixMaxEngine<N,S>::Rndm_impl()  {
       int counter = fRng->S.counter;
       SkipFunction<S>::Apply(fRng, counter, N);
+      //reset counter to original value
+      // otherwise we would skip -1 time
+      fRng->S.counter = counter;
       return fRng->get_next_float();
    }
 
@@ -90,6 +93,7 @@ namespace Math {
    uint64_t MixMaxEngine<N,S>::IntRndm() {
       int counter = fRng->S.counter;
       SkipFunction<S>::Apply(fRng, counter,N);
+      fRng->S.counter = counter;
       return fRng->get_next();
    }
 

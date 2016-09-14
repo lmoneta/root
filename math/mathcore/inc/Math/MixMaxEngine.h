@@ -33,50 +33,48 @@ namespace mixmax {
 namespace ROOT {
 
    namespace Math {
-      
 
       /**
          Wrapper class for the MIXMAX Random number generator.
-         It is a matrix-recursive random number generator introduced by 
+         It is a matrix-recursive random number generator introduced by
          G. Savvidy.
 
          See the real implementation in the mixmax.h and mixmax.cxx files.
          The generator code is available also at hepforge: http://mixmax.hepforge.org
 
-         
+
          Created by Konstantin Savvidy.
- 
+
          The code is released under GNU Lesser General Public License v3
- 
-         References: 
+
+         References:
 
          G.K.Savvidy and N.G.Ter-Arutyunian,
          On the Monte Carlo simulation of physical systems,
          J.Comput.Phys. 97, 566 (1991);
          Preprint EPI-865-16-86, Yerevan, Jan. 1986
- 
+
          K.Savvidy
          The MIXMAX random number generator
          Comp. Phys. Commun. 196 (2015), pp 161–165
          http://dx.doi.org/10.1016/j.cpc.2015.06.003
- 
+
          K.Savvidy and G.Savvidy
          Spectrum and Entropy of C-systems. MIXMAX random number generator
          Chaos, Solitons & Fractals, Volume 91, (2016) pp. 33–38
          http://dx.doi.org/10.1016/j.chaos.2016.05.003
-  
-       
+
          The period of the generator is 10^4682 for N=256, and
          10^1597 for N=88
 
          This implementation is only a wrapper around the real implemention, see mixmax.cxx and mixmax.h
          The generator, in C code, is available also at hepforge: http://mixmax.hepforge.org
 
-         
+
          @ingroup Random
       */
 
-      template<int N, int SkipNumber> 
+      template<int N, int SkipNumber>
       class MixMaxEngine : public TRandomEngine {
 
       public:
