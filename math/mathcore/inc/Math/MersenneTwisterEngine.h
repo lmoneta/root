@@ -18,6 +18,8 @@
 #endif
 
 #include <cstdint>
+#include <vector>
+#include <string>
 
 namespace ROOT {
 
@@ -80,6 +82,10 @@ namespace ROOT {
          static unsigned int MaxInt() { return 0xffffffff; }  //  2^32 -1
 
          static int Size() { return kSize; }
+
+         static std::string Name() {
+            return "MersenneTwisterEngine";
+         }
 
       protected:
          // functions used for testing

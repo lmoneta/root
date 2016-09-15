@@ -17,7 +17,8 @@
 #include "Math/MixMaxEngine.h"
 
 #include "Math/mixmax/mixmax.h"
-
+#include <cassert>
+#include "Math/Util.h"
 
 namespace ROOT {
 namespace Math {
@@ -140,16 +141,13 @@ namespace Math {
       return fRng->S.counter; 
    }
 
-   // void template<int N, int S>
-   // MixMaxEngine<N,S>::SetCounter(int val) {
-   //    fRngState->counter = val; 
-   // }
-
-   // void template<int N, int S>
-   //MixMaxEngine<N,S>::SetSpecialNumber(uint64_t /* val */ ) {
-   //    //set_special_number(val); 
-   // }
-
+   template<int N, int S>
+   std::string MixMaxEngine<N,S>::Name()  {
+      std::string name =  "MixMax";
+      name += Util::ToString(N);
+      if (S > 0) name += std::string("_") + Util::ToString(S);
+      return name; 
+   }
    
    } // namespace Math
 } // namespace ROOT

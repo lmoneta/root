@@ -15,6 +15,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <string>
 
 #ifndef ROOT_Math_TRandomEngine
 #include "Math/TRandomEngine.h"
@@ -115,9 +116,12 @@ namespace ROOT {
          /// generate a 64  bit integer number
          uint64_t IntRndm();
 
+         /// get name of the generator
+         static std::string Name(); 
+
       protected:
          // protected functions used for tesing the generator
-         
+
          /// get the state of the generator
          void GetState(std::vector<StateInt_t> & state) const;
 
