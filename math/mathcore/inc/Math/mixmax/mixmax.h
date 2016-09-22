@@ -124,7 +124,9 @@ public:
    void BranchMother();
    
    mixmax_engine(myID_t clusterID, myID_t machineID, myID_t runID, myID_t  streamID );	   // Constructor with four 32-bit seeds
-   void seed(uint64_t seedval){seed_uniquestream( &S, 0, 0, (myID_t)(seedval>>32), (myID_t)seedval );} // seed with one 64-bit seed
+   void seed(uint64_t seedval){  // seed with one 64-bit seed
+      seed_uniquestream( &S, 0, 0, (myID_t)(seedval>>32), (myID_t)seedval );
+   } 
    mixmax_engine(); // Constructor, no seeds
    
    mixmax_engine& operator=(const mixmax_engine& other );

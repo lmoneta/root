@@ -60,7 +60,7 @@ public:
    virtual  Double_t Uniform(Double_t x1, Double_t x2);
    virtual  void     WriteRandom(const char *filename) const;
 
-   ClassDef(TRandom,1)  //Simple Random number generator (periodicity = 10**9)
+   ClassDef(TRandom,2)  //Simple Random number generator (periodicity = 10**9)
 };
 
 R__EXTERN TRandom *gRandom;

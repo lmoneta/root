@@ -101,7 +101,7 @@ namespace ROOT {
          /// minimum integer that can be generated. For MIXMAX is 0
          static uint64_t MinInt();
 
-         /// set the generator seed 
+         /// set the generator seed
          void  SetSeed(uint64_t seed);
 
          // generate a random number (virtual interface)
@@ -110,8 +110,8 @@ namespace ROOT {
          /// generate a double random number (faster interface)
          inline double operator() () { return Rndm_impl(); }
 
-         /// generate an array of random numbers 
-         void RndmArray (int n, double * array); 
+         /// generate an array of random numbers
+         void RndmArray (int n, double * array);
 
          /// generate a 64  bit integer number
          uint64_t IntRndm();

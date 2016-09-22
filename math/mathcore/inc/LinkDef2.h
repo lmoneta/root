@@ -65,6 +65,8 @@
 
 #pragma link C++ class TRandomGen<ROOT::Math::MixMaxEngine<240,0>>+;
 #pragma link C++ class TRandomGen<ROOT::Math::MixMaxEngine<256,2>>+;
+#pragma link C++ class TRandomGen<ROOT::Math::MixMaxEngine<17,0>>+;
+#pragma link C++ class TRandomGen<ROOT::Math::MixMaxEngine<17,1>>+;
 #pragma link C++ class TRandomGen<ROOT::Math::StdEngine<std::mt19937_64>>+;
 #pragma link C++ class TRandomGen<ROOT::Math::StdEngine<std::ranlux48>>+;
 
@@ -75,6 +77,7 @@
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::MixMaxEngine<240,0>>+;
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::MixMaxEngine<256,2>>+;
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::MixMaxEngine<256,2>>+;
+#pragma link C++ class ROOT::Math::Random<ROOT::Math::MixMaxEngine<17,0>>+;
 #pragma link C++ class ROOT::Math::Random<ROOT::Math::MixMaxEngine<17,1>>+;
 
 // #pragma link C++ typedef ROOT::Math::RandomMT19937;
