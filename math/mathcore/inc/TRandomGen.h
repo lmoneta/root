@@ -56,12 +56,27 @@ public:
 };
 
 // some useful typedef
-
-#include "Math/MixMaxEngine.h"
 #include "Math/StdEngine.h"
+#include "Math/MixMaxEngine.h"
+
+// not working wight now for this classes
+//#define  DEFINE_TEMPL_INSTANCE
+#ifdef DEFINE_TEMPL_INSTANCE
+
+extern template class  TRandomGen<ROOT::Math::MixMaxEngine<240,0>>;
+extern template class TRandomGen<ROOT::Math::MixMaxEngine<256,2>>; 
+extern template class TRandomGen<ROOT::Math::MixMaxEngine<256,4>>; 
+extern template class TRandomGen<ROOT::Math::MixMaxEngine<17,0>>;
+extern template class TRandomGen<ROOT::Math::MixMaxEngine<17,1>>;
+
+extern template class  TRandomGen<ROOT::Math::StdEngine<std::mt19937_64> >;
+extern template class  TRandomGen<ROOT::Math::StdEngine<std::ranlux48> >;
+
+#endif
 
 typedef TRandomGen<ROOT::Math::MixMaxEngine<240,0>> TRandomMixMax;
 typedef TRandomGen<ROOT::Math::MixMaxEngine<256,2>> TRandomMixMax256;
+typedef TRandomGen<ROOT::Math::MixMaxEngine<17,1>> TRandomMixMax17;
 typedef TRandomGen<ROOT::Math::StdEngine<std::mt19937_64> > TRandomMT64;
 typedef TRandomGen<ROOT::Math::StdEngine<std::ranlux48> > TRandomRanlux48;
 

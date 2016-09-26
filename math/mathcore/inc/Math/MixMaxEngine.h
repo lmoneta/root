@@ -26,14 +26,17 @@
 
 // typedef struct rng_state_st rng_state_t;
 
-namespace mixmax { 
-   template<int Ndim>
-   class mixmax_engine; 
-}
+// namespace mixmax { 
+//    template<int Ndim>
+//    class mixmax_engine; 
+// }
 
 namespace ROOT {
 
    namespace Math {
+      
+      template<int N>
+      class MixMaxEngineImpl;
 
       /**
          Wrapper class for the MIXMAX Random number generator.
@@ -102,7 +105,7 @@ namespace ROOT {
          static uint64_t MinInt();
 
          /// set the generator seed
-         void  SetSeed(uint64_t seed);
+         void  SetSeed(result_t seed);
 
          // generate a random number (virtual interface)
          virtual double Rndm() { return Rndm_impl(); }
@@ -114,7 +117,7 @@ namespace ROOT {
          void RndmArray (int n, double * array);
 
          /// generate a 64  bit integer number
-         uint64_t IntRndm();
+         result_t IntRndm();
 
          /// get name of the generator
          static std::string Name(); 
@@ -138,12 +141,16 @@ namespace ROOT {
          double Rndm_impl();
 
          //rng_state_t * fRngState;  // mix-max generator state
-         mixmax::mixmax_engine<N> * fRng;  // mixmax internal engine class
+         //mixmax::mixmax_engine<N> * fRng;  // mixmax internal engine class
+         MixMaxEngineImpl<N> * fRng;  // mixmax internal engine class
          
       };
 
       typedef MixMaxEngine<240,0> MixMaxEngine240;
-      typedef MixMaxEngine<256,2> MixMaxEngine256;
+      //typedef MixMaxEngine<256,2> MixMaxEngine256;
+
+      extern template class MixMaxEngine<240,0>;
+      extern template class MixMaxEngine<240,1>;
 
 
    } // end namespace Math

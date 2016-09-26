@@ -14,19 +14,40 @@
 // Created by: Lorenzo Moneta  : Tue 4 Aug 2015
 //
 //
+#ifndef ROOT_Math_MixMaxEngine_icc
+#define ROOT_Math_MixMaxEngine_icc
+
 #include "Math/MixMaxEngine.h"
 
-#include "Math/mixmax/mixmax.h"
+//#include "Math/mixmax/mixmax.h"
 #include <cassert>
 #include "Math/Util.h"
 
 namespace ROOT {
 namespace Math {
 
+
+   // dummy implementation
+   template<int N>
+   class MixMaxEngineImpl {
+   public: 
+      MixMaxEngineImpl(uint64_t) {}
+      ~MixMaxEngineImpl() {}
+      void SetSeed(uint64_t) { }
+      double Rndm() { return -1; }
+      double IntRndm() { return 0; }
+      void SetState(const std::vector<uint64_t> &) { }
+      void GetState(std::vector<uint64_t> &) { }
+      int Counter() { return -1; }
+      void SetCounter(int) {}
+      void Iterate(); 
+   };
+
    template<int N, int S>
    MixMaxEngine<N,S>::MixMaxEngine(uint64_t seed) { 
-      fRng = new mixmax::mixmax_engine<N>(); 
-      fRng->seed(seed); 
+      // fRng = new mixmax::mixmax_engine<N>(); 
+      // fRng->seed(seed);
+      fRng = new MixMaxEngineImpl<N>(seed);
    }
 
    template<int N, int S>
@@ -42,8 +63,8 @@ namespace Math {
 
    template<int N, int S>
    void MixMaxEngine<N,S>::SetSeed(uint64_t seed) { 
-      fRng->seed(seed);
-      fRng->iterate();  // needed ? 
+      //fRng->seed(seed);
+      fRng->SetSeed(seed);
    }
 
    // void template<int N, int S>
@@ -67,7 +88,7 @@ namespace Math {
          // apply skipping
          if (counter < n) return; 
          for (int iskip = 0; iskip < SkipNumber; ++iskip)
-            rng->iterate();
+            rng->Iterate();
       }
    };
    // specialization for SkipNumber = 0
@@ -81,31 +102,33 @@ namespace Math {
    
    template<int N, int S>
    double MixMaxEngine<N,S>::Rndm_impl()  {
-      int counter = fRng->S.counter;
+      int counter = fRng->Counter();
       SkipFunction<S>::Apply(fRng, counter, N);
       //reset counter to original value
       // otherwise we would skip -1 time
-      fRng->S.counter = counter;
-      return fRng->get_next_float();
+      fRng->SetCounter(counter);
+      return fRng->Rndm();
    }
 
    // generate one integer number 
    template<int N, int S>
    uint64_t MixMaxEngine<N,S>::IntRndm() {
-      int counter = fRng->S.counter;
+      int counter = fRng->Counter();
       SkipFunction<S>::Apply(fRng, counter,N);
-      fRng->S.counter = counter;
-      return fRng->get_next();
+      fRng->SetCounter(counter);
+      return fRng->IntRndm();
    }
 
    template<int N, int S>
    uint64_t MixMaxEngine<N,S>::MaxInt() { 
-      return mixmax::mixmax_engine<N>::max();
+      //return mixmax::mixmax_engine<N>::max();
+      return  2305843009213693951ULL; 
    }
 
    template<int N, int S>
    uint64_t MixMaxEngine<N,S>::MinInt() { 
-      return mixmax::mixmax_engine<N>::min();
+      //return mixmax::mixmax_engine<N>::min();
+      return 0; 
    }
 
    template<int N, int S>
@@ -118,27 +141,28 @@ namespace Math {
    template<int N, int S>
    void MixMaxEngine<N,S>::SetState(const std::vector<StateInt_t> & state) {
       assert(state.size() >= N);
-      for (int i = 0; i < N; ++i)
-         fRng->S.V[i] = state[i];
-      //set counter  to fore iteration afterwards
-      fRng->S.counter = N;
+      // for (int i = 0; i < N; ++i)
+      //    fRng->S.V[i] = state[i];
+      // //set counter  to fore iteration afterwards
+      // fRng->S.counter = N;
+      fRng->SetState(state);
+      fRng->SetCounter(N); 
    }
 
    template<int N, int S>
    void MixMaxEngine<N,S>::GetState(std::vector<StateInt_t> & state) const {
       state.resize(N);
-      for (int i = 0; i < N; ++i)
-         state[i] = fRng->S.V[i];
+      fRng->GetState(state); 
    }
 
    template<int N, int S>
    int MixMaxEngine<N,S>::Size()  {
-      return mixmax::mixmax_engine<N>::rng_get_N(); 
+      return MixMaxEngineImpl<N>::Size(); 
    }
 
    template<int N, int S>
    int MixMaxEngine<N,S>::Counter() const {
-      return fRng->S.counter; 
+      return fRng->Counter(); 
    }
 
    template<int N, int S>
@@ -152,4 +176,4 @@ namespace Math {
    } // namespace Math
 } // namespace ROOT
 
-
+#endif
