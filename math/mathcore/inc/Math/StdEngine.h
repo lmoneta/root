@@ -102,7 +102,10 @@ namespace ROOT {
          Generator fGen;
          double fCONS;   //! cached value of maximum integer value generated
       };
-      
+
+
+      extern template class StdEngine<std::mt19937_64>;
+      extern template class StdEngine<std::ranlux48>;
 
    } // end namespace Math
 

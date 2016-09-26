@@ -76,7 +76,7 @@ extern template class  TRandomGen<ROOT::Math::StdEngine<std::ranlux48> >;
 
 typedef TRandomGen<ROOT::Math::MixMaxEngine<240,0>> TRandomMixMax;
 typedef TRandomGen<ROOT::Math::MixMaxEngine<256,2>> TRandomMixMax256;
-typedef TRandomGen<ROOT::Math::MixMaxEngine<17,1>> TRandomMixMax17;
+typedef TRandomGen<ROOT::Math::MixMaxEngine<17,0>> TRandomMixMax17;
 typedef TRandomGen<ROOT::Math::StdEngine<std::mt19937_64> > TRandomMT64;
 typedef TRandomGen<ROOT::Math::StdEngine<std::ranlux48> > TRandomRanlux48;
 
