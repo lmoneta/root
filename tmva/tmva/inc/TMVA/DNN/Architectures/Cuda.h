@@ -326,9 +326,9 @@ public:
    static void Im2colIndices(std::vector<int> & /* V */, const TCudaMatrix<AFloat> & /* B */, size_t /* nLocalViews */,
                              size_t /* imgHeight */, size_t /* imgWidth */, size_t /* fltHeight */,
                              size_t /* fltWidth */, size_t /* strideRows */, size_t /* strideCols */,
-                             size_t /* zeroPaddingHeight */, size_t /* zeroPaddingWidth */) {}
+                             size_t /* zeroPaddingHeight */, size_t /* zeroPaddingWidth */);
    static void Im2colFast(TCudaMatrix<AFloat> & /* A */, const TCudaMatrix<AFloat> & /* B */,
-                          const std::vector<int> & /* V */) {}
+                          const std::vector<int> & /* V */);
 
 
    /** Rotates the matrix \p B, which is representing a weights,

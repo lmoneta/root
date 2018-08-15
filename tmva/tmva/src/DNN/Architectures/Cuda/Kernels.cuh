@@ -302,6 +302,23 @@ __global__ void Im2Col(AFloat * A,
     }
 }
 
+
+//____________________________________________________________________________
+template<typename AFloat>
+__global__ void Im2ColFast(AFloat * A,
+                       const AFloat * B,
+                       const int * V, int n)
+{
+   int i = blockDim.y * blockIdx.y + threadIdx.y;
+   int j = blockDim.x * blockIdx.x + threadIdx.x;
+   int index = j * m + i;
+   if (index >= n) return; 
+   int ib = V[index];
+   if (ib > = 0) 
+      A[index] = B[ib]; 
+   else
+      A[index] = 0; 
+}
 //____________________________________________________________________________
 template<typename AFloat>
 __global__ void AddRowWise(AFloat * W,

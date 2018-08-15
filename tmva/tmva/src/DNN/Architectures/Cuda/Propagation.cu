@@ -195,6 +195,80 @@ void TCuda<AFloat>::Im2col(TCudaMatrix<AFloat> &A,
                                                             zeroPaddingHeight, zeroPaddingWidth);
 }
 
+template<typename AFloat>
+void TCuda<AFloat>::Im2colFast(TCudaMatrix<AFloat> &A,
+                               const TCudaMatrix<AFloat> &B,
+                               std::vector<int> & V)
+{
+
+   dim3 blockDims = TDevice::BlockDims2D();
+   dim3 gridDims  = TDevice::GridDims2D(A);
+   cudaStream_t s = A.GetComputeStream();
+
+   int * dV; 
+   cudaMalloc(dV, sizeof(int ) * V.size());
+   cudaMemcpy(dV, V.data(), sizeof(int) * V.size(), cudaMemcpyHostToDevice);
+
+   ::TMVA::DNN::Cuda::Im2ColFast<<<gridDims, blockDims, 0, s>>>(A.GetDataPointer(), B.GetDataPointer(), dV, V.size() ); 
+   cudaFree(dV); 
+
+}
+
+//____________________________________________________________________________
+template <typename AFloat>
+void TCpu<AFloat>::Im2colIndices(std::vector<int> &V, const TCudaMatrix<AFloat> & B, size_t nLocalViews, size_t imgHeight, size_t imgWidth,
+                          size_t fltHeight, size_t fltWidth, size_t strideRows, size_t strideCols,
+                           size_t zeroPaddingHeight, size_t zeroPaddingWidth)
+{
+
+   // image boudaries
+   int imgHeightBound = imgHeight + zeroPaddingHeight - (fltHeight - 1) / 2 - 1;
+   int imgWidthBound = imgWidth + zeroPaddingWidth - (fltWidth - 1) / 2 - 1;
+   size_t currLocalView = 0;
+
+   const int halfFltHeight =  fltHeight / 2;
+   const int halfFltWidth =  fltWidth / 2;
+   const int halfFltHeightM1 = (fltHeight - 1) / 2;
+   const int halfFltWidthM1 = (fltWidth - 1) / 2;
+   const int nRowsInput = B.GetNrows();
+   const int nColsInput = B.GetNcols();
+   const size_t nSizeOutput = V.size();
+   const int npixels =  nRowsInput * fltHeight * fltWidth;
+   // const int nRowsOutput = A.GetNrows();
+   // const int nColsOutput = A.GetNcols(); 
+
+   // convolution centers
+   for (int i = halfFltHeight -zeroPaddingHeight; i <= imgHeightBound; i += strideRows) {
+      for (int j = halfFltWidth -zeroPaddingWidth ; j <= imgWidthBound; j += strideCols) {
+         size_t currLocalViewPixel = 0;
+
+         // within the local view
+         //R__ASSERT((int) currLocalView < nRowsOutput );
+
+         for (int m = 0; m < nRowsInput; m++) {
+            for (int k = i - halfFltHeight  ; k <= Int_t(i + halfFltHeightM1 ); k++) {
+               int kstep = k * imgWidth;
+               for (int l = j - halfFltWidth ; l <= Int_t(j + halfFltWidthM1); l++) {
+
+                  // Check the boundaries
+                  //R__ASSERT(currLocalViewPixel < nColsOutput );
+                  R__ASSERT(currLocalView * npixels + currLocalViewPixel < nSizeOutput );
+                  if (k < 0 || k >= (Int_t)imgHeight || l < 0 || l >= (Int_t)imgWidth || kstep + l >=  nColsInput)
+                     //V[currLocalView * npixels + currLocalViewPixel]=-1;
+                     V[currLocalViewPixel * nLocalViews + currLocalView] = -1;
+                  else
+                     V[currLocalViewPixel * nLocalViews + currLocalView]= ( kstep + l) * nRowsInput + m;
+
+                  currLocalViewPixel++;
+               }
+            }
+         }
+         currLocalView++;
+      }
+   }
+}
+
+
 //____________________________________________________________________________
 template<typename AFloat>
 void TCuda<AFloat>::RotateWeights(TCudaMatrix<AFloat> &A,
@@ -224,10 +298,17 @@ void TCuda<AFloat>::ConvLayerForward(std::vector<TCudaMatrix<AFloat>> & output,
     size_t nLocalViews = height * width;
     size_t nLocalViewPixels = params.inputDepth * params.filterHeight * params.filterWidth;
 
+   std::vector<int> forwardIndices(nLocalViews * nLocalViewPixels);
+   Im2colIndices(forwardIndices, input[0].GetNrows(), input[0].GetNcols(), nLocalViews, params.inputHeight, params.inputWidth, params.filterHeight,
+                 params.filterWidth, params.strideRows, params.strideCols, params.paddingHeight, params.paddingWidth);
+   
    TCudaMatrix<AFloat> inputPrime(nLocalViews, nLocalViewPixels);
    for(size_t event = 0; event < input.size(); event++) {
-      Im2col(inputPrime, input[event], params.inputHeight, params.inputWidth, params.filterHeight, params.filterWidth,
-             params.strideRows, params.strideCols, params.paddingHeight, params.paddingWidth);
+
+      Im2colFast(inputPrime, input[event], forwardIndices);
+
+      // Im2col(inputPrime, input[event], params.inputHeight, params.inputWidth, params.filterHeight, params.filterWidth,
+      //        params.strideRows, params.strideCols, params.paddingHeight, params.paddingWidth);
 
       MultiplyTranspose(output[event], weights, inputPrime);
       AddConvBiases(output[event], biases);
