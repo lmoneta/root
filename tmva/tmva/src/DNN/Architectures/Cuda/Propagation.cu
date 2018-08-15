@@ -198,25 +198,21 @@ void TCuda<AFloat>::Im2col(TCudaMatrix<AFloat> &A,
 template<typename AFloat>
 void TCuda<AFloat>::Im2colFast(TCudaMatrix<AFloat> &A,
                                const TCudaMatrix<AFloat> &B,
-                               std::vector<int> & V)
+                               const int * dV, size_t vsize)
 {
 
    dim3 blockDims = TDevice::BlockDims2D();
    dim3 gridDims  = TDevice::GridDims2D(A);
    cudaStream_t s = A.GetComputeStream();
 
-   int * dV; 
-   cudaMalloc(dV, sizeof(int ) * V.size());
-   cudaMemcpy(dV, V.data(), sizeof(int) * V.size(), cudaMemcpyHostToDevice);
 
-   ::TMVA::DNN::Cuda::Im2ColFast<<<gridDims, blockDims, 0, s>>>(A.GetDataPointer(), B.GetDataPointer(), dV, V.size() ); 
-   cudaFree(dV); 
+   ::TMVA::DNN::Cuda::Im2ColFast<<<gridDims, blockDims, 0, s>>>(A.GetDataPointer(), B.GetDataPointer(), dV, A.GetNrows(), A.GetNcols(), vsize ); 
 
 }
 
 //____________________________________________________________________________
 template <typename AFloat>
-void TCpu<AFloat>::Im2colIndices(std::vector<int> &V, const TCudaMatrix<AFloat> & B, size_t nLocalViews, size_t imgHeight, size_t imgWidth,
+void TCuda<AFloat>::Im2colIndices(std::vector<int> &V, const TCudaMatrix<AFloat> & B, size_t nLocalViews, size_t imgHeight, size_t imgWidth,
                           size_t fltHeight, size_t fltWidth, size_t strideRows, size_t strideCols,
                            size_t zeroPaddingHeight, size_t zeroPaddingWidth)
 {
@@ -299,13 +295,19 @@ void TCuda<AFloat>::ConvLayerForward(std::vector<TCudaMatrix<AFloat>> & output,
     size_t nLocalViewPixels = params.inputDepth * params.filterHeight * params.filterWidth;
 
    std::vector<int> forwardIndices(nLocalViews * nLocalViewPixels);
-   Im2colIndices(forwardIndices, input[0].GetNrows(), input[0].GetNcols(), nLocalViews, params.inputHeight, params.inputWidth, params.filterHeight,
+   Im2colIndices(forwardIndices, input[0], nLocalViews, params.inputHeight, params.inputWidth, params.filterHeight,
                  params.filterWidth, params.strideRows, params.strideCols, params.paddingHeight, params.paddingWidth);
+
+
+   int * dV;
+   size_t vsize = forwardIndices.size(); 
+   cudaMalloc(&dV, sizeof(int ) * vsize);
+   cudaMemcpy(dV, forwardIndices.data(), sizeof(int) * vsize, cudaMemcpyHostToDevice);
    
    TCudaMatrix<AFloat> inputPrime(nLocalViews, nLocalViewPixels);
    for(size_t event = 0; event < input.size(); event++) {
 
-      Im2colFast(inputPrime, input[event], forwardIndices);
+      Im2colFast(inputPrime, input[event], dV, vsize);
 
       // Im2col(inputPrime, input[event], params.inputHeight, params.inputWidth, params.filterHeight, params.filterWidth,
       //        params.strideRows, params.strideCols, params.paddingHeight, params.paddingWidth);
@@ -316,6 +318,8 @@ void TCuda<AFloat>::ConvLayerForward(std::vector<TCudaMatrix<AFloat>> & output,
       evaluateDerivative<TCuda<AFloat>>(derivatives[event], activFunc, output[event]);
       evaluate<TCuda<AFloat>>(output[event], activFunc);
   }
+
+  cudaFree(dV); 
 }
 
 //____________________________________________________________________________

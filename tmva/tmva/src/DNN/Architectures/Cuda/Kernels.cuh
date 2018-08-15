@@ -307,17 +307,19 @@ __global__ void Im2Col(AFloat * A,
 template<typename AFloat>
 __global__ void Im2ColFast(AFloat * A,
                        const AFloat * B,
-                       const int * V, int n)
+                       const int * V, int m, int n, int ntot)
 {
    int i = blockDim.y * blockIdx.y + threadIdx.y;
    int j = blockDim.x * blockIdx.x + threadIdx.x;
    int index = j * m + i;
-   if (index >= n) return; 
+   if (i >= m || j >=n || index >= ntot) return; 
    int ib = V[index];
-   if (ib > = 0) 
+   if (ib >= 0) {
       A[index] = B[ib]; 
-   else
+   }     
+   else {
       A[index] = 0; 
+   }
 }
 //____________________________________________________________________________
 template<typename AFloat>

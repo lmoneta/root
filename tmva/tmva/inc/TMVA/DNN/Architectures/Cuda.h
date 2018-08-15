@@ -327,8 +327,10 @@ public:
                              size_t /* imgHeight */, size_t /* imgWidth */, size_t /* fltHeight */,
                              size_t /* fltWidth */, size_t /* strideRows */, size_t /* strideCols */,
                              size_t /* zeroPaddingHeight */, size_t /* zeroPaddingWidth */);
+   // static void Im2colFast(TCudaMatrix<AFloat> & /* A */, const TCudaMatrix<AFloat> & /* B */,
+   //                        const std::vector<int> & /* V */);
    static void Im2colFast(TCudaMatrix<AFloat> & /* A */, const TCudaMatrix<AFloat> & /* B */,
-                          const std::vector<int> & /* V */);
+                          const int * dv, size_t n);
 
 
    /** Rotates the matrix \p B, which is representing a weights,
