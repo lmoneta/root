@@ -395,12 +395,27 @@ void TCuda<AFloat>::CalculateConvActivationGradients(
 
     // Convolution.
     TCudaMatrix<AFloat> dfPrime(tempNLocalViews, tempNLocalViewPixels);
+
+
+    std::vector<int> vIndices( tempNLocalViews * tempNLocalViewPixels );
+    Im2colIndices(vIndices, df[0], tempNLocalViews, height, width, filterHeight, filterWidth, tempStrideRows, tempStrideCols,
+                  tempZeroPaddingHeight, tempZeroPaddingWidth);
+
+    int * dV;
+    size_t vsize = vIndices.size(); 
+    cudaMalloc(&dV, sizeof(int ) * vsize);
+    cudaMemcpy(dV, vIndices.data(), sizeof(int) * vsize, cudaMemcpyHostToDevice);
+
     for(size_t event = 0; event < df.size(); event++) {
-        Im2col(dfPrime, df[event], height, width, filterHeight, filterWidth, tempStrideRows, tempStrideCols,
-               tempZeroPaddingHeight, tempZeroPaddingWidth);
+
+       Im2colFast(dfPrime, df[event], dV, vsize);
+        // Im2col(dfPrime, df[event], height, width, filterHeight, filterWidth, tempStrideRows, tempStrideCols,
+        //        tempZeroPaddingHeight, tempZeroPaddingWidth);
+       
 
         MultiplyTranspose(activationGradientsBackward[event], rotWeights, dfPrime);
     }
+    cudaFree(dV);
 }
 
 //____________________________________________________________________________
@@ -438,14 +453,28 @@ void TCuda<AFloat>::CalculateConvWeightGradients(TCudaMatrix<AFloat> & weightGra
         vres.emplace_back(depth, nLocalViewPixels);
     }
 
+    std::vector<int> vIndices(nLocalViews * nLocalViewPixels );
+    Im2colIndices(vIndices, activationsBackward[0], nLocalViews, inputHeight, inputWidth, filterHeight , filterWidth,
+                  tempStrideRows, tempStrideCols, tempZeroPaddingHeight, tempZeroPaddingWidth);
+
+    int * dV;
+    size_t vsize = vIndices.size(); 
+    cudaMalloc(&dV, sizeof(int ) * vsize);
+    cudaMemcpy(dV, vIndices.data(), sizeof(int) * vsize, cudaMemcpyHostToDevice);
+
     // Convolution.
     TCudaMatrix<AFloat> activationsPrime(nLocalViews, nLocalViewPixels);
     for(size_t event = 0; event < df.size(); event++) {
-        Im2col(activationsPrime, activationsBackward[event], inputHeight, inputWidth, filterHeight, filterWidth,
-               tempStrideRows, tempStrideCols, tempZeroPaddingHeight, tempZeroPaddingWidth);
+
+       Im2colFast(activationsPrime, activationsBackward[event], dV, vsize);
+
+        // Im2col(activationsPrime, activationsBackward[event], inputHeight, inputWidth, filterHeight, filterWidth,
+        //        tempStrideRows, tempStrideCols, tempZeroPaddingHeight, tempZeroPaddingWidth);
+
 
         Multiply(vres[event], df[event], activationsPrime);
     }
+    cudaFree(dV); 
 
     dim3 blockDims = TDevice::BlockDims2D();
     dim3 gridDims  = TDevice::GridDims2D(weightGradients);
