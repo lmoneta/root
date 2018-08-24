@@ -340,7 +340,7 @@ public:
    ///@}
 
    /** Dummy placeholder - preparation is currently only required for the CUDA architecture. */
-   static void PrepareInternals(std::vector<TMatrixT<AReal>> &) {}
+   static void PrepareInternals(std::vector<TMatrixT<AReal>> &, std::vector<TMatrixT<AReal>> &, std::vector<TMatrixT<AReal>> &) {}
 
    /** Forward propagation in the Convolutional layer */
    static void ConvLayerForward(std::vector<TMatrixT<AReal>> & /*output*/,
@@ -367,6 +367,8 @@ public:
     *  formed. */
    static void ConvLayerBackward(std::vector<TMatrixT<AReal>> &,
                                  TMatrixT<AReal> &, TMatrixT<AReal> &,
+                                 std::vector<TMatrixT<AReal>> &,
+                                 std::vector<TMatrixT<AReal>> &,
                                  std::vector<TMatrixT<AReal>> &,
                                  const std::vector<TMatrixT<AReal>> &,
                                  const TMatrixT<AReal> &, const std::vector<TMatrixT<AReal>> &,

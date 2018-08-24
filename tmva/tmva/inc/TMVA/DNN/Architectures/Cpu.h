@@ -334,7 +334,9 @@ public:
    ///@}
 
    /** Dummy placeholder - preparation is currently only required for the CUDA architecture. */
-   static void PrepareInternals(std::vector<TCpuMatrix<Scalar_t>> &) {}
+   static void PrepareInternals(std::vector<TCpuMatrix<Scalar_t>> &, 
+                                std::vector<TCpuMatrix<Scalar_t>> &,
+                                std::vector<TCpuMatrix<Scalar_t>> &) {}
 
    /** Forward propagation in the Convolutional layer */
    static void ConvLayerForward(std::vector<TCpuMatrix<Scalar_t>> & output,
@@ -359,6 +361,7 @@ public:
    static void ConvLayerBackward(std::vector<TCpuMatrix<Scalar_t>> &activationGradientsBackward,
                                  TCpuMatrix<Scalar_t> &weightGradients, TCpuMatrix<Scalar_t> &biasGradients,
                                  std::vector<TCpuMatrix<Scalar_t>> &df,
+                                 std::vector<TCpuMatrix<Scalar_t>> &, std::vector<TCpuMatrix<Scalar_t>> &,
                                  const std::vector<TCpuMatrix<Scalar_t>> &activationGradients,
                                  const TCpuMatrix<Scalar_t> &weights,
                                  const std::vector<TCpuMatrix<Scalar_t>> &activationBackward, size_t batchSize,
@@ -369,6 +372,7 @@ public:
     *  before the convolutional layer. */
    static void CalculateConvActivationGradients(std::vector<TCpuMatrix<Scalar_t>> &activationGradientsBackward,
                                                 const std::vector<TCpuMatrix<Scalar_t>> &df,
+                                                std::vector<TCpuMatrix<Scalar_t>> &,
                                                 const TCpuMatrix<Scalar_t> &weights, size_t batchSize,
                                                 size_t inputHeight, size_t inputWidth, size_t depth, size_t height,
                                                 size_t width, size_t filterDepth, size_t filterHeight,
@@ -378,6 +382,7 @@ public:
     * layer. */
    static void CalculateConvWeightGradients(TCpuMatrix<Scalar_t> &weightGradients,
                                             const std::vector<TCpuMatrix<Scalar_t>> &df,
+                                            std::vector<TCpuMatrix<Scalar_t>> &,
                                             const std::vector<TCpuMatrix<Scalar_t>> &activations_backward,
                                             size_t batchSize, size_t inputHeight, size_t inputWidth, size_t depth,
                                             size_t height, size_t width, size_t filterDepth, size_t filterHeight,

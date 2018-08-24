@@ -82,6 +82,8 @@ private:
    Scalar_t fWeightDecay;  ///< The weight decay.
 
    std::vector<Matrix_t> fForwardMatrices; ///< Vector of matrices used for speeding-up the forward pass.
+   std::vector<Matrix_t> fBackwardMatrices1; ///< Vector of matrices used for speeding-up the backward pass.
+   std::vector<Matrix_t> fBackwardMatrices2; ///< Vector of matrices used for speeding-up the backward pass.
 
 public:
    /*! Constructor. */
@@ -214,8 +216,10 @@ TConvLayer<Architecture_t>::TConvLayer(size_t batchSize, size_t inputDepth, size
    for (size_t i = 0; i < batchSize; i++) {
       fDerivatives.emplace_back(depth, fNLocalViews);
       fForwardMatrices.emplace_back(fNLocalViews, fNLocalViewPixels);
+      fBackwardMatrices1.emplace_back( inputHeight * inputWidth, depth * filterHeight * filterWidth );
+      fBackwardMatrices2.emplace_back( fNLocalViews, fNLocalViewPixels );
    }
-   Architecture_t::PrepareInternals(fForwardMatrices);
+   Architecture_t::PrepareInternals(fForwardMatrices, fBackwardMatrices1, fBackwardMatrices2);
 }
 
 //______________________________________________________________________________
@@ -279,66 +283,19 @@ auto TConvLayer<Architecture_t>::Forward(std::vector<Matrix_t> &input, bool /*ap
    Architecture_t::ConvLayerForward(this->GetOutput(), this->GetDerivatives(), input, this->GetWeightsAt(0),
                                     this->GetBiasesAt(0), params, this->GetActivationFunction(),
                                     this->GetForwardMatrices());
-
-#if 0
-   // in printciple I could make the indices data member of the class
-   Matrix_t inputTr(this->GetNLocalViews(), this->GetNLocalViewPixels());
-   //Matrix_t inputTr2(this->GetNLocalViews(), this->GetNLocalViewPixels());
-   std::vector<int> vIndices(inputTr.GetNrows() * inputTr.GetNcols() );
-   R__ASSERT( input.size() > 0);
-   Architecture_t::Im2colIndices(vIndices, input[0], this->GetNLocalViews(), this->GetInputHeight(), this->GetInputWidth(), this->GetFilterHeight(),
-                             this->GetFilterWidth(), this->GetStrideRows(), this->GetStrideCols(),
-                             this->GetPaddingHeight(), this->GetPaddingWidth());
-   // batch size loop
-   for (size_t i = 0; i < this->GetBatchSize(); i++) {
-
-      if (applyDropout && (this->GetDropoutProbability() != 1.0)) {
-         Architecture_t::Dropout(input[i], this->GetDropoutProbability());
-      }
-
-      inputTr.Zero();
-      //inputTr2.Zero();
-      // Architecture_t::Im2col(inputTr2, input[i], this->GetInputHeight(), this->GetInputWidth(), this->GetFilterHeight(),
-      //                         this->GetFilterWidth(), this->GetStrideRows(), this->GetStrideCols(),
-      //                         this->GetPaddingHeight(), this->GetPaddingWidth());
-      Architecture_t::Im2colFast(inputTr, input[i], vIndices);
-      // bool diff = false;
-      // for (int j = 0; j < inputTr.GetNrows(); ++j) {
-      //    for (int k = 0; k < inputTr.GetNcols(); ++k) {
-      //       if ( inputTr2(j,k) != inputTr(j,k) ) {
-      //          diff = true;
-      //          std::cout <<  "different im2col for " << j << " , " << k << "  " << inputTr(j,k) << "  shoud be " << inputTr2(j,k) << std::endl;
-      //       }
-      //    }
-      // }
-      // if (diff) {
-      //    std::cout << "ConvLayer:: Different Im2Col for batch " << i  << std::endl;
-      //    printf("Layer parameters : %d x %d , filter %d x %d , stride %d %d , pad %d %d \n",this->GetInputHeight(), this->GetInputWidth(), this->GetFilterHeight(),
-      //                         this->GetFilterWidth(), this->GetStrideRows(), this->GetStrideCols(),
-      //           this->GetPaddingHeight(), this->GetPaddingWidth() );
-      //    // PrintMatrix(inputTr);
-      //    //PrintMatrix(inputTr2);
-      // }
-      // R__ASSERT(!diff);
-      Architecture_t::MultiplyTranspose(this->GetOutputAt(i), this->GetWeightsAt(0), inputTr);
-      Architecture_t::AddConvBiases(this->GetOutputAt(i), this->GetBiasesAt(0));
-
-      evaluateDerivative<Architecture_t>(this->GetDerivativesAt(i), fF, this->GetOutputAt(i));
-      evaluate<Architecture_t>(this->GetOutputAt(i), fF);
-   }
-#endif
 }
 
 //______________________________________________________________________________
 template <typename Architecture_t>
 auto TConvLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_backward,
                                           const std::vector<Matrix_t> &activations_backward,
-                                          std::vector<Matrix_t> & /*inp1*/, std::vector<Matrix_t> &
-                                          /*inp2*/) -> void
+                                          std::vector<Matrix_t> & /* inp1 */, std::vector<Matrix_t> & /* inp2*/) -> void
 {
    Architecture_t::ConvLayerBackward(
       gradients_backward, this->GetWeightGradientsAt(0), this->GetBiasGradientsAt(0), this->GetDerivatives(),
-      this->GetActivationGradients(), this->GetWeightsAt(0), activations_backward, this->GetBatchSize(),
+      fBackwardMatrices1, fBackwardMatrices2,
+      this->GetActivationGradients(), this->GetWeightsAt(0), activations_backward, 
+      this->GetBatchSize(),
       this->GetInputHeight(), this->GetInputWidth(), this->GetDepth(), this->GetHeight(), this->GetWidth(),
       this->GetFilterDepth(), this->GetFilterHeight(), this->GetFilterWidth(), this->GetNLocalViews());
 

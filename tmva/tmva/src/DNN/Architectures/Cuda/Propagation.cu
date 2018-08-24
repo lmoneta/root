@@ -211,12 +211,21 @@ void TCuda<AFloat>::RotateWeights(TCudaMatrix<AFloat> &A,
 }
 
 template <typename AFloat>
-void TCuda<AFloat>::PrepareInternals(std::vector<TCudaMatrix<AFloat>> & inputPrime)
+void TCuda<AFloat>::PrepareInternals(std::vector<TCudaMatrix<AFloat>> & inputPrime,
+                                     std::vector<TCudaMatrix<AFloat>> & inputPrime2,
+                                     std::vector<TCudaMatrix<AFloat>> & inputPrime3)
 {
+   // assume stream can be only 16 
+   const int nstream = 32*3; 
+   cudaStream_t s[nstream];
+   for (int i = 0; i < nstream; ++i) { 
+      cudaStreamCreate(&s[i]);
+   }
    for (size_t event = 0; event < inputPrime.size(); event++) {
-      cudaStream_t s;
-      cudaStreamCreate(&s);
-      inputPrime[event].SetComputeStream(s);
+      int streamNumber = event;// % nstream; 
+      inputPrime[event].SetComputeStream(s[streamNumber]);
+      inputPrime2[event].SetComputeStream(s[streamNumber+32]);
+      inputPrime3[event].SetComputeStream(s[streamNumber+64]);
    }
 }
 
@@ -256,6 +265,8 @@ void TCuda<AFloat>::ConvLayerBackward(std::vector<TCudaMatrix<AFloat>> & activat
                                       TCudaMatrix<AFloat> & weightGradients,
                                       TCudaMatrix<AFloat> & biasGradients,
                                       std::vector<TCudaMatrix<AFloat>> & df,
+                                      std::vector<TCudaMatrix<AFloat>> & backwardMatrices1,
+                                      std::vector<TCudaMatrix<AFloat>> & backwardMatrices2,
                                       const std::vector<TCudaMatrix<AFloat>> & activationGradients,
                                       const TCudaMatrix<AFloat> & weights,
                                       const std::vector<TCudaMatrix<AFloat>> & activationBackward,
@@ -270,19 +281,24 @@ void TCuda<AFloat>::ConvLayerBackward(std::vector<TCudaMatrix<AFloat>> & activat
                                       size_t filterWidth,
                                       size_t nLocalViews)
 {
+    
     for (size_t i = 0; i < batchSize; i++) {
-        // Compute element-wise product.
-        Hadamard(df[i], activationGradients[i]);
+       // set the correct stream which are set in the derivatives 
+       //activationGradients[i].SetComputeStream( df[i].GetComputeStream() );
+        // Compute element-wise product.       
+       Hadamard(df[i], activationGradients[i]);
     }
 
     // Calculate the activation gradients of the previous layer
-    CalculateConvActivationGradients(activationGradientsBackward, df, weights, batchSize, inputHeight, inputWidth, depth,
+    CalculateConvActivationGradients(activationGradientsBackward, df, backwardMatrices1, weights,  batchSize, inputHeight, inputWidth, depth,
                                      height, width, filterDepth, filterHeight, filterWidth);
 
 
+
     // Calculate the weight gradients
-    CalculateConvWeightGradients(weightGradients, df, activationBackward, batchSize, inputHeight, inputWidth, depth,
+    CalculateConvWeightGradients(weightGradients, df, backwardMatrices2, activationBackward, batchSize, inputHeight, inputWidth, depth,
                                  height, width, filterDepth, filterHeight, filterWidth, nLocalViews);
+
 
     // Calculate the bias gradients
     CalculateConvBiasGradients(biasGradients, df, batchSize, depth, nLocalViews);
@@ -293,6 +309,7 @@ template<typename AFloat>
 void TCuda<AFloat>::CalculateConvActivationGradients(
                                     std::vector<TCudaMatrix<AFloat>> & activationGradientsBackward,
                                     std::vector<TCudaMatrix<AFloat>> & df,
+                                    std::vector<TCudaMatrix<AFloat>> & dfPrimes,
                                     const TCudaMatrix<AFloat> & weights,
                                     size_t /* batchSize */,
                                     size_t inputHeight,
@@ -321,13 +338,23 @@ void TCuda<AFloat>::CalculateConvActivationGradients(
    size_t tempStrideRows = 1;
    size_t tempStrideCols = 1;
 
+
    // Convolution.
-   TCudaMatrix<AFloat> dfPrime(tempNLocalViews, tempNLocalViewPixels);
+   //std::vector<TCudaMatrix<AFloat>> dfPrimes;
    for(size_t event = 0; event < df.size(); event++) {
-      Im2col(dfPrime, df[event], height, width, filterHeight, filterWidth, tempStrideRows, tempStrideCols,
+      // dfPrimes.emplace_back(tempNLocalViews, tempNLocalViewPixels);
+      // dfPrimes[event].SetComputeStream( df[event].GetComputeStream() );
+      R__ASSERT(dfPrimes[event].GetNrows() == tempNLocalViews);
+      R__ASSERT(dfPrimes[event].GetNcols() == tempNLocalViewPixels);
+      activationGradientsBackward[event].SetComputeStream( dfPrimes[event].GetComputeStream() );
+   }
+   // dfPrime(tempNLocalViews, tempNLocalViewPixels);
+   for(size_t event = 0; event < df.size(); event++) {
+
+      Im2col(dfPrimes[event], df[event], height, width, filterHeight, filterWidth, tempStrideRows, tempStrideCols,
              tempZeroPaddingHeight, tempZeroPaddingWidth);
 
-      MultiplyTranspose(activationGradientsBackward[event], rotWeights, dfPrime);
+      MultiplyTranspose(activationGradientsBackward[event], rotWeights, dfPrimes[event]);
    }
 }
 
@@ -335,6 +362,7 @@ void TCuda<AFloat>::CalculateConvActivationGradients(
 template<typename AFloat>
 void TCuda<AFloat>::CalculateConvWeightGradients(TCudaMatrix<AFloat> & weightGradients,
                                                  std::vector<TCudaMatrix<AFloat>> & df,
+                                                 std::vector<TCudaMatrix<AFloat>> & activationsPrimes,
                                                  const std::vector<TCudaMatrix<AFloat>> & activationsBackward,
                                                  size_t batchSize,
                                                  size_t inputHeight,
@@ -366,13 +394,23 @@ void TCuda<AFloat>::CalculateConvWeightGradients(TCudaMatrix<AFloat> & weightGra
     const size_t tempZeroPaddingWidth = (width - inputWidth + filterWidth - 1) / 2;
 
     // Convolution.
-    TCudaMatrix<AFloat> activationsPrime(nLocalViews, nLocalViewPixels);
+
+    //std::vector<TCudaMatrix<AFloat>> activationsPrimes;
+   for(size_t event = 0; event < df.size(); event++) {
+      //activationsPrimes.emplace_back(nLocalViews, nLocalViewPixels);
+      R__ASSERT(activationsPrimes[event].GetNrows() == nLocalViews);
+      R__ASSERT(activationsPrimes[event].GetNcols() == nLocalViewPixels);
+      // dfPrimes[event].SetComputeStream( df[event].GetComputeStream() );
+      // activationGradientsBackward[event].SetComputeStream( df[event].GetComputeStream() );
+   }
+
+   //TCudaMatrix<AFloat> activationsPrime(nLocalViews, nLocalViewPixels);
     TCudaMatrix<AFloat> resPrime(depth, nLocalViewPixels);
     for(size_t event = 0; event < df.size(); event++) {
-        Im2col(activationsPrime, activationsBackward[event], inputHeight, inputWidth, filterHeight, filterWidth,
+        Im2col(activationsPrimes[event], activationsBackward[event], inputHeight, inputWidth, filterHeight, filterWidth,
                tempStrideRows, tempStrideCols, tempZeroPaddingHeight, tempZeroPaddingWidth);
 
-        Multiply(resPrime, df[event], activationsPrime);
+        Multiply(resPrime, df[event], activationsPrimes[event]);
 
         TCuda<AFloat>::ScaleAdd(weightGradients, resPrime, 1.0); 
     }

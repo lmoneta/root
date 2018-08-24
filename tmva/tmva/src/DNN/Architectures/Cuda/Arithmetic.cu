@@ -137,12 +137,13 @@ void TCuda<AFloat>::Hadamard(TCudaMatrix<AFloat> & B,
 {
    dim3 blockDims = TDevice::BlockDims2D();
    dim3 gridDims  = TDevice::GridDims2D(B);
-   cudaStream_t s = A.GetComputeStream();
+   //cudaStream_t s = A.GetComputeStream();
+   cudaStream_t s = B.GetComputeStream();
    ::TMVA::DNN::Cuda::Hadamard<<<gridDims, blockDims, 0, s>>>(B.GetDataPointer(),
                                                               A.GetDataPointer(),
                                                               A.GetNrows(),
                                                               A.GetNcols());
-   B.SetComputeStream(s);
+   //B.SetComputeStream(s);
 }
 
 //____________________________________________________________________________
@@ -292,7 +293,8 @@ void TCuda<float>::ScaleAdd(TCudaMatrix<float> & B,
                             const TCudaMatrix<float> & A,
                             float alpha)
 {
-   cudaStream_t s = 0;
+   //cudaStream_t s = 0;
+   cudaStream_t s = A.GetComputeStream(); 
    cublasSetStream(A.GetCublasHandle(), s);
    cublasSaxpy(A.GetCublasHandle(), A.GetNoElements(), &alpha,
                A.GetDataPointer(), 1,

@@ -1209,7 +1209,9 @@ void MethodDL::TrainDeepNet()
          Log() << separator << Endl;
          Log() << std::setw(10) << "Epoch"
                << " | " << std::setw(12) << "Train Err." << std::setw(12) << "Test Err." 
-               << std::setw(12) << "t(s)/epoch" << std::setw(12)  << "t(s)/Loss"
+               << std::setw(12) << "t(s)/epoch" 
+               << std::setw(12)  << "t(s)/FW%BW"
+               << std::setw(12)  << "t(s)/Loss"
                << std::setw(12) << "nEvents/s"
                << std::setw(12) << "Conv. Steps" << Endl;
          Log() << separator << Endl;
@@ -1287,7 +1289,7 @@ void MethodDL::TrainDeepNet()
             }
 
             // copy configuration when reached a minimum error
-            if (testError < minTestError ) {
+            if (testError < minTestError) {
                // Copy weights from deepNet to fNet
                Log() << std::setw(10) << optimizer->GetGlobalStep()
                      << " Minimum Test error found - save the configuration " << Endl;
@@ -1341,6 +1343,7 @@ void MethodDL::TrainDeepNet()
                   << std::setw(12) << trainingError
                   << std::setw(12) << testError
                   << std::setw(12) << seconds / settings.testInterval
+                  << std::setw(12)  << elapsed1.count()
                   << std::setw(12)  << elapsed_testing.count()
                   << std::setw(12) << 1. / eventTime
                   << std::setw(12) << convergenceCount

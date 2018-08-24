@@ -308,7 +308,8 @@ public:
    ///@{
 
    /** Attaches a cuda stream to each matrix in order to accomodate parallel kernel launches. */
-   static void PrepareInternals(std::vector<TCudaMatrix<AFloat>> & inputPrime);
+   //static void PrepareInternals(std::vector<TCudaMatrix<AFloat>> & inputPrime);
+   static void PrepareInternals(std::vector<TCudaMatrix<AFloat>> & inputPrime,std::vector<TCudaMatrix<AFloat>> & inputPrime2,std::vector<TCudaMatrix<AFloat>> & inputPrime3);
 
    /** Calculate how many neurons "fit" in the output layer, given the input as well as the layer's hyperparameters. */
    static size_t calculateDimension(size_t imgDim, size_t fltDim, size_t padding, size_t stride);
@@ -366,9 +367,12 @@ public:
    static void ConvLayerBackward(std::vector<TCudaMatrix<AFloat>> &activationGradientsBackward,
                                  TCudaMatrix<AFloat> &weightGradients, TCudaMatrix<AFloat> &biasGradients,
                                  std::vector<TCudaMatrix<AFloat>> &df,
+                                 std::vector<TCudaMatrix<AFloat>> & backwardMatrices1,
+                                 std::vector<TCudaMatrix<AFloat>> & backwardMatrices2,                               
                                  const std::vector<TCudaMatrix<AFloat>> &activationGradients,
                                  const TCudaMatrix<AFloat> &weights,
-                                 const std::vector<TCudaMatrix<AFloat>> &activationBackward, size_t batchSize,
+                                 const std::vector<TCudaMatrix<AFloat>> &activationBackward, 
+                                 size_t batchSize,
                                  size_t inputHeight, size_t inputWidth, size_t depth, size_t height, size_t width,
                                  size_t filterDepth, size_t filterHeight, size_t filterWidth, size_t nLocalViews);
 
@@ -376,6 +380,7 @@ public:
     *  before the convolutional layer. */
    static void CalculateConvActivationGradients(std::vector<TCudaMatrix<AFloat>> &activationGradientsBackward,
                                                 std::vector<TCudaMatrix<AFloat>> &df,
+                                                std::vector<TCudaMatrix<AFloat>> &dm,
                                                 const TCudaMatrix<AFloat> &weights, size_t batchSize,
                                                 size_t inputHeight, size_t inputWidth, size_t depth, size_t height,
                                                 size_t width, size_t filterDepth, size_t filterHeight,
@@ -384,6 +389,7 @@ public:
    /** Utility function for calculating the weight gradients of the convolutional
     * layer. */
    static void CalculateConvWeightGradients(TCudaMatrix<AFloat> &weightGradients, std::vector<TCudaMatrix<AFloat>> &df,
+                                            std::vector<TCudaMatrix<AFloat>> &dm,
                                             const std::vector<TCudaMatrix<AFloat>> &activations_backward,
                                             size_t batchSize, size_t inputHeight, size_t inputWidth, size_t depth,
                                             size_t height, size_t width, size_t filterDepth, size_t filterHeight,
