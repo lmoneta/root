@@ -215,17 +215,22 @@ void TCuda<AFloat>::PrepareInternals(std::vector<TCudaMatrix<AFloat>> & inputPri
                                      std::vector<TCudaMatrix<AFloat>> & inputPrime2,
                                      std::vector<TCudaMatrix<AFloat>> & inputPrime3)
 {
-   // assume stream can be only 16 
-   const int nstream = 32*3; 
-   cudaStream_t s[nstream];
-   for (int i = 0; i < nstream; ++i) { 
-      cudaStreamCreate(&s[i]);
-   }
+   // // assume stream can be only 16 
+   // const int nstream = 32*3; 
+   // cudaStream_t s[nstream];
+   // for (int i = 0; i < nstream; ++i) { 
+   //    cudaStreamCreate(&s[i]);
+   // }
    for (size_t event = 0; event < inputPrime.size(); event++) {
-      int streamNumber = event;// % nstream; 
-      inputPrime[event].SetComputeStream(s[streamNumber]);
-      inputPrime2[event].SetComputeStream(s[streamNumber+32]);
-      inputPrime3[event].SetComputeStream(s[streamNumber+64]);
+      cudaStream_t s;       
+      //int streamNumber = event;// % nstream; 
+      cudaStreamCreate(&s);       
+      inputPrime[event].SetComputeStream(s);
+      inputPrime2[event].SetComputeStream(s);
+      inputPrime3[event].SetComputeStream(s);
+      // inputPrime[event].SetComputeStream(s[streamNumber]);
+      // inputPrime2[event].SetComputeStream(s[streamNumber+32]);
+      // inputPrime3[event].SetComputeStream(s[streamNumber+64]);
    }
 }
 

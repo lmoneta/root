@@ -1,0 +1,10 @@
+
+using namespace TMVA::DNN;
+using namespace TMVA::DNN::CNN;
+
+#include "TestConvNet.h"
+
+
+template<typename Architecture>
+bool testForward1()
+{
