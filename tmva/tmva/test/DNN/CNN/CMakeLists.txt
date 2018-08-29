@@ -34,8 +34,13 @@ target_link_libraries(testRotateWeightsCuda ${Libraries} ${DNN_CUDA_LIBRARIES})
 ROOT_ADD_TEST(TMVA-DNN-CNN-RotateWeightsCuda COMMAND testRotateWeightsCuda)
 
 CUDA_ADD_EXECUTABLE(testConvBackpropagationCuda TestConvBackpropagationCuda.cxx)
-target_link_libraries(testConvBackpropagationCuda ${Libraries} ${DNN_CUDA_LIBRARIES})
+target_link_libraries(testConvBackpropagationCuda ${Libraries} ${DNN_CUDA_LIBRARIES})  
 ROOT_ADD_TEST(TMVA-DNN-CNN-ConvBackpropagationCuda COMMAND testConvBackpropagationCuda)
+
+CUDA_ADD_EXECUTABLE(testConvNetPerfCuda TestConvNetPerfCuda.cxx)
+target_link_libraries(testConvNetPerfCuda ${Libraries} ${DNN_CUDA_LIBRARIES})  
+ROOT_ADD_TEST(TMVA-DNN-CNN-Perf-Cuda COMMAND testConvNetPerfCuda)
+
 
 include_directories(${ROOT_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS})
 
@@ -112,5 +117,8 @@ ROOT_ADD_TEST(TMVA-DNN-CNN-Backpropagation-CPU COMMAND testConvBackpropagationCp
 
 ROOT_EXECUTABLE(testMethodDLCNNCpu TestMethodDLCNN.cxx LIBRARIES ${Libraries})
 ROOT_ADD_TEST(TMVA-DNN-CNN-MethodDL-CPU COMMAND testMethodDLCNNCpu)
+
+ROOT_EXECUTABLE(testConvNetPerfCpu TestConvNetPerfCpu.cxx LIBRARIES ${Libraries})
+ROOT_ADD_TEST(TMVA-DNN-CNN-Perf-CPU COMMAND testConvNetPerfCpu)
 
 endif ()
