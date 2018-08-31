@@ -329,6 +329,22 @@ __global__ void Hadamard(AFloat * B,
    if ((i < m) && (j < n))
        B[index] *= A[index];
 }
+//____________________________________________________________________________
+template<typename AFloat>
+__global__ void VHadamard(AFloat * B,
+                         const AFloat * A,
+                          int m, int n, int nb)
+{
+   int i = blockDim.y * blockIdx.y + threadIdx.y;
+   int j = blockDim.x * blockIdx.x + threadIdx.x;
+   int index = j * m + i;
+   if ((i < m) && (j < n)) { 
+      for (int k = 0; k < nb; ++k) {
+         int index2 = k*m*n + index;
+         B[index2] *= A[index2];
+      }
+   }
+}
 
 //____________________________________________________________________________
 template<typename AFloat>

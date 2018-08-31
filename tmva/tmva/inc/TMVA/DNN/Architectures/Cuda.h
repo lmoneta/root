@@ -490,6 +490,7 @@ public:
     *  with the result being written into \p A.
     */
    static void Hadamard(TCudaMatrix<AFloat> & A, const TCudaMatrix<AFloat> & B);
+   static void VHadamard(TCudaMatrix<AFloat> & A, const TCudaMatrix<AFloat> & B,const TCudaMatrix<AFloat> & A0, int nb);
 
    /** Sum columns of (m x n) matrix \p A and write the results into the first
     * m elements in \p B.

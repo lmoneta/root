@@ -314,8 +314,12 @@ bool testBackward1()
     Matrix_t computedWeightGradients(numberFilters, imgDepth * fltHeight * fltWidth);
     Matrix_t computedBiasGradients(numberFilters, 1);
 
+    // size of these tensors must be fixed
+    std::vector<Matrix_t> b1;
+    std::vector<Matrix_t> b2;
+
     Architecture::ConvLayerBackward(computedActivationGradientsBackward, computedWeightGradients, computedBiasGradients,
-                                    df, activationGradients, weights, activationsBackward,
+                                    df, b1, b2, activationGradients, weights, activationsBackward,
                                     batchSize, imgHeight, imgWidth, numberFilters, height,
                                     width, imgDepth, fltHeight, fltWidth, nLocalViews);
 

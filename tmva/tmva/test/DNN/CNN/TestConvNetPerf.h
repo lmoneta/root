@@ -60,7 +60,7 @@ struct ConvNetPerfTest {
    size_t n2 = 32;
 
 
-   TDeepNet<Architecture> createConvNet(size_t batchSize, size_t imgDepth, size_t imgHeight, size_t imgWidth,
+   TDeepNet<Architecture> createConvNet(size_t imgDepth, size_t imgHeight, size_t imgWidth,
                                         size_t batchDepth, size_t batchHeight, size_t batchWidth) 
    {
 
@@ -82,6 +82,9 @@ struct ConvNetPerfTest {
 
       //EActivationFunction fConv1 = ActivationFunctions[rand() % ActivationFunctions.size()];
 
+      // add 2 layers to test also activation backward
+      convNet.AddConvLayer(depth1, filterHeightConv1, filterWidthConv1, strideRowsConv1, strideColsConv1, zeroPaddingHeight1,
+                       zeroPaddingWidth1, fConv1);
       convNet.AddConvLayer(depth1, filterHeightConv1, filterWidthConv1, strideRowsConv1, strideColsConv1, zeroPaddingHeight1,
                        zeroPaddingWidth1, fConv1);
 
@@ -92,7 +95,7 @@ struct ConvNetPerfTest {
 
 
       
-   void createTensor(std::vector<Matrix_t> & X, size_t nb, size_t n, size_t m)
+   static void createTensor(std::vector<Matrix_t> & X, size_t nb, size_t n, size_t m)
    {
       for (size_t i = 0; i < nb; i++) {
          X.emplace_back(n, m);
@@ -108,7 +111,7 @@ struct ConvNetPerfTest {
       std::vector<Matrix_t> X;
       createTensor(X, batchSize, n0, n1*n2);
 
-      auto convNet = createConvNet(batchSize, n0, n1, n2, batchSize, n0, n1*n2); 
+      auto convNet = createConvNet(n0, n1, n2, batchSize, n0, n1*n2); 
 
       std::chrono::time_point<std::chrono::system_clock> tstart, tend;
       tstart = std::chrono::system_clock::now();
@@ -126,7 +129,7 @@ struct ConvNetPerfTest {
       std::vector<Matrix_t> X;
       createTensor(X, batchSize, n0, n1*n2);
 
-      auto convNet = createConvNet(batchSize, n0, n1, n2, batchSize, n0, n1*n2);
+      auto convNet = createConvNet(n0, n1, n2, batchSize, n0, n1*n2);
       // do a forward pass 
       convNet.Forward(X);
 
@@ -145,6 +148,7 @@ struct ConvNetPerfTest {
       std::chrono::duration<double> elapsed_seconds = tend - tstart;
       return elapsed_seconds.count(); 
    }
+
 
 
 };
