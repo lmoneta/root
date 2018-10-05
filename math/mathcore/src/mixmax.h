@@ -128,19 +128,10 @@ void branch_inplace( rng_state_t* Xin, myID_t* ID ); // almost the same as apply
     
 // the charpoly is irreducible for the combinations of N and SPECIAL
 
-#if (N==256)
-#define SPECIALMUL 0
-#ifdef USE_MIXMAX_256_NEW
-// for 1.1
-#define SPECIAL 487013230256099064 // s=487013230256099064, m=1 -- good old MIXMAX
-#define MOD_MULSPEC(k) fmodmulM61( 0, SPECIAL , (k) )
-#else
-// for 1.0
-#define SPECIAL -1
-#define MOD_MULSPEC(k) (MERSBASE - (k));
-#endif
+
+#ifndef USE_MIXMAX_OLD
     
-#elif (N==8)
+#if (N==8)
 #define SPECIALMUL 53 // m=2^53+1
 #define SPECIAL 0
     
@@ -169,7 +160,14 @@ void branch_inplace( rng_state_t* Xin, myID_t* ID ); // almost the same as apply
 #define SPECIALMUL 51   // m=2^51+1 and a SPECIAL=487013230256099140
 #define SPECIAL 487013230256099140ULL
 #define MOD_MULSPEC(k) fmodmulM61( 0, SPECIAL , (k) )
-    
+
+//mixmax 1.1 with N=256
+#elif (N==256)
+// for 1.1
+#define SPECIALMUL 0
+#define SPECIAL 487013230256099064 // s=487013230256099064, m=1 -- good old MIXMAX
+#define MOD_MULSPEC(k) fmodmulM61( 0, SPECIAL , (k) )
+
 #elif (N==44851)
 #define SPECIALMUL 0
 #define SPECIAL -3
@@ -177,25 +175,53 @@ void branch_inplace( rng_state_t* Xin, myID_t* ID ); // almost the same as apply
 
 
 #else
-#warning Not a verified N, you are on your own!
+#warning Not a verified N for new MIXMAX , you are on your own!
 #define SPECIALMUL 58
 #define SPECIAL 0
-    
+
 #endif // list of interesting N for modulus M61 ends here
+
+#else // case of old MIXMAX
+
+// for 1.0
+#if (N == 10 || N==256)
+#define SPECIAL -1
+#define MOD_MULSPEC(k) (MERSBASE - (k));
+
+#elif (N==88 || N==40)
+#define SPECIAL 1
+#define MOD_MULSPEC(k) (k)
+
+#elif (N==44)
+#define SPECIAL 0
+#define MOD_MULSPEC(k) (0)
+
+
+#elif (N==16)
+#define SPECIAL 6
+//#define MOD_MULSPEC(k) (MERSBASE-(k))
+#else
+
+#warning Not a verified N for old MIXMAX , you are on your own!
+#define SPECIALMUL 0
+#define SPECIAL 0
+#endif
+
+#endif
 
 
 #ifndef __MIXMAX_C // c++ can put code into header files, why cant we? (with the inline declaration, should be safe from duplicate-symbol error)
-	
+
 #define get_next(X) GET_BY_MACRO(X)
 #define get_next_float(X) get_next_float_BY_MACRO(X)
 
 #endif // __MIXMAX_C
-    
+
 
 inline 	myuint GET_BY_MACRO(rng_state_t* X) {
     int i;
     i=X->counter;
-    
+
     if (i<=(N-1) ){
         X->counter++;
         return X->V[i];
@@ -205,7 +231,7 @@ inline 	myuint GET_BY_MACRO(rng_state_t* X) {
         return X->V[1];
     }
 }
-	
+
 inline double get_next_float_BY_MACRO(rng_state_t* X){
     /* cast to signed int trick suggested by Andrzej Görlich     */
     int64_t Z=(int64_t)GET_BY_MACRO(X);

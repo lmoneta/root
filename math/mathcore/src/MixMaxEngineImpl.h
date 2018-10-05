@@ -1,3 +1,5 @@
+#ifndef ROOT_Math_MixMaxEngineImpl
+#define ROOT_Math_MixMaxEngineImpl
 
 
 #include <cstdio>
@@ -5,8 +7,6 @@
 #include <cstdlib>
 #include <vector>
 
-#ifndef ROOT_Math_MixMaxEngineImpl
-#define ROOT_Math_MixMaxEngineImpl
 
 
 #if (ROOT_MM_N==17)
@@ -14,9 +14,23 @@ namespace mixmax_17 {
 #elif (ROOT_MM_N==240)
 namespace mixmax_240 {
 #elif (ROOT_MM_N==256)
+#define USE_MIXMAX_OLD   
 namespace mixmax_256 {
-#else
-namespace { 
+#elif (ROOT_MM_N==8)
+namespace mixmax_8 {
+#elif (ROOT_MM_N==40)
+namespace mixmax_40 { 
+#elif (ROOT_MM_N==44)
+#define USE_MIXMAX_OLD   
+namespace mixmax_44 { 
+#elif (ROOT_MM_N==88)
+#define USE_MIXMAX_OLD   
+namespace mixmax_88 { 
+#elif (ROOT_MM_N==10)
+#define USE_MIXMAX_OLD   
+namespace mixmax_10 { 
+#elif
+error "value of ROOT_MM_N is not supported"
 #endif
 
 #ifdef WIN32
@@ -26,7 +40,7 @@ namespace {
 #include "mixmax.icc"
 
 #undef N
-}
+}  // end namespace mixmax_xx
 
 #include "Math/MixMaxEngine.h"
 
@@ -38,6 +52,16 @@ using namespace mixmax_17;
 using namespace mixmax_240;
 #elif (ROOT_MM_N==256)
 using namespace mixmax_256;
+#elif (ROOT_MM_N==8)
+using namespace mixmax_8;
+#elif (ROOT_MM_N==40)
+using namespace mixmax_40;
+#elif (ROOT_MM_N==44)
+using namespace mixmax_44;
+#elif (ROOT_MM_N==88)
+using namespace mixmax_88;
+#elif (ROOT_MM_N==10)
+using namespace mixmax_10;
 #endif
 
 
@@ -45,11 +69,10 @@ namespace ROOT {
    namespace Math {
 
 
-
          // dummy implementation
    template<int N>
    class MixMaxEngineImpl {
-   public: 
+   public:
       MixMaxEngineImpl(uint64_t) {
          std::cerr << "MixMaxEngineImpl - These template parameters are not supported for MixMaxEngine" << std::endl;
       }
@@ -61,8 +84,9 @@ namespace ROOT {
       void GetState(std::vector<uint64_t> &) { }
       int Counter() { return -1; }
       void SetCounter(int) {}
-      void Iterate() {} 
+      void Iterate() {}
    };
+
 
 
 template<> 
@@ -84,8 +108,11 @@ public:
       seed_spbox(fRngState, seed);
    }
    void SetSeed(Result_t seed) {
-      //seed_spbox(fRngState, seed);
+#if (ROOT_MM_N==10 || ROOT_MM_N==40 || ROOT_MM_N==44 || ROOT_MM_N==88)
+      SetSeedFast(seed);
+#else
       seed_uniquestream(fRngState, 0, 0, (uint32_t)(seed>>32), (uint32_t)seed );
+#endif
    }
    double Rndm() {
        return get_next_float(fRngState);
