@@ -1,7 +1,7 @@
 
 
 // define number for used to Mixmax
-#define ROOT_MM_N 10
+#define ROOT_MM_N 8
 #include "MixMaxEngineImpl.h"
 
 // define the template instance we want to have in the librsary
@@ -9,8 +9,8 @@
 namespace ROOT {
    namespace Math {
       template class MixMaxEngine<ROOT_MM_N,0>;
-      template class MixMaxEngine<ROOT_MM_N,7>;
-      template class MixMaxEngine<ROOT_MM_N,13>;
+      template class MixMaxEngine<ROOT_MM_N,1>;
+      template class MixMaxEngine<ROOT_MM_N,2>;
    }
 }
 

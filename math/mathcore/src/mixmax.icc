@@ -348,7 +348,8 @@ cum[i] =  fmodmulM61( cum[i], coeff ,  Y[i] ) ; \
 #define SKIPISON 1
 #define OLDSKIP 0
 
-#if ( ( (N==8) || (N==17) || (N==240) ||(N==120) || (N==256) ) && BITS==61 && SKIPISON!=0)
+//#if ( ( (N==8) || (N==17) || (N==240) ||(N==120) || (N==256) ) && BITS==61 && SKIPISON!=0)
+#if ( ( (N==17) || (N==240) ||(N==120) || (N==256) ) && BITS==61 && SKIPISON!=0)
 #if (OLDSKIP==1)
 #warning Compiling with normal skip
 void seed_uniquestream( rng_state_t* Xin, myID_t clusterID, myID_t machineID, myID_t runID, myID_t  streamID ){

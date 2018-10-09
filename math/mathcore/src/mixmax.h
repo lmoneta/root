@@ -132,8 +132,10 @@ void branch_inplace( rng_state_t* Xin, myID_t* ID ); // almost the same as apply
 #ifndef USE_MIXMAX_OLD
     
 #if (N==8)
-#define SPECIALMUL 53 // m=2^53+1
+// #define SPECIALMUL 53 // m=2^53+1
 #define SPECIAL 0
+#define SPECIALMUL 36 // m=2^36+1
+
     
 #elif (N==17)
 #define SPECIALMUL 36 // m=2^36+1, other valid possibilities are m=2^13+1, m=2^19+1, m=2^24+1
@@ -157,8 +159,11 @@ void branch_inplace( rng_state_t* Xin, myID_t* ID ); // almost the same as apply
 #define MOD_MULSPEC(k) (k)
 
 #elif (N==240)
-#define SPECIALMUL 51   // m=2^51+1 and a SPECIAL=487013230256099140
-#define SPECIAL 487013230256099140ULL
+///#define SPECIALMUL 51   // m=2^51+1 and a SPECIAL=487013230256099140
+///#define SPECIAL 487013230256099140ULL
+#define SPECIALMUL 32 // m=2^42+1
+#define SPECIAL 271828282ULL
+
 #define MOD_MULSPEC(k) fmodmulM61( 0, SPECIAL , (k) )
 
 //mixmax 1.1 with N=256
