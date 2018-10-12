@@ -188,6 +188,7 @@ http://dx.doi.org/10.1016/j.chaos.2016.05.003
       extern template class MixMaxEngine<8,2>;
 
       extern template class MixMaxEngine<10,0>;
+      extern template class MixMaxEngine<10,4>;
       extern template class MixMaxEngine<10,7>;
       extern template class MixMaxEngine<10,13>;
       extern template class MixMaxEngine<44,0>;
