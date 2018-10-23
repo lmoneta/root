@@ -13,6 +13,8 @@
 namespace mixmax_17 {
 #elif (ROOT_MM_N==240)
 namespace mixmax_240 {
+#elif (ROOT_MM_N==44851)
+namespace mixmax_44851 {
 #elif (ROOT_MM_N==256)
 #define USE_MIXMAX_OLD   
 namespace mixmax_256 {
@@ -28,7 +30,10 @@ namespace mixmax_44 {
 namespace mixmax_88 { 
 #elif (ROOT_MM_N==10)
 #define USE_MIXMAX_OLD   
-namespace mixmax_10 { 
+namespace mixmax_10 {
+#elif (ROOT_MM_N==1000)
+#define USE_MIXMAX_OLD   
+namespace mixmax_1000 { 
 #elif
 error "value of ROOT_MM_N is not supported"
 #endif
@@ -50,6 +55,8 @@ error "value of ROOT_MM_N is not supported"
 using namespace mixmax_17;
 #elif (ROOT_MM_N==240)
 using namespace mixmax_240;
+#elif (ROOT_MM_N==44851)
+using namespace mixmax_44851;
 #elif (ROOT_MM_N==256)
 using namespace mixmax_256;
 #elif (ROOT_MM_N==8)
@@ -62,6 +69,8 @@ using namespace mixmax_44;
 using namespace mixmax_88;
 #elif (ROOT_MM_N==10)
 using namespace mixmax_10;
+#elif (ROOT_MM_N==1000)
+using namespace mixmax_1000;
 #endif
 
 

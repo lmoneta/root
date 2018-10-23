@@ -172,6 +172,7 @@ http://dx.doi.org/10.1016/j.chaos.2016.05.003
       };
 
       typedef MixMaxEngine<240,0> MixMaxEngine240;
+      typedef MixMaxEngine<44851,0> MixMaxEngine44851;
       typedef MixMaxEngine<256,2> MixMaxEngine256;
       typedef MixMaxEngine<17,0> MixMaxEngine17;
       typedef MixMaxEngine<10,0> MixMaxEngine10;
@@ -182,6 +183,8 @@ http://dx.doi.org/10.1016/j.chaos.2016.05.003
       typedef MixMaxEngine<8,0> MixMaxEngine8;
       typedef MixMaxEngine<8,1> MixMaxEngine8_1;
       typedef MixMaxEngine<8,2> MixMaxEngine8_2;
+      typedef MixMaxEngine<1000,0> MixMaxEngine1000;
+
 
       extern template class MixMaxEngine<8,0>;
       extern template class MixMaxEngine<8,1>;
@@ -201,6 +204,8 @@ http://dx.doi.org/10.1016/j.chaos.2016.05.003
       extern template class MixMaxEngine<17,0>;
       extern template class MixMaxEngine<17,1>;
       extern template class MixMaxEngine<17,2>;
+      extern template class MixMaxEngine<44851,0>;
+      extern template class MixMaxEngine<1000,0>;
 
    } // end namespace Math
 

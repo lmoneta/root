@@ -201,6 +201,10 @@ void branch_inplace( rng_state_t* Xin, myID_t* ID ); // almost the same as apply
 #define SPECIAL 0
 #define MOD_MULSPEC(k) (0)
 
+#elif (N==1000)
+#define SPECIAL 0
+#define MOD_MULSPEC(k) (0)
+
 
 #elif (N==16)
 #define SPECIAL 6
