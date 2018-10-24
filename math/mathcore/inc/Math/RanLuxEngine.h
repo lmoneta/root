@@ -19,6 +19,8 @@
 #include <vector>
 #include <string>
 
+class RanluxS;
+class RanluxD;
 namespace ROOT {
 
    namespace Math {
@@ -32,6 +34,8 @@ namespace ROOT {
          @ingroup Random
       */
 
+      
+
       class RanLuxSEngine : public TRandomEngine {
 
 
@@ -42,12 +46,14 @@ namespace ROOT {
          typedef  uint32_t StateInt_t;
 
 
-         RanLuxSEngine(uint32_t level, uint32_t seed=4357)  {
+         RanLuxSEngine(uint32_t level, uint32_t seed=4357) :
+            fRlxs(0)
+         {
             fLevel = level;
             Init(level,seed);
          }
 
-         virtual ~RanLuxSEngine() {}
+         virtual ~RanLuxSEngine();
 
          void SetSeed(Result_t seed) {
             Init(fLevel,seed);
@@ -91,7 +97,8 @@ namespace ROOT {
 
          int fLevel;
          float fX[1];
-         
+
+         RanluxS * fRlxs;
 
       };
 
@@ -108,12 +115,14 @@ namespace ROOT {
          typedef  uint32_t StateInt_t;
 
 
-         RanLuxDEngine(uint32_t level, uint32_t seed=4357)  {
-            fLevel = level;
-            Init(level,seed);
+        RanLuxDEngine(uint32_t level, uint32_t seed=4357) :
+           fRlxd(0)
+        {
+           fLevel = level;
+           Init(level,seed);
          }
 
-         virtual ~RanLuxDEngine() {}
+         virtual ~RanLuxDEngine();
 
          void SetSeed(Result_t seed) {
             Init(fLevel,seed);
@@ -157,7 +166,9 @@ namespace ROOT {
 
          int fLevel;
          double fX[1];
-         
+
+        RanluxD * fRlxd;
+
 
       };
 

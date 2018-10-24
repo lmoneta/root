@@ -15,65 +15,88 @@
 //
 //
 #include "Math/RanLuxEngine.h"
-#include "ranlxs.h"
+//#include "ranlxs.h"
 #include "ranlxd.h"
 #include <cassert>
+
+#include "RanluxS.h"
+#include "RanluxD.h"
 
 
 namespace ROOT {
 namespace Math {
 
+   RanLuxSEngine::~RanLuxSEngine() {
+      if (fRlxs) delete fRlxs; 
+   }
+
    /// init the generator
    void RanLuxSEngine::Init(int level, int seed) {
-      rlxs_init(level,seed);
+//      rlxs_init(level,seed);
+
+      if (fRlxs) delete fRlxs;
+      fRlxs = new RanluxS(); 
+      fRlxs->rlxs_init(level,seed);
    }
 
    /// generate a random double number 
    double RanLuxSEngine::Rndm_impl() {
       // could use a counter to be faster
-      ranlxs(fX,1);
+      //ranlxs(fX,1);
+      fRlxs->ranlxs(fX,1);
       return fX[0]; 
    }
 
    void RanLuxSEngine::SetState(const std::vector<uint32_t> & state) {
-      rlxs_reset((int*) state.data() );
+      fRlxs->rlxs_reset((int*) state.data() );
    }
 
+   // void RanLuxSEngine::GetState(std::vector<uint32_t> & state) {
+   //    fRlxs->rlxs_reset((int*) state.data() );
+   // }
+
    void RanLuxSEngine::GetState(std::vector<uint32_t> & state) {
-      rlxs_get((int*) state.data() );
+      fRlxs->rlxs_get((int*) state.data() );
    }
 
    int RanLuxSEngine::Size() {
-      return rlxs_size(); 
+      return RanluxS::rlxs_size(); 
    }
 
    ///////Double engine
+
+    RanLuxDEngine::~RanLuxDEngine() {
+      if (fRlxd) delete fRlxd; 
+   }
       
      /// init the generator
    void RanLuxDEngine::Init(int level, int seed) {
-      rlxd_init(level,seed);
+      if (fRlxd) delete fRlxd;
+      fRlxd = new RanluxD(); 
+      fRlxd->rlxd_init(level,seed);
+      //rlxd_init(level,seed);
    }
 
    /// generate a random double number 
    double RanLuxDEngine::Rndm_impl() {
       // could use a counter to be faster
-      ranlxd(fX,1);
+      fRlxd->ranlxd(fX,1);
       return fX[0]; 
    }
 
    void RanLuxDEngine::SetState(const std::vector<uint32_t> & state) {
       assert( (int) state.size() == Size() );
-      rlxd_reset((int*) state.data() );
+      fRlxd->rlxd_reset((int*) state.data() );
    }
 
    void RanLuxDEngine::GetState(std::vector<uint32_t> & state) {
       size_t size = Size(); 
       if (state.size() != size) state.resize(size); 
-      rlxd_get((int*) state.data() );
+      fRlxd->rlxd_get((int*) state.data() );
    }
 
    int RanLuxDEngine::Size() {
-      return rlxd_size(); 
+      return  RanluxD::rlxd_size(); 
    }
       
   
