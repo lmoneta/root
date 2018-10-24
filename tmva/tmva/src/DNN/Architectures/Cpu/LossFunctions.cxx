@@ -15,6 +15,7 @@
  /////////////////////////////////////////////////////////////////////
 
 #include "TMVA/DNN/Architectures/Reference.h"
+#include "TMath.h"
 
 namespace TMVA
 {
@@ -87,6 +88,8 @@ AFloat TCpu<AFloat>::CrossEntropy(const TCpuMatrix<AFloat> &Y, const TCpuMatrix<
    auto f = [&dataY, &dataOutput, &dataWeights, &temp, m](UInt_t workerID) {
       AFloat y   = dataY[workerID];
       AFloat sig = 1.0 / (1.0 + exp(- dataOutput[workerID]));
+      // skip events that give NaN
+      if ( (y == 1.0 && sig == 1.0) || ( y == 0.0 && sig == 0.0 ) ) return 0; 
       temp[workerID] = - (y * log(sig) + (1.0 - y) * log(1.0 - sig));
       temp[workerID] *= dataWeights[workerID % m];
       return 0;

@@ -412,7 +412,7 @@ __global__ void SqrtElementWise(AFloat * A,
    int index = j * m + i;
 
    if ((i < m) && (j < n)) {
-      A[index] = sqrt(A[index]);
+      A[index] = (A[index] > 0) ? sqrt(A[index]) : 0.0; 
    }
 }
 
@@ -828,11 +828,20 @@ __global__ void CrossEntropy(AFloat * result,
 
    if ((i < m) && (j < n)) {
        AFloat norm = 1 / ((AFloat) (m * n));
-       AFloat sig  = 1.0 / (1.0 + exp(-output[index]));
-       AFloat ce   = Y[index] * log(sig) + (1.0 - Y[index]) * log(1.0 - sig);
+       AFloat yout = output[index];
+       AFloat ce = 0.0;
+       AFloat  sig  = 1.0 / (1.0 + exp(-yout));
+       if (sig == 0. )
+          ce =  Y[index] * yout;
+       else if (sig == 1. )
+          ce = - (1.-Y[index]) * yout;
+       else { 
+          ce   = Y[index] * log(sig) + (1.0 - Y[index]) * log(1.0 - sig);
+       }
        sdata[tid]  = -weights[i] * norm * ce;
-   } else {
-       sdata[tid] = 0.0;
+   }
+   else {
+      sdata[tid] = 0.0;
    }
 
    ReduceSum(result, sdata);
