@@ -46,6 +46,8 @@
 #include "TMVA/Timer.h"
 
 #include "TStopwatch.h"
+#include "TGraph.h"
+
 
 #include <chrono>
 
@@ -1159,31 +1161,39 @@ void MethodDL::TrainDeepNet()
       std::unique_ptr<DNN::VOptimizer<Architecture_t, Layer_t, DeepNet_t>> optimizer;
 
       // initialize the base class pointer with the corresponding derived class object.
+      TString optimizerName;
       switch (O) {
-
+         
       case EOptimizer::kSGD:
          optimizer = std::unique_ptr<DNN::TSGD<Architecture_t, Layer_t, DeepNet_t>>(
             new DNN::TSGD<Architecture_t, Layer_t, DeepNet_t>(settings.learningRate, deepNet, settings.momentum));
+         optimizerName = "SGD";
+         if (settings.momentum != 0.) optimizerName += TString::Format(" momentum=%5.2f",settings.momentum);         
          break;
 
       case EOptimizer::kAdam:
          optimizer = std::unique_ptr<DNN::TAdam<Architecture_t, Layer_t, DeepNet_t>>(
             new DNN::TAdam<Architecture_t, Layer_t, DeepNet_t>(deepNet, settings.learningRate));
+         optimizerName = "ADAM";
          break;
 
       case EOptimizer::kAdagrad:
          optimizer = std::unique_ptr<DNN::TAdagrad<Architecture_t, Layer_t, DeepNet_t>>(
             new DNN::TAdagrad<Architecture_t, Layer_t, DeepNet_t>(deepNet, settings.learningRate));
+         optimizerName = "ADAGRAD";
          break;
 
       case EOptimizer::kRMSProp:
          optimizer = std::unique_ptr<DNN::TRMSProp<Architecture_t, Layer_t, DeepNet_t>>(
             new DNN::TRMSProp<Architecture_t, Layer_t, DeepNet_t>(deepNet, settings.learningRate, settings.momentum));
+         optimizerName = "RMSPROP";
+         if (settings.momentum != 0.) optimizerName += TString::Format(" momentum=%5.2f",settings.momentum);         
          break;
 
       case EOptimizer::kAdadelta:
          optimizer = std::unique_ptr<DNN::TAdadelta<Architecture_t, Layer_t, DeepNet_t>>(
             new DNN::TAdadelta<Architecture_t, Layer_t, DeepNet_t>(deepNet, settings.learningRate));
+         optimizerName = "ADADELTA";
          break;
       }
 
@@ -1200,7 +1210,7 @@ void MethodDL::TrainDeepNet()
       tstart = std::chrono::system_clock::now();
 
       Log() << "Training phase " << trainingPhase << " of " << this->GetTrainingSettings().size() << ":    "
-            << "Learning rate = " << settings.learningRate 
+            << optimizerName << " learning rate = " << settings.learningRate 
             << " regularization " << (char) settings.regularization 
             << " minimum error = " << minTestError
             << Endl;
@@ -1216,6 +1226,16 @@ void MethodDL::TrainDeepNet()
                << std::setw(12) << "Conv. Steps" << Endl;
          Log() << separator << Endl;
       }
+
+      // create the grapgs for storing training and test errors
+      auto pTestErr = new TGraph();
+      pTestErr->SetName(TString::Format("testErr_%d",int(trainingPhase)));
+      pTestErr->SetTitle(TString::Format("Test Error for %s",optimizerName.Data()) );
+      auto pTrainErr = new TGraph();
+      pTrainErr->SetName(TString::Format("trainErr_%d",int(trainingPhase)));
+      pTrainErr->SetTitle(TString::Format("Train Error for %s",optimizerName.Data()) );
+      if (trainingPhase==1) pTestErr->SetPoint(0,0.,minTestError);
+
 
       // set up generator for shuffling the batches 
       // if seed is zero we have always a different order in the batches 
@@ -1353,6 +1373,8 @@ void MethodDL::TrainDeepNet()
                Log() << Endl;
             }
             tstart = std::chrono::system_clock::now();
+            pTestErr->SetPoint(pTestErr->GetN(),optimizer->GetGlobalStep(),testError);
+            pTrainErr->SetPoint(pTrainErr->GetN(),optimizer->GetGlobalStep(),trainingError);
          }
 
          // if (stepCount % 10 == 0 || converged) {
@@ -1367,7 +1389,10 @@ void MethodDL::TrainDeepNet()
          }
 
       }
-
+      // save graphs in Results object
+      Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
+      results->Store(pTestErr);
+      results->Store(pTrainErr);
       trainingPhase++;
    }  // end loop on training Phase
 }
