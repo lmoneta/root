@@ -177,6 +177,7 @@ http://dx.doi.org/10.1016/j.chaos.2016.05.003
       typedef MixMaxEngine<17,0> MixMaxEngine17;
       typedef MixMaxEngine<10,0> MixMaxEngine10;
       typedef MixMaxEngine<10,7> MixMaxEngine10_7;
+      typedef MixMaxEngine<10,9> MixMaxEngine10_9;
       typedef MixMaxEngine<10,13> MixMaxEngine10_13;
       typedef MixMaxEngine<44,0> MixMaxEngine44;
       typedef MixMaxEngine<88,0> MixMaxEngine88;
@@ -193,6 +194,7 @@ http://dx.doi.org/10.1016/j.chaos.2016.05.003
       extern template class MixMaxEngine<10,0>;
       extern template class MixMaxEngine<10,4>;
       extern template class MixMaxEngine<10,7>;
+      extern template class MixMaxEngine<10,9>;
       extern template class MixMaxEngine<10,13>;
       extern template class MixMaxEngine<44,0>;
       extern template class MixMaxEngine<88,0>;

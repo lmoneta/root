@@ -36,9 +36,11 @@
 #pragma link C++ class ROOT::Math::TRandomEngine+;
 #pragma link C++ class ROOT::Math::LCGEngine+;
 #pragma link C++ class ROOT::Math::MersenneTwisterEngine+;
-//#pragma link C++ class ROOT::Math::MixMaxEngine<8,0>+;
+#pragma link C++ class ROOT::Math::MixMaxEngine<8,0>+;
+#pragma link C++ class ROOT::Math::MixMaxEngine<10,0>+;
 #pragma link C++ class ROOT::Math::MixMaxEngine<240,0>+;
 #pragma link C++ class ROOT::Math::MixMaxEngine<256,2>+;
+#pragma link C++ class ROOT::Math::MixMaxEngine<17,0>+;
 #pragma link C++ class ROOT::Math::MixMaxEngine<17,1>+;
 //#pragma link C++ class mixmax::mixmax_engine<240>+;
 //#pragma link C++ class mixmax::mixmax_engine<256>+;

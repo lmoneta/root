@@ -46,7 +46,7 @@ namespace ROOT {
          typedef  uint32_t StateInt_t;
 
 
-         RanLuxSEngine(uint32_t level, uint32_t seed=4357) :
+         RanLuxSEngine(uint32_t seed=4357, uint32_t level = 1 ) :
             fRlxs(0)
          {
             fLevel = level;
@@ -115,7 +115,7 @@ namespace ROOT {
          typedef  uint32_t StateInt_t;
 
 
-        RanLuxDEngine(uint32_t level, uint32_t seed=4357) :
+        RanLuxDEngine(uint32_t seed=4357, uint32_t level=1) :
            fRlxd(0)
         {
            fLevel = level;

@@ -152,9 +152,15 @@ ROOT_STANDARD_LIBRARY_PACKAGE(MathCore
     src/MinimTransformFunction.cxx
     src/MinimizerOptions.cxx
     src/MinimizerVariableTransformation.cxx
+    src/MixMaxEngineImpl8.cxx	
     src/MixMaxEngineImpl17.cxx
     src/MixMaxEngineImpl240.cxx
     src/MixMaxEngineImpl256.cxx
+    src/MixMaxEngineImpl10.cxx	
+    src/MixMaxEngineImpl44.cxx	
+    src/MixMaxEngineImpl88.cxx	
+    src/MixMaxEngineImpl1000.cxx	
+    src/MixMaxEngineImpl44851.cxx	
     src/ParameterSettings.cxx
     src/PdfFuncMathCore.cxx
     src/ProbFuncMathCore.cxx
