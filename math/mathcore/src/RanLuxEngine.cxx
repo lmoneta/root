@@ -68,7 +68,7 @@ namespace Math {
     RanLuxDEngine::~RanLuxDEngine() {
       if (fRlxd) delete fRlxd; 
    }
-      
+
      /// init the generator
    void RanLuxDEngine::Init(int level, int seed) {
       if (fRlxd) delete fRlxd;

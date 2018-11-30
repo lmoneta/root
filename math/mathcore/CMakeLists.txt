@@ -72,6 +72,7 @@ set(HEADERS
   Math/ProbFuncMathCore.h
   Math/QuantFuncMathCore.h
   Math/Random.h
+  Math/RanLuxEngine.h
   Math/RandomFunctions.h
   Math/RichardsonDerivator.h
   Math/RootFinder.h
@@ -166,6 +167,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(MathCore
     src/ProbFuncMathCore.cxx
     src/QuantFuncMathCore.cxx
     src/RandomFunctions.cxx
+    src/RanLuxEngine.cxx
     src/RichardsonDerivator.cxx
     src/RootFinder.cxx
     src/SparseData.cxx
