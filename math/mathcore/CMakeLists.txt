@@ -8,6 +8,7 @@
 # CMakeLists.txt file for building ROOT math/mathcore package
 ############################################################################
 
+
 set(HEADERS
   Fit/BasicFCN.h
   Fit/BinData.h
@@ -73,6 +74,7 @@ set(HEADERS
   Math/QuantFuncMathCore.h
   Math/Random.h
   Math/RanLuxEngine.h
+  Math/RanLuxPPEngine.h
   Math/RandomFunctions.h
   Math/RichardsonDerivator.h
   Math/RootFinder.h
@@ -122,6 +124,8 @@ if(veccore)
   set(MATHCORE_LIBRARIES ${VecCore_LIBRARIES})
 endif()
 
+set(MATHCORE_LIBRARIES "/home/moneta/cernbox/root/dev/ranluxpp/libranlux++.a")
+
 ROOT_STANDARD_LIBRARY_PACKAGE(MathCore
   HEADERS
     ${HEADERS}
@@ -168,6 +172,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(MathCore
     src/QuantFuncMathCore.cxx
     src/RandomFunctions.cxx
     src/RanLuxEngine.cxx
+    src/RanLuxPPEngine.cxx
     src/RichardsonDerivator.cxx
     src/RootFinder.cxx
     src/SparseData.cxx
@@ -189,6 +194,11 @@ ROOT_STANDARD_LIBRARY_PACKAGE(MathCore
     src/UnBinData.cxx
     src/triangle.c
     src/VectorizedTMath.cxx
+    src/ranlxs.c
+    src/ranlxd.c
+#    src/ranluxpp.cxx
+#    src/mulmod.cxx
+#    src/mul9x9mod.asm
   LIBRARIES
     ${MATHCORE_LIBRARIES}
   DICTIONARY_OPTIONS
