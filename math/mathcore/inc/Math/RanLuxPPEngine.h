@@ -50,7 +50,7 @@ namespace ROOT {
          typedef  uint64_t StateInt_t;
 
 
-	 RanLuxPPEngine(uint64_t seed=4357, int level=0);
+	 RanLuxPPEngine(uint64_t seed=4357, int level=-1);
 
          virtual ~RanLuxPPEngine();
 
@@ -59,7 +59,7 @@ namespace ROOT {
          }
 
          virtual double Rndm() {
-            return Rndm_impl();
+	   return Rndm_impl();
          }
          inline double operator() () { return Rndm_impl(); }
 
@@ -88,11 +88,12 @@ namespace ROOT {
 
          void Init(uint64_t seed);
 
+         double Rndm_impl();
+	 
+         float  Rndm_impl_float();
 
       private:
 
-         double Rndm_impl();
-         float  Rndm_impl_float();
          uint32_t IntRndm_impl() {return (int) Rndm_impl_float()*MaxInt(); }
 
          /* int fLevel; */
@@ -102,6 +103,23 @@ namespace ROOT {
 
 
       };
+
+     class RanLuxPPEngineFloat : public RanLuxPPEngine {
+
+     public:
+       
+       RanLuxPPEngineFloat (uint64_t seed=4357, int level=-1) :
+       RanLuxPPEngine(seed,level)
+	 {}
+
+       virtual ~RanLuxPPEngineFloat() {}
+
+       virtual double Rndm() {
+            return Rndm_impl_float();
+         }
+       inline double operator() () { return Rndm_impl_float(); }
+
+     };
 
 
    } // end namespace Math

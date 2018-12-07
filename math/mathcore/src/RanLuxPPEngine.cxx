@@ -25,9 +25,11 @@ namespace Math {
 
    ///////RanluxPP  engine
 
+  uint64_t skipValues[] = {24,48,97,223,389,1024,2048};
+
   RanLuxPPEngine::RanLuxPPEngine(uint64_t seed, int luxlevel) {
-    uint64_t p = 1024;
-    if (luxlevel==0) p = 2048;    
+    uint64_t p = 2048;
+    if (luxlevel >=0 &&  luxlevel < 7) p = skipValues[luxlevel];    
     fRlxpp = new ranluxpp(seed, p); 
    }
 
