@@ -13,6 +13,7 @@ namespace ROOT {
       template class MixMaxEngine<256,0>;
       template class MixMaxEngine<256,2>;
       template class MixMaxEngine<256,4>;
+      template class MixMaxEngine<256,5>;
    }
 }
 

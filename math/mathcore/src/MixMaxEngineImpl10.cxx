@@ -12,6 +12,7 @@ namespace ROOT {
       template class MixMaxEngine<ROOT_MM_N,4>;
       template class MixMaxEngine<ROOT_MM_N,7>;
       template class MixMaxEngine<ROOT_MM_N,13>;
+      template class MixMaxEngine<ROOT_MM_N,14>;
    }
 }
 
