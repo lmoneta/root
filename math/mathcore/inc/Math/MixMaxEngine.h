@@ -132,7 +132,8 @@ http://dx.doi.org/10.1016/j.chaos.2016.05.003
          void  SetSeed(Result_t seed);
 
          // generate a random number (virtual interface)
-         virtual double Rndm() { return Rndm_impl(); }
+	 //virtual
+         double Rndm() { return Rndm_impl(); }
 
          /// generate a double random number (faster interface)
          inline double operator() () { return Rndm_impl(); }
@@ -196,18 +197,26 @@ http://dx.doi.org/10.1016/j.chaos.2016.05.003
       extern template class MixMaxEngine<10,7>;
       extern template class MixMaxEngine<10,9>;
       extern template class MixMaxEngine<10,13>;
+      extern template class MixMaxEngine<10,14>;
       extern template class MixMaxEngine<44,0>;
+      extern template class MixMaxEngine<44,4>;
+      extern template class MixMaxEngine<44,8>;
       extern template class MixMaxEngine<88,0>;
+      extern template class MixMaxEngine<88,3>;
+      extern template class MixMaxEngine<88,6>;
 
       extern template class MixMaxEngine<240,0>;
       extern template class MixMaxEngine<256,0>;
       extern template class MixMaxEngine<256,2>;
       extern template class MixMaxEngine<256,4>;
+      extern template class MixMaxEngine<256,5>;
       extern template class MixMaxEngine<17,0>;
       extern template class MixMaxEngine<17,1>;
       extern template class MixMaxEngine<17,2>;
       extern template class MixMaxEngine<44851,0>;
       extern template class MixMaxEngine<1000,0>;
+      extern template class MixMaxEngine<1000,2>;
+      extern template class MixMaxEngine<1000,4>;
 
    } // end namespace Math
 
