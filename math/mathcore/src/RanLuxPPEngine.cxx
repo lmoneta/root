@@ -14,6 +14,9 @@
 // Created by: Lorenzo Moneta  : Tue 4 Aug 201
 //
 //
+
+#ifdef USE_RANLUXPP
+
 #include "Math/RanLuxPPEngine.h"
 #include "ranluxpp.h"
 #include <cassert>
@@ -75,3 +78,5 @@ namespace Math {
   
    } // namespace Math
 } // namespace ROOT
+
+#endif /* USE_RANLUXPP */

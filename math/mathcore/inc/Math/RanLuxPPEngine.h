@@ -13,6 +13,8 @@
 #ifndef ROOT_Math_RanLuxPPEngine
 #define ROOT_Math_RanLuxPPEngine
 
+#ifdef USE_RANLUXPP
+
 #include "Math/TRandomEngine.h"
 
 #include <cstdint>
@@ -126,5 +128,5 @@ namespace ROOT {
 
 } // end namespace ROOT
 
-
-#endif /* ROOT_Math_TRandomEngines */
+#endif  /* USE_RANLUXPP */
+#endif /* ROOT_Math_RanluxPPEngine */

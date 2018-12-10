@@ -124,7 +124,10 @@ if(veccore)
   set(MATHCORE_LIBRARIES ${VecCore_LIBRARIES})
 endif()
 
-set(MATHCORE_LIBRARIES "/home/moneta/cernbox/root/dev/ranluxpp/libranlux++.a")
+if (RANLUXPP_LIB)
+  set(MATHCORE_LIBRARIES "/home/moneta/cernbox/root/dev/ranluxpp/libranlux++.a")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_RANLUXPP")
+endif()
 
 ROOT_STANDARD_LIBRARY_PACKAGE(MathCore
   HEADERS
