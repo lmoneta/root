@@ -10,7 +10,7 @@ namespace ROOT {
    namespace Math {
       template class MixMaxEngine<ROOT_MM_N,0>;
       template class MixMaxEngine<ROOT_MM_N,5>;
-      template class MixMaxEngine<ROOT_MM_N,10>;
+      template class MixMaxEngine<ROOT_MM_N,11>;
    }
 }
 
