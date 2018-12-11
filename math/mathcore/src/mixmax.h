@@ -209,6 +209,7 @@ void branch_inplace( rng_state_t* Xin, myID_t* ID ); // almost the same as apply
 #elif (N==16)
 #define SPECIAL 6
 //#define MOD_MULSPEC(k) (MERSBASE-(k))
+#define MOD_MULSPEC(k) MOD_MERSENNE(6*(k))
 #else
 
 #warning Not a verified N for old MIXMAX , you are on your own!

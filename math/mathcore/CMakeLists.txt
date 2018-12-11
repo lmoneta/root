@@ -165,6 +165,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(MathCore
     src/MixMaxEngineImpl240.cxx
     src/MixMaxEngineImpl256.cxx
     src/MixMaxEngineImpl10.cxx	
+    src/MixMaxEngineImpl16.cxx	
     src/MixMaxEngineImpl44.cxx	
     src/MixMaxEngineImpl88.cxx	
     src/MixMaxEngineImpl1000.cxx	

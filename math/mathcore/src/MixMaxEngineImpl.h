@@ -31,6 +31,9 @@ namespace mixmax_88 {
 #elif (ROOT_MM_N==10)
 #define USE_MIXMAX_OLD   
 namespace mixmax_10 {
+#elif (ROOT_MM_N==16)
+#define USE_MIXMAX_OLD   
+namespace mixmax_16 {
 #elif (ROOT_MM_N==1000)
 #define USE_MIXMAX_OLD   
 namespace mixmax_1000 { 
@@ -69,6 +72,8 @@ using namespace mixmax_44;
 using namespace mixmax_88;
 #elif (ROOT_MM_N==10)
 using namespace mixmax_10;
+#elif (ROOT_MM_N==16)
+using namespace mixmax_16;
 #elif (ROOT_MM_N==1000)
 using namespace mixmax_1000;
 #endif
