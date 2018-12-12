@@ -43,7 +43,7 @@ namespace Math {
 
   /// init the generator
   void RanLuxPPEngine::Init(uint64_t seed) {
-    if (fRlxpp) return;
+    if (!fRlxpp) return;
     fRlxpp->init(seed);
       //rlxd_init(level,seed);
    }

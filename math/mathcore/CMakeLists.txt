@@ -124,8 +124,11 @@ if(veccore)
   set(MATHCORE_LIBRARIES ${VecCore_LIBRARIES})
 endif()
 
+#for using ranluxpp
+set(RANLUXPP_LIB "/home/moneta/cernbox/root/dev/ranluxpp/libranlux++.a")
 if (RANLUXPP_LIB)
-  set(MATHCORE_LIBRARIES "/home/moneta/cernbox/root/dev/ranluxpp/libranlux++.a")
+  message(STATUS "Using ranlux++ library ${RANLUXPP_LIB}")
+  set(MATHCORE_LIBRARIES ${RANLUXPP_LIB} )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_RANLUXPP")
 endif()
 
