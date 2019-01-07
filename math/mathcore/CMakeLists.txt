@@ -125,7 +125,12 @@ if(veccore)
 endif()
 
 #for using ranluxpp
-set(RANLUXPP_LIB "/home/moneta/cernbox/root/dev/ranluxpp/libranlux++.a")
+if(ROOT_ARCHITECTURE MATCHES macosx)
+  message("ranlux++ is not built for macos")
+else() 
+  set(RANLUXPP_LIB "/home/moneta/cernbox/root/dev/ranluxpp/libranlux++.a")
+endif()
+
 if (RANLUXPP_LIB)
   message(STATUS "Using ranlux++ library ${RANLUXPP_LIB}")
   set(MATHCORE_LIBRARIES ${RANLUXPP_LIB} )
