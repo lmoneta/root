@@ -201,8 +201,8 @@ ROOT_STANDARD_LIBRARY_PACKAGE(MathCore
     src/UnBinData.cxx
     src/triangle.c
     src/VectorizedTMath.cxx
-    src/ranlxs.c
-    src/ranlxd.c
+#    src/ranlxs.c
+#    src/ranlxd.c
 #    src/ranluxpp.cxx
 #    src/mulmod.cxx
 #    src/mul9x9mod.asm
