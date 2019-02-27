@@ -5064,6 +5064,30 @@ Bool_t TH1::IsBinUnderflow(Int_t bin, Int_t iaxis) const
    return kFALSE;
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+/// Return true if the bin is in the given range
+/////////////////////////////////////////////////////////////////////////////////
+
+bool TH1::IsBinInRange(Int_t binglobal, Int_t ixmin, Int_t ixmax, Int_t iymin, Int_t iymax, Int_t izmin, Int_t izmax) const
+{
+   Int_t nx = fXaxis.GetNbins()+2;
+   Int_t binx = binglobal%nx;
+   if (binx < ixmin || binx > ixmax) return false; 
+   if (GetDimension() > 1) {
+      Int_t ny = fYaxis.GetNbins()+2;
+      Int_t biny = ((binglobal-binx)/nx)%ny;
+      if (biny < iymin || biny > iymax) return false; 
+      // for 3d
+      if (GetDimension() > 2) {
+         Int_t binz = ((binglobal-binx)/nx - biny)/ny;
+         if (binz < izmin || binz > izmax) return false; 
+      }
+   }
+   return true; 
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Reduce the number of bins for the axis passed in the option to the number of bins having a label.
 /// The method will remove only the extra bins existing after the last "labeled" bin.

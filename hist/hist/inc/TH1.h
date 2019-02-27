@@ -325,6 +325,8 @@ public:
    virtual Double_t Interpolate(Double_t x);
    virtual Double_t Interpolate(Double_t x, Double_t y);
    virtual Double_t Interpolate(Double_t x, Double_t y, Double_t z);
+           Bool_t   IsBinInRange(Int_t bin, Int_t ixmin, Int_t ixmax, Int_t iymin = 1, Int_t iymax = -1,
+                                 Int_t izmin = 1, Int_t izmax = -1) const;
            Bool_t   IsBinOverflow(Int_t bin, Int_t axis = 0) const;
            Bool_t   IsBinUnderflow(Int_t bin, Int_t axis = 0) const;
    virtual Bool_t   IsHighlight() const { return TestBit(kIsHighlight); }
