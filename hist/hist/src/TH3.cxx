@@ -1277,6 +1277,23 @@ Double_t TH3::Interpolate(Double_t x, Double_t y, Double_t z)
    return result;
 }
 
+bool TH3::IsBinInRange(Int_t binglobal, Int_t ixmin, Int_t ixmax, Int_t iymin, Int_t iymax, Int_t izmin, Int_t izmax) const
+{
+   Int_t nx = fXaxis.GetNbins()+2;
+   Int_t binx = binglobal%nx;
+   if (binx < ixmin || binx > ixmax) return false; 
+   //if (GetDimension() > 1) {
+   Int_t ny = fYaxis.GetNbins()+2;
+   Int_t biny = ((binglobal-binx)/nx)%ny;
+   if (biny < iymin || biny > iymax) return false; 
+   // for 3d
+//      if (GetDimension() > 2) {
+   Int_t binz = ((binglobal-binx)/nx - biny)/ny;
+   if (binz < izmin || binz > izmax) return false; 
+
+   return true; 
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  Statistical test of compatibility in shape between

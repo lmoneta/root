@@ -106,6 +106,9 @@ public:
    virtual Double_t Interpolate(Double_t x);
    virtual Double_t Interpolate(Double_t x, Double_t y);
    virtual Double_t Interpolate(Double_t x, Double_t y, Double_t z);
+   virtual Bool_t   IsBinInRange(Int_t bin, Int_t ixmin, Int_t ixmax, Int_t iymin = 1, Int_t iymax = -1,
+                                 Int_t izmin = 1, Int_t izmax = -1) const;
+
    virtual Double_t KolmogorovTest(const TH1 *h2, Option_t *option="") const;
    virtual TH1D    *ProjectionX(const char *name="_px", Int_t iymin=0, Int_t iymax=-1, Int_t izmin=0,
                                 Int_t izmax=-1, Option_t *option="") const; // *MENU*

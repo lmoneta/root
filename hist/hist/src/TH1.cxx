@@ -5008,30 +5008,23 @@ Bool_t TH1::IsEmpty() const
 
 Bool_t TH1::IsBinOverflow(Int_t bin, Int_t iaxis) const
 {
-   Int_t binx, biny, binz;
-   GetBinXYZ(bin, binx, biny, binz);
+   Int_t nx = fXaxis.GetNbins();
+   Int_t binx = bin%(nx+2);
+   if (iaxis <= 1 && binx > nx) return kTRUE;
 
-   if (iaxis == 0) {
-      if ( fDimension == 1 )
-         return binx >= GetNbinsX() + 1;
-      if ( fDimension == 2 )
-         return (binx >= GetNbinsX() + 1) ||
-            (biny >= GetNbinsY() + 1);
-      if ( fDimension == 3 )
-         return (binx >= GetNbinsX() + 1) ||
-            (biny >= GetNbinsY() + 1) ||
-            (binz >= GetNbinsZ() + 1);
-      return kFALSE;
+   if (fDimension > 1) {
+      Int_t ny = fYaxis.GetNbins();
+      Int_t biny = ((bin-binx)/(nx+2))%(ny+2);
+      if ( (iaxis == 0 || iaxis == 2) && biny > ny ) return kTRUE;
+
+      if (fDimension > 2) {
+         Int_t nz = fZaxis.GetNbins();
+         Int_t binz = ((bin-binx)/(nx+2) - biny)/(ny+2);
+         if ( (iaxis == 0 || iaxis == 3) && binz > nz ) return kTRUE;
+      }
    }
-   if (iaxis == 1)
-      return binx >= GetNbinsX() + 1;
-   if (iaxis == 2)
-      return biny >= GetNbinsY() + 1;
-   if (iaxis == 3)
-      return binz >= GetNbinsZ() + 1;
-
-   Error("IsBinOverflow","Invalid axis value");
-   return kFALSE;
+   if (iaxis < 0 || iaxis > 3) Error("IsBinOverflow","Invalid axis value");
+   return kFALSE; 
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -5040,50 +5033,44 @@ Bool_t TH1::IsBinOverflow(Int_t bin, Int_t iaxis) const
 
 Bool_t TH1::IsBinUnderflow(Int_t bin, Int_t iaxis) const
 {
-   Int_t binx, biny, binz;
-   GetBinXYZ(bin, binx, biny, binz);
+   Int_t nx = fXaxis.GetNbins();
+   Int_t binx = bin%(nx+2);
+   if (iaxis <= 1 && binx <= 0) return kTRUE;
 
-   if (iaxis == 0) {
-      if ( fDimension == 1 )
-         return (binx <= 0);
-      else if ( fDimension == 2 )
-         return (binx <= 0 || biny <= 0);
-      else if ( fDimension == 3 )
-         return (binx <= 0 || biny <= 0 || binz <= 0);
-      else
-         return kFALSE;
+   if (fDimension > 1) {
+      Int_t ny = fYaxis.GetNbins();
+      Int_t biny = ((bin-binx)/(nx+2))%(ny+2);
+      if ( (iaxis == 0 || iaxis == 2) && biny <= 0 ) return kTRUE;
+
+      if (fDimension > 2) {
+//         Int_t nz = fZaxis.GetNbins();
+         Int_t binz = ((bin-binx)/(nx+2) - biny)/(ny+2);
+         if ( (iaxis == 0 || iaxis == 3) && binz <= 0 ) return kTRUE;
+      }
    }
-   if (iaxis == 1)
-       return (binx <= 0);
-   if (iaxis == 2)
-      return (biny <= 0);
-   if (iaxis == 3)
-      return (binz <= 0);
-
-   Error("IsBinUnderflow","Invalid axis value");
-   return kFALSE;
+   if (iaxis < 0 || iaxis > 3) Error("IsBinOverflow","Invalid axis value");
+   return kFALSE; 
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Return true if the bin is in the given range
 /////////////////////////////////////////////////////////////////////////////////
-
 bool TH1::IsBinInRange(Int_t binglobal, Int_t ixmin, Int_t ixmax, Int_t iymin, Int_t iymax, Int_t izmin, Int_t izmax) const
 {
    Int_t nx = fXaxis.GetNbins()+2;
    Int_t binx = binglobal%nx;
    if (binx < ixmin || binx > ixmax) return false; 
-   if (GetDimension() > 1) {
-      Int_t ny = fYaxis.GetNbins()+2;
-      Int_t biny = ((binglobal-binx)/nx)%ny;
-      if (biny < iymin || biny > iymax) return false; 
-      // for 3d
-      if (GetDimension() > 2) {
-         Int_t binz = ((binglobal-binx)/nx - biny)/ny;
-         if (binz < izmin || binz > izmax) return false; 
-      }
-   }
+   // if (GetDimension() > 1) {
+   //    Int_t ny = fYaxis.GetNbins()+2;
+   //    Int_t biny = ((binglobal-binx)/nx)%ny;
+   //    if (biny < iymin || biny > iymax) return false; 
+   //    // for 3d
+   //    if (GetDimension() > 2) {
+   //       Int_t binz = ((binglobal-binx)/nx - biny)/ny;
+   //       if (binz < izmin || binz > izmax) return false; 
+   //    }
+   // }
    return true; 
 }
 
