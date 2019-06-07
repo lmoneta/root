@@ -162,6 +162,10 @@ endif ()
   ROOT_EXECUTABLE(testBackpropagationDL TestBackpropagationDL.cxx LIBRARIES ${Libraries})
   ROOT_ADD_TEST(TMVA-DNN-Backpropagation-DL COMMAND testBackpropagationDL)
 
+  # DNN - Batch normalization
+  ROOT_EXECUTABLE(testBatchNormalization TestBatchNormalization.cxx LIBRARIES ${Libraries})
+  ROOT_ADD_TEST(TMVA-DNN-BatchNormalization COMMAND testBatchNormalization)
+
   # DNN - DataLoader
   ROOT_EXECUTABLE(testDataLoader TestDataLoader.cxx LIBRARIES ${Libraries})
   ROOT_ADD_TEST(TMVA-DNN-Data-Loader COMMAND testDataLoader)
