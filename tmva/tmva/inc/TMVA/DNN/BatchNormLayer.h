@@ -62,16 +62,15 @@ public:
 private:
    std::vector<Matrix_t> fDerivatives; ///< First fDerivatives of the activations of this layer.
 
-   Scalar_t fDropoutProbability; ///< Probability that an input is active.
-
-   EActivationFunction fF; ///< Activation function of the layer.
-   ERegularization fReg;   ///< The regularization method.
-   Scalar_t fWeightDecay;  ///< The weight decay.
+   
+   
+   
+    Scalar_t fMomentum;  ///< The weight decay.
 
     Matrix_t xmu;
     Matrix_t xhat;
-    Matrix_t gammax;
-    Matrix_t out;
+    
+    
     Matrix_t dgamma;
     Matrix_t dgammax;
     Matrix_t dx;
@@ -79,16 +78,17 @@ private:
     Matrix_t var;
     Matrix_t sqrtvar;
     Matrix_t ivar;
-    double epsilon;
-    double gamma;
-    double beta;
-    double mu_Training;
-    double var_Training;
+    
+    
+    Scalar_t fEpsilon;
+    //std::vector<Scalar_t> fGamma;
+    //std::vector<Scalar_t> fBeta;
+    std::vector<Scalar_t> fMu_Training;
+    std::vector<Scalar_t> fVar_Training;
     
 public:
    /*! Constructor */
-   TBatchNormLayer(size_t BatchSize, size_t InputWidth, size_t Width, EInitialization init, Scalar_t DropoutProbability,
-               EActivationFunction f, ERegularization reg, Scalar_t weightDecay);
+    TBatchNormLayer(size_t BatchSize, size_t InputWidth,  Scalar_t epsilon = 0.0001);
 
    /*! Copy the dense layer provided as a pointer */
    TBatchNormLayer(TBatchNormLayer<Architecture_t> *layer);
@@ -97,7 +97,7 @@ public:
    TBatchNormLayer(const TBatchNormLayer &);
 
    /*! Destructor */
-   ~TBatchNormLayer();
+    ~TBatchNormLayer();
 
    /*! Compute activation of the layer for the given input. The input
     * must be in 3D tensor form with the different matrices corresponding to
@@ -110,26 +110,20 @@ public:
     *  first partial derviatives of the activation function computed during
     *  forward propagation and modifies them. Must only be called directly
     *  a the corresponding call to Forward(...). */
-   void Backward(std::vector<Matrix_t> &gradients_backward, const std::vector<Matrix_t> &activations_backward);
+   void Backward(std::vector<Matrix_t> &gradients_backward, const std::vector<Matrix_t> &activations_backward, std::vector<Matrix_t> &inp1, std::vector<Matrix_t> &inp2);
+    
 
    /*! Printing the layer info. */
    void Print() const;
 
    /*! Writes the information and the weights about the layer in an XML node. */
-   virtual void AddWeightsXMLTo(void *parent);
+    virtual void AddWeightsXMLTo(void *parent) {}
 
    /*! Read the information and the weights about the layer from XML node. */
-   virtual void ReadWeightsFromXML(void *parent);
+    virtual void ReadWeightsFromXML(void *parent) {}
 
-   const std::vector<Matrix_t> &GetDerivatives() const { return fDerivatives; }
-   std::vector<Matrix_t> &GetDerivatives() { return fDerivatives; }
-
-   Matrix_t &GetDerivativesAt(size_t i) { return fDerivatives[i]; }
-   const Matrix_t &GetDerivativesAt(size_t i) const { return fDerivatives[i]; }
-
-   EActivationFunction GetActivationFunction() const { return fF; }
-   ERegularization GetRegularization() const { return fReg; }
-   Scalar_t GetWeightDecay() const { return fWeightDecay; }
+  
+   //Scalar_t GetWeightDecay() const { return fWeightDecay; }
 };
 
 //
@@ -137,32 +131,55 @@ public:
 //  The Dense Layer Class - Implementation
 //______________________________________________________________________________
 template <typename Architecture_t>
-TBatchNormLayer<Architecture_t>::TBatchNormLayer(size_t batchSize, size_t inputWidth, size_t width, EInitialization init,
-                                         Scalar_t dropoutProbability, EActivationFunction f, ERegularization reg,
-                                         Scalar_t weightDecay)
-   : VGeneralLayer<Architecture_t>(batchSize, 1, 1, inputWidth, 1, 1, width, 1, width, inputWidth, 1, width, 1, 1,
-                                   batchSize, width, init),
-     fDerivatives(), fDropoutProbability(dropoutProbability), fF(f), fReg(reg), fWeightDecay(weightDecay)
+TBatchNormLayer<Architecture_t>::TBatchNormLayer(size_t batchSize, size_t inputWidth, Scalar_t epsilon)
+   : VGeneralLayer<Architecture_t>(batchSize, 1, 1, inputWidth, 1, 1, inputWidth,
+                                   2, 1, inputWidth,   // weight tensor dim.
+                                   1, 1, 1,   // bias
+                                   1 , batchSize, inputWidth,  // output tensor
+                                   EInitialization::kZero),
+    xmu(batchSize, inputWidth),
+    xhat(batchSize, inputWidth),
+    dgamma(batchSize, inputWidth),
+    dgammax(batchSize, inputWidth),
+    dx(batchSize, inputWidth),
+    dbeta(batchSize, inputWidth),
+    var(batchSize, inputWidth),
+    sqrtvar(batchSize, inputWidth),
+    ivar(batchSize, inputWidth),
+    fMu_Training(inputWidth),
+    fVar_Training(inputWidth),
+    fEpsilon(epsilon)
+    
+    
+    //
+    
 {
-   fDerivatives.emplace_back(batchSize, width);
+    fMu_Training.assign(inputWidth, 0.);
+    fVar_Training.assign(inputWidth, 0.);
+    Matrix_t & gamma = this->GetWeightsAt(0);
+    for (int i = 0; i < gamma.GetNcols(); ++i)
+        gamma(0,i) = 1;
+    Matrix_t & beta = this->GetWeightsAt(1);
+    for (int i = 0; i < gamma.GetNcols(); ++i)
+        beta(0,i) = 0;
 }
 
 //______________________________________________________________________________
 template <typename Architecture_t>
 TBatchNormLayer<Architecture_t>::TBatchNormLayer(TBatchNormLayer<Architecture_t> *layer)
-   : VGeneralLayer<Architecture_t>(layer), fDerivatives(), fDropoutProbability(layer->GetDropoutProbability()),
-     fF(layer->GetActivationFunction()), fReg(layer->GetRegularization()), fWeightDecay(layer->GetWeightDecay())
+   : VGeneralLayer<Architecture_t>(layer)
 {
-   fDerivatives.emplace_back(layer->GetBatchSize(), layer->GetWidth());
+   // to be implemented
+    printf("Error - copy ctor not implmented\n");
 }
 
 //______________________________________________________________________________
 template <typename Architecture_t>
 TBatchNormLayer<Architecture_t>::TBatchNormLayer(const TBatchNormLayer &layer)
-   : VGeneralLayer<Architecture_t>(layer), fDerivatives(), fDropoutProbability(layer.fDropoutProbability), fF(layer.fF),
-     fReg(layer.fReg), fWeightDecay(layer.fWeightDecay)
+   : VGeneralLayer<Architecture_t>(layer)
 {
-   fDerivatives.emplace_back(layer.fBatchSize, layer.fWidth);
+   // to be implmeented
+    printf("Error - copy ctor not implmented\n");
 }
 
 //______________________________________________________________________________
@@ -181,6 +198,8 @@ auto TBatchNormLayer<Architecture_t>::Forward(std::vector<Matrix_t> &x, bool inT
     Matrix_t & gamma = this->GetWeightsAt(0);
     Matrix_t & beta = this->GetWeightsAt(1);
     
+    Matrix_t & out = this->GetOutputAt(0);
+    double epsilon = fEpsilon;
     
     int n = input.GetNrows();
     int d = input.GetNcols();
@@ -223,27 +242,38 @@ auto TBatchNormLayer<Architecture_t>::Forward(std::vector<Matrix_t> &x, bool inT
     
 //______________________________________________________________________________
 template <typename Architecture_t>
-auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_backward, const std::vector<Matrix_t> &activations_backward) -> void
+auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_backward, const std::vector<Matrix_t> &activations_backward,std::vector<Matrix_t> &inp1, std::vector<Matrix_t> &inp2) -> void
 {
     const Matrix_t & dout = activations_backward[0];
+    double epsilon = fEpsilon;
     
     int d = dout.GetNcols();
     int n = dout.GetNrows();
     
-    dgamma.ResizeTo(1,d);
-    dx.ResizeTo(n,d);
-    dbeta.ResizeTo(1,d);
+    const Matrix_t & gamma = this->GetWeightsAt(0);
+    
+    Matrix_t & dgamma = this->GetWeightGradientsAt(0);
+    Matrix_t & dbeta = this->GetWeightGradientsAt(1);
+    Matrix_t & dx = gradients_backward[0];
+
     
     TMatrixD dxhat(n,d);
     
+
+    
     for( int k = 0; k < d; k++) {
+        dgamma(0,k) = 0;
+        dbeta(0,k) = 0;
         for ( int i = 0; i < n; i++ ) {
+            dbeta(0,k) += dout(i,k);
             dgamma(0,k) += dout(i,k) * xhat(i,k);
-            dxhat(i,k) = dout(i,k) * gamma;
+            dxhat(i,k) = dout(i,k) * gamma(0,k);
         }
     }
     std::vector<double> divar(d);
     std::vector<double> dmu(d);
+  
+    
     std::vector<double> dx1(n);
     
     for( int k = 0; k < d; k++) {
@@ -275,21 +305,13 @@ auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_
 template <typename Architecture_t>
 void TBatchNormLayer<Architecture_t>::Print() const
 {
-   std::cout << " DENSE Layer: \t";
-   std::cout << " ( Input =" << std::setw(6) << this->GetWeightsAt(0).GetNcols();  // input size 
-   std::cout << " , Width =" << std::setw(6) << this->GetWeightsAt(0).GetNrows() << " ) ";  // layer width
-   if (this->GetOutput().size() > 0) {
-      std::cout << "\tOutput = ( " << std::setw(2) << this->GetOutput().size() << " ," << std::setw(6) << this->GetOutput()[0].GetNrows() << " ," << std::setw(6) << this->GetOutput()[0].GetNcols() << " ) ";
-   }
-   std::vector<std::string> activationNames = { "Identity","Relu","Sigmoid","Tanh","SymmRelu","SoftSign","Gauss" };
-   std::cout << "\t Activation Function = ";
-   std::cout << activationNames[ static_cast<int>(fF) ];
-   if (fDropoutProbability != 1.) std::cout << "\t Dropout prob. = " << fDropoutProbability;
+   std::cout << " BATCH NORM Layer: \t";
+   std::cout << " ( Input =" << std::setw(6) << this->GetWeightsAt(0).GetNcols() << " ) ";
    std::cout << std::endl;
 }
 
 //______________________________________________________________________________
-
+/*
 template <typename Architecture_t>
 void TBatchNormLayer<Architecture_t>::AddWeightsXMLTo(void *parent)
 {
@@ -316,6 +338,7 @@ void TBatchNormLayer<Architecture_t>::ReadWeightsFromXML(void *parent)
    this->ReadMatrixXML(parent,"Biases", this -> GetBiasesAt(0));
    
 }
+ */
 
 } // namespace DNN
 } // namespace TMVA
