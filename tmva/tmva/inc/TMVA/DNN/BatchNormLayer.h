@@ -66,21 +66,18 @@ private:
    
    
     Scalar_t fMomentum;  ///< The weight decay.
+    Scalar_t fEpsilon;
 
     Matrix_t xmu;
     Matrix_t xhat;
     
     
-    Matrix_t dgamma;
     Matrix_t dgammax;
-    Matrix_t dx;
-    Matrix_t dbeta;
     Matrix_t var;
     Matrix_t sqrtvar;
     Matrix_t ivar;
     
     
-    Scalar_t fEpsilon;
     //std::vector<Scalar_t> fGamma;
     //std::vector<Scalar_t> fBeta;
     std::vector<Scalar_t> fMu_Training;
@@ -137,19 +134,15 @@ TBatchNormLayer<Architecture_t>::TBatchNormLayer(size_t batchSize, size_t inputW
                                    1, 1, 1,   // bias
                                    1 , batchSize, inputWidth,  // output tensor
                                    EInitialization::kZero),
+   fEpsilon(epsilon),
     xmu(batchSize, inputWidth),
     xhat(batchSize, inputWidth),
-    dgamma(batchSize, inputWidth),
     dgammax(batchSize, inputWidth),
-    dx(batchSize, inputWidth),
-    dbeta(batchSize, inputWidth),
     var(batchSize, inputWidth),
     sqrtvar(batchSize, inputWidth),
     ivar(batchSize, inputWidth),
     fMu_Training(inputWidth),
-    fVar_Training(inputWidth),
-    fEpsilon(epsilon)
-    
+    fVar_Training(inputWidth)
     
     //
     
@@ -191,7 +184,7 @@ TBatchNormLayer<Architecture_t>::~TBatchNormLayer()
 
 //______________________________________________________________________________
 template <typename Architecture_t>
-auto TBatchNormLayer<Architecture_t>::Forward(std::vector<Matrix_t> &x, bool inTraining) -> void
+auto TBatchNormLayer<Architecture_t>::Forward(std::vector<Matrix_t> &x, bool /* inTraining */) -> void
 {
     Matrix_t & input = x[0];
     
@@ -242,7 +235,7 @@ auto TBatchNormLayer<Architecture_t>::Forward(std::vector<Matrix_t> &x, bool inT
     
 //______________________________________________________________________________
 template <typename Architecture_t>
-auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_backward, const std::vector<Matrix_t> &activations_backward,std::vector<Matrix_t> &inp1, std::vector<Matrix_t> &inp2) -> void
+auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_backward, const std::vector<Matrix_t> &activations_backward,std::vector<Matrix_t> &, std::vector<Matrix_t> &) -> void
 {
     const Matrix_t & dout = activations_backward[0];
     double epsilon = fEpsilon;
@@ -259,7 +252,7 @@ auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_
     
     TMatrixD dxhat(n,d);
     
-
+    printf("doing backpropagation \n");
     
     for( int k = 0; k < d; k++) {
         dgamma(0,k) = 0;
@@ -272,7 +265,10 @@ auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_
     }
     std::vector<double> divar(d);
     std::vector<double> dmu(d);
-  
+
+    printf("computed dg,db \n");
+    dbeta.Print();
+    dgamma.Print(); 
     
     std::vector<double> dx1(n);
     
@@ -281,6 +277,7 @@ auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_
         for ( int i = 0; i < n; i++ ) {
             divar[k] += dxhat(i,k) * xmu(i,k);
         }
+
         for( int i = 0; i < n; i++ ) {
             double dxmu1 = dxhat(i,k) * ivar(i,k);
             double dsqrtvar = -1. /(pow(sqrtvar(i,k),2)) * divar[k];
@@ -298,7 +295,8 @@ auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_
         }
         
     }
-    
+    printf("output gradient \n");
+    dx.Print(); 
 }
 
 //______________________________________________________________________________

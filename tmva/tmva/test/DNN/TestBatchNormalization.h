@@ -97,24 +97,23 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx)
       auto layer = net.GetLayerAt(l);
       auto &W = layer->GetWeightGradientsAt(0);
 
-      for (size_t i = 0; i < layer->GetWidth(); i++) {
-         for (size_t j = 0; j < layer->GetInputWidth(); j++) {
-            auto f = [&net, &X, &Y, &weights, l, i, j](Scalar_t x) {
-               return evaluate_net_weight(net, X, Y, weights, l, 0, i, j, x);
-            };
-            Scalar_t dy = finiteDifference(f, dx) / (2.0 * dx);
-            Scalar_t dy_ref = W(i, j);
+      int i = 0; 
+      for (size_t j = 0; j < layer->GetInputWidth(); j++) {
+         auto f = [&net, &X, &Y, &weights, l, i, j](Scalar_t x) {
+            return evaluate_net_weight(net, X, Y, weights, l, 0, i, j, x);
+         };
+         Scalar_t dy = finiteDifference(f, dx) / (2.0 * dx);
+         Scalar_t dy_ref = W(0, j);
 
-            // Compute the relative error if dy != 0.
-            Scalar_t error;
-            if (std::fabs(dy_ref) > 1e-15) {
-               error = std::fabs((dy - dy_ref) / dy_ref);
-            } else {
-               error = std::fabs(dy - dy_ref);
-            }
-
-            maximum_error = std::max(error, maximum_error);
+         // Compute the relative error if dy != 0.
+         Scalar_t error;
+         if (std::fabs(dy_ref) > 1e-15) {
+            error = std::fabs((dy - dy_ref) / dy_ref);
+         } else {
+            error = std::fabs(dy - dy_ref);
          }
+         
+         maximum_error = std::max(error, maximum_error);
       }
    }
 
