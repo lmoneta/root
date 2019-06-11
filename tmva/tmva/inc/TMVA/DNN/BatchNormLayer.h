@@ -266,8 +266,9 @@ auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_
     std::vector<double> divar(d);
     std::vector<double> dmu(d);
 
-    printf("computed dg,db \n");
+    printf("computed dbeta \n");
     dbeta.Print();
+    printf("computed dgamma \n");
     dgamma.Print(); 
     
     std::vector<double> dx1(n);

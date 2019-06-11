@@ -30,7 +30,7 @@ int test()
     // Test backpropagation for linear net.
     //
 
-    error = testBackpropagationWeights<TReference<double>>(1.0);
+    error = testBackpropagationWeights<TReference<double>>(0.00001);
     if (error > 1e-3)
         return 1;
 

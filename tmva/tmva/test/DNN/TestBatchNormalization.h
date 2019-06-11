@@ -49,7 +49,7 @@ auto evaluate_net_weight(TDeepNet<Architecture> &net, std::vector<typename Archi
 
    
 // TODO pass as function params
-size_t tbatchSize = 2, timeSteps = 1, inputSize = 2, outputSize = 2;
+size_t tbatchSize = 16,  inputSize = 2, outputSize = 2;
 
 /*! Generate a random net, perform forward and backward propagation and check
  *  the weight gradients using numerical differentiation. Returns the maximum
@@ -65,7 +65,7 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx)
    // using FCLayer_t  = TDenseLayer<Architecture>;
 
    // Random net.
-   Net_t net(tbatchSize, timeSteps, tbatchSize, inputSize, 0, 0, 0, ELossFunction::kMeanSquaredError,
+   Net_t net(tbatchSize, 1, tbatchSize, inputSize, 0, 0, 0, ELossFunction::kMeanSquaredError,
              EInitialization::kGauss);
    // FCLayer_t* l1 = net.AddDenseLayer(outputSize, EActivationFunction::kIdentity);
    net.AddDenseLayer(outputSize, EActivationFunction::kIdentity);
@@ -77,10 +77,12 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx)
 
 
    // Random training data.
-   std::vector<Matrix_t> X(timeSteps, Matrix_t(tbatchSize, inputSize)); // T x B x D
+   std::vector<Matrix_t> X(1, Matrix_t(tbatchSize, inputSize)); // T x B x D
    Matrix_t Y(tbatchSize, outputSize), weights(tbatchSize, 1);
    net.Initialize();
    randomBatch(X[0]);
+   //Matrix_t & input = X[0];
+  
    randomMatrix(Y);
    fillMatrix(weights, 1.0);
 
@@ -91,11 +93,11 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx)
 
    // Compute derivatives for all weights using finite differences and
    // compare to result obtained from backpropagation.
-   for (size_t l = 0; l < net.GetDepth(); l++) {
-      std::cout << "\rTesting weight gradients:      layer: " << l << " / " << net.GetDepth();
+   for (size_t l = 0; l < 2; l++) {
+      std::cout << "\rTesting weight gradients   for batch norm    layer " << std::endl;
       std::cout << std::flush;
-      auto layer = net.GetLayerAt(l);
-      auto &W = layer->GetWeightGradientsAt(0);
+      auto layer = net.GetLayerAt(1);
+      auto &W = layer->GetWeightGradientsAt(l);
 
       int i = 0; 
       for (size_t j = 0; j < layer->GetInputWidth(); j++) {
@@ -105,6 +107,7 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx)
          Scalar_t dy = finiteDifference(f, dx) / (2.0 * dx);
          Scalar_t dy_ref = W(0, j);
 
+          std::cout << "   dy = " << dy << " dy_ref = " << dy_ref << std::endl;
          // Compute the relative error if dy != 0.
          Scalar_t error;
          if (std::fabs(dy_ref) > 1e-15) {
