@@ -119,7 +119,9 @@ public:
    /*! Read the information and the weights about the layer from XML node. */
     virtual void ReadWeightsFromXML(void *parent) {}
 
-  
+   /* initialize weights */
+   virtual void Initialize() {}
+   
    //Scalar_t GetWeightDecay() const { return fWeightDecay; }
 };
 
@@ -148,13 +150,16 @@ TBatchNormLayer<Architecture_t>::TBatchNormLayer(size_t batchSize, size_t inputW
     
 {
     fMu_Training.assign(inputWidth, 0.);
-    fVar_Training.assign(inputWidth, 0.);
+    fVar_Training.assign(inputWidth, 1.);
     Matrix_t & gamma = this->GetWeightsAt(0);
     for (int i = 0; i < gamma.GetNcols(); ++i)
         gamma(0,i) = 1;
     Matrix_t & beta = this->GetWeightsAt(1);
     for (int i = 0; i < gamma.GetNcols(); ++i)
         beta(0,i) = 0;
+
+    printf("constructed gamma \n");
+    this->GetWeightsAt(0).Print();
 }
 
 //______________________________________________________________________________
@@ -190,6 +195,10 @@ auto TBatchNormLayer<Architecture_t>::Forward(std::vector<Matrix_t> &x, bool /* 
     
     Matrix_t & gamma = this->GetWeightsAt(0);
     Matrix_t & beta = this->GetWeightsAt(1);
+
+    //printf("gamma and beta \n");
+    //gamma.Print();
+    //beta.Print(); 
     
     Matrix_t & out = this->GetOutputAt(0);
     double epsilon = fEpsilon;
@@ -231,13 +240,21 @@ auto TBatchNormLayer<Architecture_t>::Forward(std::vector<Matrix_t> &x, bool /* 
             out(i,k) = gammax + beta(0,k);
         }
     }
+    //std::cout << "xhat \n";
+    //xhat.Print();
+    // std::cout << "out \n";
+    // out.Print();
+    // std::cout << "beta \n";
+    // beta.Print(); 
 }
     
 //______________________________________________________________________________
 template <typename Architecture_t>
 auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_backward, const std::vector<Matrix_t> &activations_backward,std::vector<Matrix_t> &, std::vector<Matrix_t> &) -> void
 {
-    const Matrix_t & dout = activations_backward[0];
+    const Matrix_t & dout = this->GetActivationGradients()[0];
+
+       
     double epsilon = fEpsilon;
     
     int d = dout.GetNcols();
@@ -253,7 +270,9 @@ auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_
     TMatrixD dxhat(n,d);
     
     printf("doing backpropagation \n");
-    
+    printf("input dout\n");
+    dout.Print();  
+     
     for( int k = 0; k < d; k++) {
         dgamma(0,k) = 0;
         dbeta(0,k) = 0;

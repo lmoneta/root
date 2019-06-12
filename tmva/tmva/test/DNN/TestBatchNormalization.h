@@ -26,6 +26,10 @@
 #include "TMVA/DNN/DeepNet.h"
 #include "TMVA/DNN/BatchNormLayer.h"
 #include "Utility.h"
+#include "TMath.h"
+#include "Math/RichardsonDerivator.h"
+#include "Math/Functor.h"
+
 
 using namespace TMVA::DNN;
 
@@ -35,21 +39,22 @@ using namespace TMVA::DNN;
 template <typename Architecture>
 auto evaluate_net_weight(TDeepNet<Architecture> &net, std::vector<typename Architecture::Matrix_t> & X,
                          const typename Architecture::Matrix_t &Y, const typename Architecture::Matrix_t &W, size_t l,
-                         size_t k, size_t i, size_t j, typename Architecture::Scalar_t dx) ->
+                         size_t k, size_t i, size_t j, typename Architecture::Scalar_t xvalue) ->
    typename Architecture::Scalar_t
 {
     using Scalar_t = typename Architecture::Scalar_t;
 
-    net.GetLayerAt(l)->GetWeightsAt(k).operator()(i,j) += dx;
+    Scalar_t prev_value = net.GetLayerAt(l)->GetWeightsAt(k).operator()(i,j);
+    net.GetLayerAt(l)->GetWeightsAt(k).operator()(i,j) = xvalue;
     Scalar_t res = net.Loss(X, Y, W, false, false);
-    net.GetLayerAt(l)->GetWeightsAt(k).operator()(i,j) -= dx;
+    net.GetLayerAt(l)->GetWeightsAt(k).operator()(i,j) = prev_value;
+    std::cout << "compute loss for weight  " << xvalue << "  " << prev_value << " result " << res << std::endl;
     return res;
 }
 
 
-   
 // TODO pass as function params
-size_t tbatchSize = 16,  inputSize = 2, outputSize = 2;
+size_t tbatchSize = 3,  inputSize = 2, outputSize = 2;
 
 /*! Generate a random net, perform forward and backward propagation and check
  *  the weight gradients using numerical differentiation. Returns the maximum
@@ -69,54 +74,99 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx)
              EInitialization::kGauss);
    // FCLayer_t* l1 = net.AddDenseLayer(outputSize, EActivationFunction::kIdentity);
    net.AddDenseLayer(outputSize, EActivationFunction::kIdentity);
+
+   auto & layers = net.GetLayers();
+   auto bnlayer = new TBatchNormLayer<Architecture>(tbatchSize, outputSize);
+   layers.push_back( bnlayer);
+   net.AddDenseLayer(1, EActivationFunction::kIdentity);
+
     
-    auto & layers = net.GetLayers();
-    auto bnlayer = new TBatchNormLayer<Architecture>(tbatchSize, outputSize);
-    layers.push_back( bnlayer);
     //net.AddBatchNormLayer()
 
+   net.Print(); 
 
    // Random training data.
    std::vector<Matrix_t> X(1, Matrix_t(tbatchSize, inputSize)); // T x B x D
-   Matrix_t Y(tbatchSize, outputSize), weights(tbatchSize, 1);
+   Matrix_t Y(tbatchSize, 1), weights(tbatchSize, 1);
    net.Initialize();
    randomBatch(X[0]);
-   //Matrix_t & input = X[0];
-  
-   randomMatrix(Y);
+   // Matrix_t & input = X[0];
+   // for (int i = 0; i < tbatchSize; ++i) { 
+   //    for (int j = 0; j < inputSize; ++j) { 
+   //       input(i,j) = i*2 + j;
+   //    }
+   // }
+   //input.Print(); 
+
+   fillMatrix(Y,0.0);
    fillMatrix(weights, 1.0);
 
+   std::cout << "input \n";
+   X[0].Print();
+
+   auto & w2 = net.GetLayerAt(2)->GetWeightsAt(0);
+   
    net.Forward(X);
+
+   std::cout << "output DL \n";
+   net.GetLayerAt(0)->GetOutputAt(0).Print();
+   std::cout << "output BN \n";
+
+   std::vector<double> data(tbatchSize);
+   for (int i = 0; i < tbatchSize; ++i) data[i] = net.GetLayerAt(0)->GetOutputAt(0)(i,0); 
+   std::cout << "output DL mean " <<  TMath::Mean(data.begin(), data.end() ) << std::endl;
+   std::cout << "output DL std " <<  TMath::RMS(data.begin(), data.end() ) << std::endl;
+
+   net.GetLayerAt(1)->GetOutputAt(0).Print();
+
+   for (int i = 0; i < tbatchSize; ++i) data[i] = net.GetLayerAt(1)->GetOutputAt(0)(i,0); 
+   std::cout << "output BN mean " <<  TMath::Mean(data.begin(), data.end() ) << std::endl;
+   std::cout << "output BN std " <<  TMath::RMS(data.begin(), data.end() ) << std::endl;
+  
+
    net.Backward(X, Y, weights);
 
    Scalar_t maximum_error = 0.0;
 
    // Compute derivatives for all weights using finite differences and
    // compare to result obtained from backpropagation.
-   for (size_t l = 0; l < 2; l++) {
-      std::cout << "\rTesting weight gradients   for batch norm    layer " << std::endl;
-      std::cout << std::flush;
-      auto layer = net.GetLayerAt(1);
-      auto &W = layer->GetWeightGradientsAt(l);
-
-      int i = 0; 
-      for (size_t j = 0; j < layer->GetInputWidth(); j++) {
-         auto f = [&net, &X, &Y, &weights, l, i, j](Scalar_t x) {
-            return evaluate_net_weight(net, X, Y, weights, l, 0, i, j, x);
-         };
-         Scalar_t dy = finiteDifference(f, dx) / (2.0 * dx);
-         Scalar_t dy_ref = W(0, j);
-
-          std::cout << "   dy = " << dy << " dy_ref = " << dy_ref << std::endl;
-         // Compute the relative error if dy != 0.
-         Scalar_t error;
-         if (std::fabs(dy_ref) > 1e-15) {
-            error = std::fabs((dy - dy_ref) / dy_ref);
-         } else {
-            error = std::fabs(dy - dy_ref);
-         }
+   ROOT::Math::RichardsonDerivator deriv;
+   int ilayer = 1; 
+   for (size_t l = 0; l < net.GetLayers().size(); l++) {
+      //if (l < 1) continue; 
+      auto layer = net.GetLayerAt(l);
+      for (size_t k = 0; k < layer->GetWeights().size(); k++) {
+         //if (k != 1 ) continue; 
+         std::cout << "\rTesting weight gradients   for    layer " << l << std::endl;
+         std::cout << std::flush;
+         auto &dW = layer->GetWeightGradientsAt(k);
+         std::cout << "weight gradient for layer " << l << std::endl;
+         dW.Print();
+         auto &W = layer->GetWeightsAt(k);
+         std::cout << "weights for layer " << l << std::endl;
+         W.Print(); 
          
-         maximum_error = std::max(error, maximum_error);
+         int i = 0; 
+         for (size_t j = 0; j < layer->GetInputWidth(); j++) {
+            auto f = [&net, &X, &Y, &weights, l, k, i, j](Scalar_t x) {
+               return evaluate_net_weight(net, X, Y, weights, l, k, i, j, x);
+            };
+            ROOT::Math::Functor1D func(f);
+            double dy = deriv.Derivative1(func, W(i,j), 1.E-3);
+
+            //Scalar_t dy = finiteDifference(f, dx) / (2.0 * dx);
+            Scalar_t dy_ref = dW(0, j);
+
+            std::cout << "   --dy = " << dy << " dy_ref = " << dy_ref << std::endl;
+            // Compute the relative error if dy != 0.
+            Scalar_t error;
+            if (std::fabs(dy_ref) > 1e-10) {
+               error = std::fabs((dy - dy_ref) / dy_ref);
+            } else {
+               error = std::fabs(dy - dy_ref);
+            }
+            maximum_error = std::max(error, maximum_error);
+         }
       }
    }
 

@@ -95,7 +95,7 @@ public:
    virtual ~VGeneralLayer();
 
    /*! Initialize the weights and biases according to the given initialization method. */
-   void Initialize();
+   virtual void Initialize();
 
    /*! Computes activation of the layer for the given input. The input
     * must be in 3D tensor form with the different matrices corresponding to
