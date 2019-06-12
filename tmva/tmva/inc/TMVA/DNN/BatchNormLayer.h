@@ -215,7 +215,7 @@ auto TBatchNormLayer<Architecture_t>::Forward(std::vector<Matrix_t> &x, bool /* 
         
         for( int i = 0; i < n; i++ ) {
             
-            var(i,k)  = 0;
+            var(0,k)  = 0;
             xmu(i,k) = input(i,k) - mean;
         }
         double sq = 0;
@@ -225,17 +225,12 @@ auto TBatchNormLayer<Architecture_t>::Forward(std::vector<Matrix_t> &x, bool /* 
             
             sq = sq + (xmu(i,k) * xmu(i,k));
         }
-        
+        var(0,k) = sq / n;
+        var(0,k) = var(0,k) + epsilon;
+        sqrtvar(0,k) = std::sqrt(var(0,k));
+        ivar(0,k) = 1./sqrtvar(0,k);
         for( int i = 0; i < n; i++ ) {
-            
-            
-            var(i,k) = sq / n;
-            
-            var(i,k) = var(i,k) + epsilon;
-            
-            sqrtvar(i,k) = std::sqrt(var(i,k));
-            ivar(i,k) = 1./sqrtvar(i,k);
-            xhat(i,k) = xmu(i,k) * ivar(i,k);
+            xhat(i,k) = xmu(i,k) * ivar(0,k);
             double gammax = gamma(0,k) * xhat(i,k);
             out(i,k) = gammax + beta(0,k);
         }
@@ -265,7 +260,8 @@ auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_
     Matrix_t & dgamma = this->GetWeightGradientsAt(0);
     Matrix_t & dbeta = this->GetWeightGradientsAt(1);
     Matrix_t & dx = gradients_backward[0];
-
+    Matrix_t & dh = gradients_backward[0];
+    const Matrix_t & x = activations_backward[0];
     
     TMatrixD dxhat(n,d);
     
@@ -314,8 +310,27 @@ auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_
             
         }
         
+        
     }
-    printf("output gradient \n");
+    printf("output gradient method1 \n");
+    dx.Print();
+    
+    double npSumDy = 0;
+    double npSumDyHMu = 0;
+    
+    for ( int k = 0; k < d; k++) {
+        for ( int i = 0; i < n; i++) {
+            npSumDy += dout(i,k);
+            npSumDyHMu += dout(i,k) * xmu(i,k);
+        }
+        for ( int i = 0; i < n; i++) {
+            dx(i,k) = (1./double(n) * gamma(0,k) * ivar(0,k)) * (n * dout(i,k) - npSumDy - xmu(i,k) * pow(var(0,k),-1.0) * npSumDyHMu);
+        }
+        
+    }
+    
+    
+    printf("output gradient method2 \n");
     dx.Print(); 
 }
 
