@@ -295,9 +295,9 @@ auto TBatchNormLayer<Architecture_t>::Backward(std::vector<Matrix_t> &gradients_
         }
 
         for( int i = 0; i < n; i++ ) {
-            double dxmu1 = dxhat(i,k) * ivar(i,k);
-            double dsqrtvar = -1. /(pow(sqrtvar(i,k),2)) * divar[k];
-            double dvar = 0.5 * 1. /sqrt(var(i,k) + epsilon) * dsqrtvar;
+            double dxmu1 = dxhat(i,k) * ivar(0,k);
+            double dsqrtvar = -1. /(pow(sqrtvar(0,k),2)) * divar[k];
+            double dvar = 0.5 * 1. /sqrt(var(0,k) + epsilon) * dsqrtvar;
             double dsq = dvar / n;
             double dxmu2 = 2 * xmu(i,k) * dsq;
             dmu[k] += -1 * dxmu1 + dxmu2;

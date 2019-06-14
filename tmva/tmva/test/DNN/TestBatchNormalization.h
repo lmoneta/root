@@ -54,7 +54,7 @@ auto evaluate_net_weight(TDeepNet<Architecture> &net, std::vector<typename Archi
 
 
 // TODO pass as function params
-size_t tbatchSize = 3,  inputSize = 2, outputSize = 2;
+size_t tbatchSize = 100,  inputSize = 4, outputSize = 2;
 
 /*! Generate a random net, perform forward and backward propagation and check
  *  the weight gradients using numerical differentiation. Returns the maximum
