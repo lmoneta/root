@@ -122,7 +122,7 @@ public:
       seed_spbox(fRngState, seed);
    }
    void SetSeed(Result_t seed) {
-#if (ROOT_MM_N==10 || ROOT_MM_N==40 || ROOT_MM_N==44 || ROOT_MM_N==88)
+#if (ROOT_MM_N==10 || ROOT_MM_N==40 || ROOT_MM_N==44 || ROOT_MM_N==88 || ROOT_MM_N==8)
       SetSeedFast(seed);
 #else
       seed_uniquestream(fRngState, 0, 0, (uint32_t)(seed>>32), (uint32_t)seed );
