@@ -37,7 +37,9 @@
 #include "TMVA/DNN/GeneralLayer.h"
 #include "TMVA/DNN/DenseLayer.h"
 #include "TMVA/DNN/ReshapeLayer.h"
-//#include "TMVA/DNN/BatchNormLayer.h"
+
+#include "TMVA/DNN/BatchNormLayer.h"
+
 
 #include "TMVA/DNN/CNN/ConvLayer.h"
 #include "TMVA/DNN/CNN/MaxPoolLayer.h"
@@ -162,7 +164,8 @@ public:
    TReshapeLayer<Architecture_t> *AddReshapeLayer(size_t depth, size_t height, size_t width, bool flattening);
 
    /*! Function for adding a Batch Normalization layer with given parameters */
-   //TBatchNormLayer<Architecture_t> *AddBatchNormLayer(Scalar_t momentum, Scalar_t epsilon);
+
+   TBatchNormLayer<Architecture_t> *AddBatchNormLayer(Scalar_t momentum, Scalar_t epsilon);
 
    /*! Function for adding Reshape Layer in the Deep Neural Network, when
     *  the layer is already created. */
@@ -718,6 +721,26 @@ TBatchNormLayer<Architecture_t> *TDeepNet<Architecture_t, Layer_t>::AddBatchNorm
 
    return bnormLayer;
 }*/
+
+//______________________________________________________________________________
+template <typename Architecture_t, typename Layer_t>
+TBatchNormLayer<Architecture_t> *TDeepNet<Architecture_t, Layer_t>::AddBatchNormLayer(Scalar_t momentum, Scalar_t epsilon)
+{
+   size_t batchSize = this->GetBatchSize();
+   size_t inputWidth = 0; 
+   if (fLayers.size() == 0) {
+      inputWidth = this->GetInputWidth();
+   } else {
+      Layer_t *lastLayer = fLayers.back();
+      inputWidth = lastLayer->GetWidth();
+   }
+
+   auto bnormLayer = new TBatchNormLayer<Architecture_t>(batchSize, inputWidth, momentum, epsilon);
+
+   fLayers.push_back(bnormLayer);
+
+   return bnormLayer;
+}
 
 //______________________________________________________________________________
 template <typename Architecture_t, typename Layer_t>
