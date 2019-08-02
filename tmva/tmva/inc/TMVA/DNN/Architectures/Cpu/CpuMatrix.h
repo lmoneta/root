@@ -269,6 +269,34 @@ void TCpuMatrix<AFloat>::Zero()
 }
 
 
+//CPU Tensor Class 
+// It is a simple wrapper for TMVA RTensor based on 
+// memory owned by CPU Buffer
+// We need to keep a pointer for CPUBuffer for fast conversion
+// without copying to TCpuMatrix
+// also provides compatibility with old interface
+
+template<typename AFloat>
+class TCpuTensor { 
+
+   private: 
+
+    TCpuBuffer<AFloat> fBuffer; ///< The buffer holding the matrix elements
+    TMVA::Experimantal::RTensor<AFloat>    fData; /// The tensor view 
+
+
+    public:
+
+   /** Return raw pointer to the elements stored contiguously in column-major
+    *  order. */
+   AFloat *       GetRawDataPointer()        {return fBuffer;}
+   const AFloat * GetRawDataPointer()  const {return fBuffer;}
+
+   AFloat *       GetData() { return fTensor.GetData();}
+
+}
+
+
 } // namespace DNN
 } // namespace TMVA
 

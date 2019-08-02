@@ -115,6 +115,29 @@ inline void evaluate(typename Architecture_t::Matrix_t &A,
 }
 
 
+template<typename Architecture_t>
+inline void evaluate(typename Architecture_t::Tensor_t &A,
+                    EActivationFunction f)
+{
+    switch(f)
+    {
+    case EActivationFunction::kIdentity : break;
+    case EActivationFunction::kRelu :     Architecture_t::Relu(A);
+        break;
+    case EActivationFunction::kSigmoid  :  Architecture_t::Sigmoid(A);
+        break;
+    case EActivationFunction::kTanh     :  Architecture_t::Tanh(A);
+        break;
+    case EActivationFunction::kSymmRelu :  Architecture_t::SymmetricRelu(A);
+        break;
+    case EActivationFunction::kSoftSign :  Architecture_t::SoftSign(A);
+        break;
+    case EActivationFunction::kGauss    :  Architecture_t::Gauss(A);
+        break;
+    }
+}
+
+
 /*! Compute the first partial derivative of the activation function for
 *  the values given in matrix A and write the results into B. */
 //______________________________________________________________________________
@@ -122,6 +145,34 @@ template<typename Architecture_t>
 inline void evaluateDerivative(typename Architecture_t::Matrix_t & B,
                                 EActivationFunction f,
                                 const typename Architecture_t::Matrix_t & A)
+{
+    switch(f)
+    {
+    case EActivationFunction::kIdentity : Architecture_t::IdentityDerivative(B, A);
+        break;
+    case EActivationFunction::kRelu     : Architecture_t::ReluDerivative(B, A);
+        break;
+    case EActivationFunction::kSigmoid  : Architecture_t::SigmoidDerivative(B, A);
+        break;
+    case EActivationFunction::kTanh     : Architecture_t::TanhDerivative(B, A);
+        break;
+    case EActivationFunction::kSymmRelu : Architecture_t::SymmetricReluDerivative(B, A);
+        break;
+    case EActivationFunction::kSoftSign : Architecture_t::SoftSignDerivative(B, A);
+        break;
+    case EActivationFunction::kGauss    : Architecture_t::GaussDerivative(B, A);
+        break;
+    }
+}
+
+
+/*! Compute the first partial derivative of the activation function for
+*  the values given in matrix A and write the results into B. */
+//______________________________________________________________________________
+template<typename Architecture_t>
+inline void evaluateDerivative(typename Architecture_t::Tensor_t & B,
+                                EActivationFunction f,
+                                const typename Architecture_t::Tensor_t & A)
 {
     switch(f)
     {

@@ -21,16 +21,16 @@ namespace DNN  {
 //#if 0
 //____________________________________________________________________________
 template<typename AFloat>
-void TCpu<AFloat>::Dropout(TCpuMatrix<AFloat> &A,
+void TCpu<AFloat>::Dropout(Tensor_t<AFloat> &A,
                            AFloat dropoutProbability)
 {
-   AFloat *data = A.GetRawDataPointer();
+   AFloat *data = A.GetData();
 
    TRandom & dlRand = TCpu<AFloat>::GetRandomGenerator();
    size_t seed = dlRand.Integer(4294967295);   // use 2^32-1
 
-   size_t nElements =  A.GetNoElements();
-   const size_t nSteps = TCpuMatrix<AFloat>::GetNWorkItems(nElements);
+   size_t nElements =  A.GetSize();
+   const size_t nSteps = TCpu<AFloat>::GetNWorkItems(nElements);
 
    // apply droput. The probability is actually the probability to keep the node
    // (i.e. 1 - dropout_prob)
@@ -46,7 +46,7 @@ void TCpu<AFloat>::Dropout(TCpuMatrix<AFloat> &A,
    };
 
 #ifdef DL_USE_MTE
-   A.GetThreadExecutor().Foreach(f, ROOT::TSeqI(0,nElements,nSteps));
+   TCpu<AFloat>::GetThreadExecutor().Foreach(f, ROOT::TSeqI(0,nElements,nSteps));
 #else
    for (size_t i = 0;  i < nElements; i+=nSteps)
       f(i); 

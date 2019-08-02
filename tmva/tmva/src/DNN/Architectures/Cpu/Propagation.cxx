@@ -21,6 +21,64 @@
 namespace TMVA {
 namespace DNN {
 
+
+template <typename AFloat>
+void TCpu<AFloat>::MultiplyTranspose(Tensor_t &output, const Tensor_t &input,
+                                     const TCpuMatrix<AFloat> &Weights)
+{
+   // apply  multiply transpose. Assume tensor has size == 2  and is column major ordering
+   //int m = (int)input.GetNrows();
+   //int k = (int)input.GetNcols();
+    
+   int n = (int)Weights.GetNrows();
+   int m = (int)input.GetShape()[0];
+   int k = (int)input.GetShape()[1];
+
+   if ((int)output.GetShape()[0] != m) {
+      Error("MultiplyTranspose","Invalid input - output  rows  - input:  %d != output : %d",m, (int) output.GetNrows());
+      R__ASSERT((int) GetShape()[0] == m);
+   }
+   if ((int)output.GetShape()[1] != n) {
+      Error("MultiplyTranspose","Invalid output cols or weight  rows  - output cols:  %d != weight rows : %d",(int) output.GetNcols(),n);
+      R__ASSERT((int) GetShape()[1] == n);
+   }
+   if ((int)Weights.GetNcols() != k) {
+      Error("MultiplyTranspose","Invalid input cols or weight cols  - input cols:  %d != weight cols : %d", k, (int) Weights.GetNcols());
+      R__ASSERT((int) Weights.GetNcols() == k); 
+   }
+
+   char transa = 'N';
+   char transb = 'T';
+
+   AFloat alpha = 1.0;
+   AFloat beta = 0.0;
+
+   const AFloat *A = input.GetData();
+   const AFloat *B = Weights.GetRawDataPointer();
+   AFloat *C = output.GetData();
+
+   ::TMVA::DNN::Blas::Gemm(&transa, &transb, &m, &n, &k, &alpha, A, &m, B, &n, &beta, C, &m);
+}
+
+template <typename AFloat>
+void TCpu<AFloat>::AddRowWise(TCpuMatrix<AFloat> &output, const TCpuMatrix<AFloat> &biases)
+{
+   int m = (int)output.GetNrows();
+   int n = (int)output.GetNcols();
+
+   int inc = 1.0;
+   AFloat alpha = 1.0;
+
+   AFloat *A = output.GetRawDataPointer();
+   const AFloat *x = TCpuMatrix<AFloat>::GetOnePointer();
+   const AFloat *y = biases.GetRawDataPointer();
+
+   R__ASSERT(m <= (int)TCpuMatrix<AFloat>::GetOnePointerSize()); 
+   R__ASSERT(n <= (int)(biases.GetNcols()*biases.GetNrows())); 
+
+   ::TMVA::DNN::Blas::Ger(&m, &n, &alpha, x, &inc, y, &inc, A, &m);
+}
+#if 0
 template <typename AFloat>
 void TCpu<AFloat>::MultiplyTranspose(TCpuMatrix<AFloat> &output, const TCpuMatrix<AFloat> &input,
                                      const TCpuMatrix<AFloat> &Weights)
@@ -74,6 +132,7 @@ void TCpu<AFloat>::AddRowWise(TCpuMatrix<AFloat> &output, const TCpuMatrix<AFloa
 
    ::TMVA::DNN::Blas::Ger(&m, &n, &alpha, x, &inc, y, &inc, A, &m);
 }
+#endif
 
 template <typename AFloat>
 void TCpu<AFloat>::Backward(TCpuMatrix<AFloat> &activationGradientsBackward, TCpuMatrix<AFloat> &weightGradients,

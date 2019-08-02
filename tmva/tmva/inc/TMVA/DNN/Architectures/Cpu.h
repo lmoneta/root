@@ -21,6 +21,8 @@
 #include "TMVA/DNN/Functions.h"
 #include "TMVA/DNN/CNN/ConvLayer.h"
 
+#include "TMVA/RTensor.hxx"
+
 #include "Cpu/CpuBuffer.h"
 #include "Cpu/CpuMatrix.h"
 #include <vector>
@@ -48,9 +50,16 @@ private:
 public:
 
    using Scalar_t       = AReal;
+   using Tensor_t       = TMVA::Experimental::RTensor<AReal>;
    using Matrix_t       = TCpuMatrix<AReal>;
    using HostBuffer_t   = TCpuBuffer<AReal>;
    using DeviceBuffer_t = TCpuBuffer<AReal>;
+
+
+   // Utility function to convert from a Matrix to a Tensor
+   static Tensor_t  MatrixToTensor(Matrix_t & A) { 
+      return Tensor_t(A.GetRawDataPointer(), Shape_t({A.GetNrows(), A.GetNcols() }), RTensor::MemoryLayout::ColumnMajor);
+   }
 
    //____________________________________________________________________________
    //
@@ -64,13 +73,19 @@ public:
    ///@{
    /** Matrix-multiply \p input with the transpose of \pweights and
     *  write the results into \p output. */
-   static void MultiplyTranspose(TCpuMatrix<Scalar_t> &output,
-                                 const TCpuMatrix<Scalar_t> &input,
+   static void MultiplyTranspose(Tensor_t &output,
+                                 const Tensor_t &input,
                                  const TCpuMatrix<Scalar_t> &weights);
+
+   // static void MultiplyTranspose(TCpuMatrix<Scalar_t> &output,
+   //                               const TCpuMatrix<Scalar_t> &input,
+   //                               const TCpuMatrix<Scalar_t> &weights);
    /** Add the vectors biases row-wise to the matrix output */
-   static void AddRowWise(TCpuMatrix<Scalar_t> &output,
+   static void AddRowWise(Tensor_t<Scalar_t> &output,
                           const TCpuMatrix<Scalar_t> &biases);
-   ///@}
+ 
+   // static void AddRowWise(TCpuMatrix<Scalar_t> &output,
+   //                        const TCpuMatrix<Scalar_t> &biases);
 
    /** @name Backward Propagation
     * Low-level functions required for the forward propagation of activations
@@ -289,8 +304,12 @@ public:
    ///@{
 
    /** Apply dropout with activation probability \p p to the given
-    *  matrix \p A and scale the result by reciprocal of \p p. */
-   static void Dropout(TCpuMatrix<Scalar_t> & A, Scalar_t p);
+    *  tensor \p A and scale the result by reciprocal of \p p. */
+   static void Dropout(Tensor_t & A, Scalar_t p);
+
+   static void Dropout(TCpuMatrix<Scalar_t> & A, Scalar_t p) { 
+      Dropout( MatrixToTensor(A), p );
+   }
 
    ///@}
 

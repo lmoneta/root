@@ -74,8 +74,11 @@ namespace DNN {
 template <typename Architecture_t, typename Layer_t = VGeneralLayer<Architecture_t>>
 class TDeepNet {
 public:
+
+   using Tensor_t = typename Architecture_t::Tensor_t;
    using Matrix_t = typename Architecture_t::Matrix_t;
    using Scalar_t = typename Architecture_t::Scalar_t;
+  
 
 private:
    bool inline isInteger(Scalar_t x) const { return x == floor(x); }
@@ -236,14 +239,20 @@ public:
    /*! Function that executes the entire forward pass in the network. */
    void Forward(std::vector<Matrix_t> &input, bool applyDropout = false);
 
+    /*! Function that reset some training flags after looping all the events but not the weights*/
+   void Reset();
+
+
+
+   /*! Function that executes the entire backward pass in the network. */
+   void Backward(const Tensor_t &input, const Matrix_t &groundTruth, const Matrix_t &weights);
+
+
+#ifdef USE_PARALLEL_DEEPNET
    /*! Function for parallel forward in the vector of deep nets, where the master
     *  net is the net calling this function. There is one batch for one deep net.*/
    void ParallelForward(std::vector<TDeepNet<Architecture_t, Layer_t>> &nets,
                         std::vector<TTensorBatch<Architecture_t>> &batches, bool applyDropout = false);
-
-   /*! Function that executes the entire backward pass in the network. */
-   void Backward(std::vector<Matrix_t> &input, const Matrix_t &groundTruth, const Matrix_t &weights);
-
 
    /*! Function for parallel backward in the vector of deep nets, where the master
     *  net is the net calling this function and getting the updates from the other nets.
@@ -265,6 +274,8 @@ public:
                                  std::vector<TTensorBatch<Architecture_t>> &batches, Scalar_t learningRate,
                                  Scalar_t momentum);
 
+#endif // endif use parallel deepnet
+
    /*! Function that will update the weights and biases in the layers that
     *  contain weights and biases.  */
    void Update(Scalar_t learningRate);
@@ -274,7 +285,7 @@ public:
    Scalar_t Loss(const Matrix_t &groundTruth, const Matrix_t &weights, bool includeRegularization = true) const;
 
    /*! Function for evaluating the loss, based on the propagation of the given input. */
-   Scalar_t Loss(std::vector<Matrix_t> &input, const Matrix_t &groundTruth, const Matrix_t &weights,
+   Scalar_t Loss(const Tensor_t &input, const Matrix_t &groundTruth, const Matrix_t &weights,
                  bool inTraining = false, bool includeRegularization = true);
 
    /*! Function for computing the regularizaton term to be added to the loss function  */
@@ -738,24 +749,36 @@ auto TDeepNet<Architecture_t, Layer_t>::Initialize() -> void
    }
 }
 
-template <typename Architecture>
-auto debugTensor(const std::vector<typename Architecture::Matrix_t> &A, const std::string name = "tensor") -> void
+//______________________________________________________________________________
+template <typename Architecture_t, typename Layer_t>
+auto TDeepNet<Architecture_t, Layer_t>::ResetTraining() -> void
 {
-   std::cout << name << "\n";
-   for (size_t l = 0; l < A.size(); ++l) {
-      for (size_t i = 0; i < A[l].GetNrows(); ++i) {
-         for (size_t j = 0; j < A[l].GetNcols(); ++j) {
-            std::cout << A[l](i, j) << " ";
-         }
-         std::cout << "\n";
-      }
-      std::cout << "********\n";
+   for (size_t i = 0; i < fLayers.size(); i++) {
+      fLayers[i]->ResetTraining();
    }
+}
+
+template <typename Architecture>
+auto debugTensor(const Tensor_t &A, const std::string name = "tensor") -> void
+{
+   std::cout << name << " tensor size = " << A.GetSize() << " shape = { "; 
+   auto shape = A.GetShape(); 
+   for (size_t k = 0; k < shape.size()-1; ++k)
+      std::cout << shape[k] << " , "
+   std::cout << shape.back() << " } ";
+   std::coout << " is view/owner " << A.IsView() << " / " << A.IsOwner() << std::endl;
+   // print elements 
+   // need to find way to nice printing all elements
+   for (size_t l = 0; l < A.GetSize(); ++l) {
+         std::cout << A[l] << " ";
+   }
+   std::cout << "\n";
+   std::cout << "********\n";
 }
 
 //______________________________________________________________________________
 template <typename Architecture_t, typename Layer_t>
-auto TDeepNet<Architecture_t, Layer_t>::Forward(std::vector<Matrix_t> &input, bool applyDropout) -> void
+auto TDeepNet<Architecture_t, Layer_t>::Forward( Tensor_t &input, bool applyDropout) -> void
 {
    fLayers.front()->Forward(input, applyDropout);
 
@@ -766,26 +789,6 @@ auto TDeepNet<Architecture_t, Layer_t>::Forward(std::vector<Matrix_t> &input, bo
    }
 }
 
-//______________________________________________________________________________
-template <typename Architecture_t, typename Layer_t>
-auto TDeepNet<Architecture_t, Layer_t>::ParallelForward(std::vector<TDeepNet<Architecture_t, Layer_t>> &nets,
-                                                        std::vector<TTensorBatch<Architecture_t>> &batches,
-                                                        bool applyDropout) -> void
-{
-   size_t depth = this->GetDepth();
-
-   // The first layer of each deep net
-   for (size_t i = 0; i < nets.size(); i++) {
-      nets[i].GetLayerAt(0)->Forward(batches[i].GetInput(), applyDropout);
-   }
-
-   // The i'th layer of each deep net
-   for (size_t i = 1; i < depth; i++) {
-      for (size_t j = 0; j < nets.size(); j++) {
-         nets[j].GetLayerAt(i)->Forward(nets[j].GetLayerAt(i - 1)->GetOutput(), applyDropout);
-      }
-   }
-}
 
 #ifdef HAVE_DAE
 //_____________________________________________________________________________
@@ -912,24 +915,47 @@ auto TDeepNet<Architecture_t, Layer_t>::FineTune(std::vector<Matrix_t> &input, s
 
 //______________________________________________________________________________
 template <typename Architecture_t, typename Layer_t>
-auto TDeepNet<Architecture_t, Layer_t>::Backward(std::vector<Matrix_t> &input, const Matrix_t &groundTruth,
+auto TDeepNet<Architecture_t, Layer_t>::Backward(const Tensor_t &input, const Matrix_t &groundTruth,
                                                  const Matrix_t &weights) -> void
 {
-   std::vector<Matrix_t> inp1;
-   std::vector<Matrix_t> inp2;
+   Tensor_t inp1;
+   Tensor_t inp2;
    // Last layer should be dense layer
    evaluateGradients<Architecture_t>(fLayers.back()->GetActivationGradientsAt(0), this->GetLossFunction(), groundTruth,
                                      fLayers.back()->GetOutputAt(0), weights);
    for (size_t i = fLayers.size() - 1; i > 0; i--) {
-      std::vector<Matrix_t> &activation_gradient_backward = fLayers[i - 1]->GetActivationGradients();
-      std::vector<Matrix_t> &activations_backward = fLayers[i - 1]->GetOutput();
+      auto &activation_gradient_backward = fLayers[i - 1]->GetActivationGradients();
+      auto &activations_backward = fLayers[i - 1]->GetOutput();
       fLayers[i]->Backward(activation_gradient_backward, activations_backward, inp1, inp2);
    }
 
    // need to have a dummy tensor (size=0) to pass for activation gradient backward which
    // are not computed for the first layer 
-   std::vector<Matrix_t> dummy;
+   Tensor_t dummy;
    fLayers[0]->Backward(dummy, input, inp1, inp2);
+}
+
+#ifdef USE_PARALLEL_DEEPNET
+
+//______________________________________________________________________________
+template <typename Architecture_t, typename Layer_t>
+auto TDeepNet<Architecture_t, Layer_t>::ParallelForward(std::vector<TDeepNet<Architecture_t, Layer_t>> &nets,
+                                                        std::vector<TTensorBatch<Architecture_t>> &batches,
+                                                        bool applyDropout) -> void
+{
+   size_t depth = this->GetDepth();
+
+   // The first layer of each deep net
+   for (size_t i = 0; i < nets.size(); i++) {
+      nets[i].GetLayerAt(0)->Forward(batches[i].GetInput(), applyDropout);
+   }
+
+   // The i'th layer of each deep net
+   for (size_t i = 1; i < depth; i++) {
+      for (size_t j = 0; j < nets.size(); j++) {
+         nets[j].GetLayerAt(i)->Forward(nets[j].GetLayerAt(i - 1)->GetOutput(), applyDropout);
+      }
+   }
 }
 
 //______________________________________________________________________________
@@ -1103,6 +1129,7 @@ auto TDeepNet<Architecture_t, Layer_t>::ParallelBackwardNestorov(std::vector<TDe
       masterLayer->Update(1.0);
    }
 }
+#endif   // use parallel deep net
 
 //______________________________________________________________________________
 template <typename Architecture_t, typename Layer_t>
@@ -1131,7 +1158,7 @@ auto TDeepNet<Architecture_t, Layer_t>::Loss(const Matrix_t &groundTruth, const 
 
 //______________________________________________________________________________
 template <typename Architecture_t, typename Layer_t>
-auto TDeepNet<Architecture_t, Layer_t>::Loss(std::vector<Matrix_t> &input, const Matrix_t &groundTruth,
+auto TDeepNet<Architecture_t, Layer_t>::Loss(const Tensor_t &input, const Matrix_t &groundTruth,
                                              const Matrix_t &weights, bool inTraining, bool includeRegularization)
    -> Scalar_t
 {
