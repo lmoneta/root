@@ -75,17 +75,17 @@ public:
     *  write the results into \p output. */
    static void MultiplyTranspose(Tensor_t &output,
                                  const Tensor_t &input,
-                                 const TCpuMatrix<Scalar_t> &weights);
+                                 const Matrix_t &weights);
 
-   // static void MultiplyTranspose(TCpuMatrix<Scalar_t> &output,
-   //                               const TCpuMatrix<Scalar_t> &input,
-   //                               const TCpuMatrix<Scalar_t> &weights);
+   // static void MultiplyTranspose(Matrix_t &output,
+   //                               const Matrix_t &input,
+   //                               const Matrix_t &weights);
    /** Add the vectors biases row-wise to the matrix output */
    static void AddRowWise(Tensor_t<Scalar_t> &output,
-                          const TCpuMatrix<Scalar_t> &biases);
+                          const Matrix_t &biases);
  
-   // static void AddRowWise(TCpuMatrix<Scalar_t> &output,
-   //                        const TCpuMatrix<Scalar_t> &biases);
+   // static void AddRowWise(Matrix_t &output,
+   //                        const Matrix_t &biases);
 
    /** @name Backward Propagation
     * Low-level functions required for the forward propagation of activations
@@ -100,50 +100,50 @@ public:
     *  in \p df and thus produces only a valid result, if it is applied the
     *  first time after the corresponding forward propagation has been per-
     *  formed. */
-   static void Backward(TCpuMatrix<Scalar_t> & activationGradientsBackward,
-                        TCpuMatrix<Scalar_t> & weightGradients,
-                        TCpuMatrix<Scalar_t> & biasGradients,
-                        TCpuMatrix<Scalar_t> & df,
-                        const TCpuMatrix<Scalar_t> & activationGradients,
-                        const TCpuMatrix<Scalar_t> & weights,
-                        const TCpuMatrix<Scalar_t> & activationBackward);
+   static void Backward(Matrix_t & activationGradientsBackward,
+                        Matrix_t & weightGradients,
+                        Matrix_t & biasGradients,
+                        Matrix_t & df,
+                        const Matrix_t & activationGradients,
+                        const Matrix_t & weights,
+                        const Matrix_t & activationBackward);
    /** Backward pass for Recurrent Networks */
-   static Matrix_t & RecurrentLayerBackward(TCpuMatrix<Scalar_t> & state_gradients_backward, // BxH
-                                            TCpuMatrix<Scalar_t> & input_weight_gradients,
-                                            TCpuMatrix<Scalar_t> & state_weight_gradients,
-                                            TCpuMatrix<Scalar_t> & bias_gradients,
-                                            TCpuMatrix<Scalar_t> & df, //DxH
-                                            const TCpuMatrix<Scalar_t> & state, // BxH
-                                            const TCpuMatrix<Scalar_t> & weights_input, // HxD 
-                                            const TCpuMatrix<Scalar_t> & weights_state, // HxH
-                                            const TCpuMatrix<Scalar_t> & input,  // BxD
-                                            TCpuMatrix<Scalar_t> & input_gradient);
+   static Matrix_t & RecurrentLayerBackward(Matrix_t & state_gradients_backward, // BxH
+                                            Matrix_t & input_weight_gradients,
+                                            Matrix_t & state_weight_gradients,
+                                            Matrix_t & bias_gradients,
+                                            Matrix_t & df, //DxH
+                                            const Matrix_t & state, // BxH
+                                            const Matrix_t & weights_input, // HxD 
+                                            const Matrix_t & weights_state, // HxH
+                                            const Matrix_t & input,  // BxD
+                                            Matrix_t & input_gradient);
    /** Adds a the elements in matrix B scaled by c to the elements in
     *  the matrix A. This is required for the weight update in the gradient
     *  descent step.*/
-   static void ScaleAdd(TCpuMatrix<Scalar_t> & A,
-                        const TCpuMatrix<Scalar_t> & B,
+   static void ScaleAdd(Matrix_t & A,
+                        const Matrix_t & B,
                         Scalar_t beta = 1.0);
 
-   static void Copy(TCpuMatrix<Scalar_t> & B,
-                    const TCpuMatrix<Scalar_t> & A);
+   static void Copy(Matrix_t & B,
+                    const Matrix_t & A);
 
    // copy from another type of matrix
    template<typename AMatrix_t>
-   static void CopyDiffArch(TCpuMatrix<Scalar_t> & B, const AMatrix_t & A); 
+   static void CopyDiffArch(Matrix_t & B, const AMatrix_t & A); 
 
 
    /** Above functions extended to vectors */
-   static void ScaleAdd(std::vector<TCpuMatrix<Scalar_t>> & A,
-                        const std::vector<TCpuMatrix<Scalar_t>> & B,
+   static void ScaleAdd(std::vector<Matrix_t> & A,
+                        const std::vector<Matrix_t> & B,
                         Scalar_t beta = 1.0);
 
-   static void Copy(std::vector<TCpuMatrix<Scalar_t>> & A,
-                    const std::vector<TCpuMatrix<Scalar_t>> & B);
+   static void Copy(std::vector<Matrix_t> & A,
+                    const std::vector<Matrix_t> & B);
 
    // copy from another architecture
    template<typename AMatrix_t>
-   static void CopyDiffArch(std::vector<TCpuMatrix<Scalar_t>> & A,
+   static void CopyDiffArch(std::vector<Matrix_t> & A,
                     const std::vector<AMatrix_t> & B);
 
    ///@}
@@ -160,32 +160,32 @@ public:
     * and writes the results into the result matrix.
     */
    ///@{
-   static void IdentityDerivative(TCpuMatrix<Scalar_t> & B,
-                                  const TCpuMatrix<Scalar_t> &A);
+   static void IdentityDerivative(Matrix_t & B,
+                                  const Matrix_t &A);
 
-   static void Relu(TCpuMatrix<Scalar_t> & B);
-   static void ReluDerivative(TCpuMatrix<Scalar_t> & B,
-                              const TCpuMatrix<Scalar_t> & A);
+   static void Relu(Matrix_t & B);
+   static void ReluDerivative(Matrix_t & B,
+                              const Matrix_t & A);
 
-   static void Sigmoid(TCpuMatrix<Scalar_t> & B);
-   static void SigmoidDerivative(TCpuMatrix<Scalar_t> & B,
-                                 const TCpuMatrix<Scalar_t> & A);
+   static void Sigmoid(Matrix_t & B);
+   static void SigmoidDerivative(Matrix_t & B,
+                                 const Matrix_t & A);
 
-   static void Tanh(TCpuMatrix<Scalar_t> & B);
-   static void TanhDerivative(TCpuMatrix<Scalar_t> & B,
-                              const TCpuMatrix<Scalar_t> & A);
+   static void Tanh(Matrix_t & B);
+   static void TanhDerivative(Matrix_t & B,
+                              const Matrix_t & A);
 
-   static void SymmetricRelu(TCpuMatrix<Scalar_t> & B);
-   static void SymmetricReluDerivative(TCpuMatrix<Scalar_t> & B,
-                                       const TCpuMatrix<Scalar_t> & A);
+   static void SymmetricRelu(Matrix_t & B);
+   static void SymmetricReluDerivative(Matrix_t & B,
+                                       const Matrix_t & A);
 
-   static void SoftSign(TCpuMatrix<Scalar_t> & B);
-   static void SoftSignDerivative(TCpuMatrix<Scalar_t> & B,
-                                  const TCpuMatrix<Scalar_t> & A);
+   static void SoftSign(Matrix_t & B);
+   static void SoftSignDerivative(Matrix_t & B,
+                                  const Matrix_t & A);
 
-   static void Gauss(TCpuMatrix<Scalar_t> & B);
-   static void GaussDerivative(TCpuMatrix<Scalar_t> & B,
-                               const TCpuMatrix<Scalar_t> & A);
+   static void Gauss(Matrix_t & B);
+   static void GaussDerivative(Matrix_t & B,
+                               const Matrix_t & A);
    ///@}
 
    //____________________________________________________________________________
@@ -202,25 +202,25 @@ public:
     */
    ///@{
 
-   static Scalar_t MeanSquaredError(const TCpuMatrix<Scalar_t> &Y, const TCpuMatrix<Scalar_t> &output,
-                                    const TCpuMatrix<Scalar_t> &weights);
-   static void MeanSquaredErrorGradients(TCpuMatrix<Scalar_t> &dY, const TCpuMatrix<Scalar_t> &Y,
-                                         const TCpuMatrix<Scalar_t> &output, const TCpuMatrix<Scalar_t> &weights);
+   static Scalar_t MeanSquaredError(const Matrix_t &Y, const Matrix_t &output,
+                                    const Matrix_t &weights);
+   static void MeanSquaredErrorGradients(Matrix_t &dY, const Matrix_t &Y,
+                                         const Matrix_t &output, const Matrix_t &weights);
 
    /** Sigmoid transformation is implicitly applied, thus \p output should
     *  hold the linear activations of the last layer in the net. */
-   static Scalar_t CrossEntropy(const TCpuMatrix<Scalar_t> &Y, const TCpuMatrix<Scalar_t> &output,
-                                const TCpuMatrix<Scalar_t> &weights);
+   static Scalar_t CrossEntropy(const Matrix_t &Y, const Matrix_t &output,
+                                const Matrix_t &weights);
 
-   static void CrossEntropyGradients(TCpuMatrix<Scalar_t> &dY, const TCpuMatrix<Scalar_t> &Y,
-                                     const TCpuMatrix<Scalar_t> &output, const TCpuMatrix<Scalar_t> &weights);
+   static void CrossEntropyGradients(Matrix_t &dY, const Matrix_t &Y,
+                                     const Matrix_t &output, const Matrix_t &weights);
 
    /** Softmax transformation is implicitly applied, thus \p output should
     *  hold the linear activations of the last layer in the net. */
-   static Scalar_t SoftmaxCrossEntropy(const TCpuMatrix<Scalar_t> &Y, const TCpuMatrix<Scalar_t> &output,
-                                       const TCpuMatrix<Scalar_t> &weights);
-   static void SoftmaxCrossEntropyGradients(TCpuMatrix<Scalar_t> &dY, const TCpuMatrix<Scalar_t> &Y,
-                                            const TCpuMatrix<Scalar_t> &output, const TCpuMatrix<Scalar_t> &weights);
+   static Scalar_t SoftmaxCrossEntropy(const Matrix_t &Y, const Matrix_t &output,
+                                       const Matrix_t &weights);
+   static void SoftmaxCrossEntropyGradients(Matrix_t &dY, const Matrix_t &Y,
+                                            const Matrix_t &output, const Matrix_t &weights);
    ///@}
 
    //____________________________________________________________________________
@@ -236,10 +236,10 @@ public:
     * classification.
     */
    ///@{
-   static void Sigmoid(TCpuMatrix<Scalar_t> &YHat,
-                        const TCpuMatrix<Scalar_t> & );
-   static void Softmax(TCpuMatrix<Scalar_t> &YHat,
-                       const TCpuMatrix<Scalar_t> & );
+   static void Sigmoid(Matrix_t &YHat,
+                        const Matrix_t & );
+   static void Softmax(Matrix_t &YHat,
+                       const Matrix_t & );
    ///@}
 
    //____________________________________________________________________________
@@ -256,14 +256,14 @@ public:
     */
    ///@{
 
-   static Scalar_t L1Regularization(const TCpuMatrix<Scalar_t> & W);
-   static void AddL1RegularizationGradients(TCpuMatrix<Scalar_t> & A,
-                                            const TCpuMatrix<Scalar_t> & W,
+   static Scalar_t L1Regularization(const Matrix_t & W);
+   static void AddL1RegularizationGradients(Matrix_t & A,
+                                            const Matrix_t & W,
                                             Scalar_t weightDecay);
 
-   static Scalar_t L2Regularization(const TCpuMatrix<Scalar_t> & W);
-   static void AddL2RegularizationGradients(TCpuMatrix<Scalar_t> & A,
-                                            const TCpuMatrix<Scalar_t> & W,
+   static Scalar_t L2Regularization(const Matrix_t & W);
+   static void AddL2RegularizationGradients(Matrix_t & A,
+                                            const Matrix_t & W,
                                             Scalar_t weightDecay);
    ///@}
 
@@ -279,12 +279,12 @@ public:
     */
    ///@{
 
-   static void InitializeGauss(TCpuMatrix<Scalar_t> & A);
-   static void InitializeUniform(TCpuMatrix<Scalar_t> & A);
-   static void InitializeIdentity(TCpuMatrix<Scalar_t> & A);
-   static void InitializeZero(TCpuMatrix<Scalar_t> & A);
-   static void InitializeGlorotNormal(TCpuMatrix<Scalar_t> & A);
-   static void InitializeGlorotUniform(TCpuMatrix<Scalar_t> & A);
+   static void InitializeGauss(Matrix_t & A);
+   static void InitializeUniform(Matrix_t & A);
+   static void InitializeIdentity(Matrix_t & A);
+   static void InitializeZero(Matrix_t & A);
+   static void InitializeGlorotNormal(Matrix_t & A);
+   static void InitializeGlorotUniform(Matrix_t & A);
 
    // return static instance of random generator used for initialization
    // if generator does not exist it is created the first time with a random seed (e.g. seed = 0)
@@ -307,7 +307,7 @@ public:
     *  tensor \p A and scale the result by reciprocal of \p p. */
    static void Dropout(Tensor_t & A, Scalar_t p);
 
-   static void Dropout(TCpuMatrix<Scalar_t> & A, Scalar_t p) { 
+   static void Dropout(Matrix_t & A, Scalar_t p) { 
       Dropout( MatrixToTensor(A), p );
    }
 
@@ -349,19 +349,19 @@ public:
                              size_t filterWidth, size_t numFilters);
 
    /** Add the biases in the Convolutional Layer.  */
-   static void AddConvBiases(TCpuMatrix<Scalar_t> &output, const TCpuMatrix<Scalar_t> &biases);
+   static void AddConvBiases(Matrix_t &output, const Matrix_t &biases);
    ///@}
 
    /** Dummy placeholder - preparation is currently only required for the CUDA architecture. */
-   static void PrepareInternals(std::vector<TCpuMatrix<Scalar_t>> &) {}
+   static void PrepareInternals(std::vector<Matrix_t> &) {}
 
    /** Forward propagation in the Convolutional layer */
-   static void ConvLayerForward(std::vector<TCpuMatrix<Scalar_t>> & output,
-                                std::vector<TCpuMatrix<Scalar_t>> & derivatives,
-                                const std::vector<TCpuMatrix<Scalar_t>> &input,
-                                const TCpuMatrix<Scalar_t> &weights, const TCpuMatrix<Scalar_t> & biases,
+   static void ConvLayerForward(std::vector<Matrix_t> & output,
+                                std::vector<Matrix_t> & derivatives,
+                                const std::vector<Matrix_t> &input,
+                                const Matrix_t &weights, const Matrix_t & biases,
                                 const DNN::CNN::TConvParams & params, EActivationFunction activFunc,
-                                std::vector<TCpuMatrix<Scalar_t>> & /* inputPrime */);
+                                std::vector<Matrix_t> & /* inputPrime */);
 
    /** @name Backward Propagation in Convolutional Layer
     */
@@ -375,36 +375,36 @@ public:
     *  in \p df and thus produces only a valid result, if it is applied the
     *  first time after the corresponding forward propagation has been per-
     *  formed. */
-   static void ConvLayerBackward(std::vector<TCpuMatrix<Scalar_t>> &activationGradientsBackward,
-                                 TCpuMatrix<Scalar_t> &weightGradients, TCpuMatrix<Scalar_t> &biasGradients,
-                                 std::vector<TCpuMatrix<Scalar_t>> &df,
-                                 const std::vector<TCpuMatrix<Scalar_t>> &activationGradients,
-                                 const TCpuMatrix<Scalar_t> &weights,
-                                 const std::vector<TCpuMatrix<Scalar_t>> &activationBackward, size_t batchSize,
+   static void ConvLayerBackward(std::vector<Matrix_t> &activationGradientsBackward,
+                                 Matrix_t &weightGradients, Matrix_t &biasGradients,
+                                 std::vector<Matrix_t> &df,
+                                 const std::vector<Matrix_t> &activationGradients,
+                                 const Matrix_t &weights,
+                                 const std::vector<Matrix_t> &activationBackward, size_t batchSize,
                                  size_t inputHeight, size_t inputWidth, size_t depth, size_t height, size_t width,
                                  size_t filterDepth, size_t filterHeight, size_t filterWidth, size_t nLocalViews);
 
    /** Utility function for calculating the activation gradients of the layer
     *  before the convolutional layer. */
-   static void CalculateConvActivationGradients(std::vector<TCpuMatrix<Scalar_t>> &activationGradientsBackward,
-                                                const std::vector<TCpuMatrix<Scalar_t>> &df,
-                                                const TCpuMatrix<Scalar_t> &weights, size_t batchSize,
+   static void CalculateConvActivationGradients(std::vector<Matrix_t> &activationGradientsBackward,
+                                                const std::vector<Matrix_t> &df,
+                                                const Matrix_t &weights, size_t batchSize,
                                                 size_t inputHeight, size_t inputWidth, size_t depth, size_t height,
                                                 size_t width, size_t filterDepth, size_t filterHeight,
                                                 size_t filterWidth);
 
    /** Utility function for calculating the weight gradients of the convolutional
     * layer. */
-   static void CalculateConvWeightGradients(TCpuMatrix<Scalar_t> &weightGradients,
-                                            const std::vector<TCpuMatrix<Scalar_t>> &df,
-                                            const std::vector<TCpuMatrix<Scalar_t>> &activations_backward,
+   static void CalculateConvWeightGradients(Matrix_t &weightGradients,
+                                            const std::vector<Matrix_t> &df,
+                                            const std::vector<Matrix_t> &activations_backward,
                                             size_t batchSize, size_t inputHeight, size_t inputWidth, size_t depth,
                                             size_t height, size_t width, size_t filterDepth, size_t filterHeight,
                                             size_t filterWidth, size_t nLocalViews);
 
    /** Utility function for calculating the bias gradients of the convolutional
     *  layer */
-   static void CalculateConvBiasGradients(TCpuMatrix<Scalar_t> &biasGradients, const std::vector<TCpuMatrix<Scalar_t>> &df,
+   static void CalculateConvBiasGradients(Matrix_t &biasGradients, const std::vector<Matrix_t> &df,
                                           size_t batchSize, size_t depth, size_t nLocalViews);
    ///@}
 
@@ -484,64 +484,64 @@ public:
    /** Standard multiplication of two matrices \p A and \p B with the result being
     *  written into C.
     */
-   static void Multiply(TCpuMatrix<Scalar_t> &C,
-                        const TCpuMatrix<Scalar_t> &A,
-                        const TCpuMatrix<Scalar_t> &B);
+   static void Multiply(Matrix_t &C,
+                        const Matrix_t &A,
+                        const Matrix_t &B);
    /** Matrix multiplication of two matrices \p A and \p B^T (transposed) with the
     *  result being written into C.
     */
-   static void TransposeMultiply(TCpuMatrix<Scalar_t> &output,
-                                 const TCpuMatrix<Scalar_t> &input,
-                                 const TCpuMatrix<Scalar_t> &Weights,
+   static void TransposeMultiply(Matrix_t &output,
+                                 const Matrix_t &input,
+                                 const Matrix_t &Weights,
                                  Scalar_t alpha = 1.0, Scalar_t beta = 0.);
    /** In-place Hadamard (element-wise) product of matrices \p A and \p B
     *  with the result being written into \p A.
     */
-   static void Hadamard(TCpuMatrix<Scalar_t> &A,
-                        const TCpuMatrix<Scalar_t> &B);
+   static void Hadamard(Matrix_t &A,
+                        const Matrix_t &B);
 
    /** Sum columns of (m x n) matrixx \p A and write the results into the first
     * m elements in \p A.
     */
-   static void SumColumns(TCpuMatrix<Scalar_t> &B,
-                          const TCpuMatrix<Scalar_t> &A,
+   static void SumColumns(Matrix_t &B,
+                          const Matrix_t &A,
                           Scalar_t alpha = 1.0, Scalar_t beta = 0.);
 
    /** Compute the sum of all elements in \p A */
-   static Scalar_t Sum(const TCpuMatrix<Scalar_t> &A);
+   static Scalar_t Sum(const Matrix_t &A);
 
    /** Check two matrices for equality, taking floating point arithmetic errors into account. */
-   static bool AlmostEquals(const TCpuMatrix<Scalar_t> &A, const TCpuMatrix<Scalar_t> &B, double epsilon = 0.1);
+   static bool AlmostEquals(const Matrix_t &A, const Matrix_t &B, double epsilon = 0.1);
 
    /** Add the constant \p beta to all the elements of matrix \p A and write the
     * result into \p A.
     */
-   static void ConstAdd(TCpuMatrix<Scalar_t> &A, Scalar_t beta);
+   static void ConstAdd(Matrix_t &A, Scalar_t beta);
 
    /** Multiply the constant \p beta to all the elements of matrix \p A and write the
     * result into \p A.
     */
-   static void ConstMult(TCpuMatrix<Scalar_t> &A, Scalar_t beta);
+   static void ConstMult(Matrix_t &A, Scalar_t beta);
 
    /** Reciprocal each element of the matrix \p A and write the result into
     * \p A
     */
-   static void ReciprocalElementWise(TCpuMatrix<Scalar_t> &A);
+   static void ReciprocalElementWise(Matrix_t &A);
 
    /** Square each element of the matrix \p A and write the result into
     * \p A
     */
-   static void SquareElementWise(TCpuMatrix<Scalar_t> &A);
+   static void SquareElementWise(Matrix_t &A);
 
    /** Square root each element of the matrix \p A and write the result into
     * \p A
     */
-   static void SqrtElementWise(TCpuMatrix<Scalar_t> &A);
+   static void SqrtElementWise(Matrix_t &A);
 
      // optimizer functions
-   static void AdamUpdate(TCpuMatrix<Scalar_t> & A, const TCpuMatrix<Scalar_t> & M, const TCpuMatrix<Scalar_t> & V, Scalar_t alpha, Scalar_t eps);
-   static void AdamUpdateFirstMom(TCpuMatrix<Scalar_t> & A, const TCpuMatrix<Scalar_t> & B, Scalar_t beta);
-   static void AdamUpdateSecondMom(TCpuMatrix<Scalar_t> & A, const TCpuMatrix<Scalar_t> & B, Scalar_t beta);
+   static void AdamUpdate(Matrix_t & A, const Matrix_t & M, const Matrix_t & V, Scalar_t alpha, Scalar_t eps);
+   static void AdamUpdateFirstMom(Matrix_t & A, const Matrix_t & B, Scalar_t beta);
+   static void AdamUpdateSecondMom(Matrix_t & A, const Matrix_t & B, Scalar_t beta);
 
 };
 

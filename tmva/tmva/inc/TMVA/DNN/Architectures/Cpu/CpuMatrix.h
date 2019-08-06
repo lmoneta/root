@@ -97,6 +97,8 @@ private:
 
 public:
 
+   friend class TcpuTensor<AFloat>; 
+
    /** Returns pointer to a vector holding only ones with a guaranteed length
     *  of the number of columns of every instantiated CpuMatrix object. */
    static const AFloat * GetOnePointer() {return fOnes.data();}
@@ -279,13 +281,40 @@ void TCpuMatrix<AFloat>::Zero()
 template<typename AFloat>
 class TCpuTensor { 
 
-   private: 
+private: 
 
     TCpuBuffer<AFloat> fBuffer; ///< The buffer holding the matrix elements
     TMVA::Experimantal::RTensor<AFloat>    fData; /// The tensor view 
 
 
-    public:
+public:
+
+   using Shape_t =  typename TMVA::Experimantal::RTensor<AFloat>::Shape_t;
+
+   // constructor from an RTensor
+   // here we allocate the data and make the contained tensor a view
+   // TCpuTensor(const  TMVA::Experimantal::RTensor<AFloat>  & tensor ) : 
+   //    fBuffer(buffer),
+   //    fTensor( tensor)
+   // { }
+
+   /** constructors from a TCpuBuffer and a rtensor */
+   TCpuTensor(const TCpuBuffer<AFloat> &buffer, const  TMVA::Experimantal::RTensor<AFloat>  & tensor ) : 
+      fBuffer(buffer),
+      fTensor( tensor)
+   { }
+
+   /** constructors from a TCpuBuffer and a shape */
+   TCpuTensor(const TCpuBuffer<AFloat> &buffer, const Shape_t & shape ) : 
+      fBuffer(buffer),
+      fTensor( fBuffer, shape)
+   { }
+
+    /** constructors from a TCpuMatrix */
+   TCpuTensor(const TCpuMatrix<AFloat> &matrix) : 
+      fBuffer(matrix.fBuffer),
+      fTensor( fBuffer, { matrix.GetNrows(), matrix.GetNcols() })
+   { }
 
    /** Return raw pointer to the elements stored contiguously in column-major
     *  order. */
@@ -293,6 +322,31 @@ class TCpuTensor {
    const AFloat * GetRawDataPointer()  const {return fBuffer;}
 
    AFloat *       GetData() { return fTensor.GetData();}
+
+   // Matrix conversion for tensors of shape 2 
+   TCpuMatrix GetMatrix() { 
+      assert( fTensor.GetShape().size() == 2);
+      return TCpuMatrix(fBuffer, fTensor.GetShape()[0], fTensor.GetShape()[1]);
+   }
+
+   // return slices in the first dimension
+   // so single event slides 
+   Tensor_t  operator[ size_t i] { 
+      TMVA::Experimantal::RTensor<AFloat>::Slice_t slice( fTensor.GetShape().size()); 
+      slice[0][0] = i; 
+      slice[0][1] = i+1; 
+      assert(i < fTensor.GetShape()[0]); 
+      size_t buffsize = 1;
+      for (size_t j = 1; j < slice.size(); ++j) { 
+         slice[j][0] = 0; 
+         slice[j][1] = fTensor.GetShape()[j]; 
+         buffSize *= fTensor.GetShape()[j]; 
+      }
+      size_t offset = i * buffSize; 
+      return TCpuTensor(fBuffer.GetSubBuffer(offset, buffsize)   , fTensor.Slice(slice));
+   }
+   Tensor_t At(size_t i ) { return (*this)[i]; }
+
 
 }
 
