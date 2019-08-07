@@ -63,13 +63,13 @@ void TCpu<AFloat>::MultiplyTranspose(Tensor_t &output, const Tensor_t &input,
 template <typename AFloat>
 void TCpu<AFloat>::AddRowWise(TCpuMatrix<AFloat> &output, const TCpuMatrix<AFloat> &biases)
 {
-   int m = (int)output.GetNrows();
-   int n = (int)output.GetNcols();
+   int m = (int)output.GetShape()[0];
+   int n = (int)output.GetShape()[1];
 
    int inc = 1.0;
    AFloat alpha = 1.0;
 
-   AFloat *A = output.GetRawDataPointer();
+   AFloat *A = output.GetData();
    const AFloat *x = TCpuMatrix<AFloat>::GetOnePointer();
    const AFloat *y = biases.GetRawDataPointer();
 
@@ -78,7 +78,7 @@ void TCpu<AFloat>::AddRowWise(TCpuMatrix<AFloat> &output, const TCpuMatrix<AFloa
 
    ::TMVA::DNN::Blas::Ger(&m, &n, &alpha, x, &inc, y, &inc, A, &m);
 }
-#if 0
+
 template <typename AFloat>
 void TCpu<AFloat>::MultiplyTranspose(TCpuMatrix<AFloat> &output, const TCpuMatrix<AFloat> &input,
                                      const TCpuMatrix<AFloat> &Weights)
@@ -132,25 +132,27 @@ void TCpu<AFloat>::AddRowWise(TCpuMatrix<AFloat> &output, const TCpuMatrix<AFloa
 
    ::TMVA::DNN::Blas::Ger(&m, &n, &alpha, x, &inc, y, &inc, A, &m);
 }
-#endif
 
 template <typename AFloat>
-void TCpu<AFloat>::Backward(TCpuMatrix<AFloat> &activationGradientsBackward, TCpuMatrix<AFloat> &weightGradients,
-                            TCpuMatrix<AFloat> &biasGradients, TCpuMatrix<AFloat> &df,
-                            const TCpuMatrix<AFloat> &activationGradients, const TCpuMatrix<AFloat> &weights,
-                            const TCpuMatrix<AFloat> &activationsBackward)
+void TCpu<AFloat>::Backward(TCpuTensor<AFloat> &activationGradientsBackward, TCpuMatrix<AFloat> &weightGradients,
+                            TCpuMatrix<AFloat> &biasGradients, TCpuTensor<AFloat> &df,
+                            const TCpuTensor<AFloat> &activationGradients, const TCpuMatrix<AFloat> &weights,
+                            const TCpuTensor<AFloat> &activationsBackward)
 {
    // Compute element-wise product.
    Hadamard(df, activationGradients);
 
    // Activation gradients.
-   if (activationGradientsBackward.GetNoElements() > 0) Multiply(activationGradientsBackward, df, weights);
+   Matrix_t  activationGradientsBackward_m = activationGradientsBackward.GetMatrix(); 
+   Matrix_t df_m = df.GetMatrix(); 
+   
+   if (activationGradientsBackward.GetNoElements() > 0) Multiply(activationGradientsBackward_m, df_m, weights);
 
    // Weight gradients.
-   if (weightGradients.GetNoElements() > 0) TransposeMultiply(weightGradients, df, activationsBackward);
+   if (weightGradients.GetNoElements() > 0) TransposeMultiply(weightGradients, df_m, activationsBackward.GetMatrix());
 
    // Bias gradients.
-   if (biasGradients.GetNoElements() > 0) SumColumns(biasGradients, df);
+   if (biasGradients.GetNoElements() > 0) SumColumns(biasGradients, df_m);
 }
 
 //____________________________________________________________________________
@@ -350,12 +352,12 @@ size_t TCpu<AFloat>::calculateDimension(size_t imgDim, size_t fltDim, size_t pad
 
 //____________________________________________________________________________
 template <typename AFloat>
-void TCpu<AFloat>::ConvLayerForward(std::vector<TCpuMatrix<AFloat>> & output,
-                                    std::vector<TCpuMatrix<AFloat>> & derivatives,
-                                    const std::vector<TCpuMatrix<AFloat>> &input,
+void TCpu<AFloat>::ConvLayerForward(TCpuTensor<AFloat> & output,
+                                    TCpuTensor<AFloat> & derivatives,
+                                    const TCpuTensor<AFloat> &input,
                                     const TCpuMatrix<AFloat> &weights, const TCpuMatrix<AFloat> & biases,
                                     const DNN::CNN::TConvParams & params, EActivationFunction activFunc,
-                                    std::vector<TCpuMatrix<AFloat>> & /*  */)
+                                    TCpuTensor<AFloat> & /*  */)
 {
    size_t height = calculateDimension(params.inputHeight, params.filterHeight, params.paddingHeight, params.strideRows);
    size_t width = calculateDimension(params.inputWidth, params.filterWidth, params.paddingWidth, params.strideCols);
@@ -382,27 +384,27 @@ void TCpu<AFloat>::ConvLayerForward(std::vector<TCpuMatrix<AFloat>> & output,
        TCpuMatrix<AFloat> inputTr(nLocalViews, nLocalViewPixels);
        //inputTr.Zero();   // this is not thread safe
 
-       Im2colFast(inputTr, input[i], forwardIndices);
+       Im2colFast(inputTr, input.At(i).GetMatrix(), forwardIndices);
 
-       MultiplyTranspose(output[i], weights, inputTr);
-       AddConvBiases(output[i], biases);
-
-       evaluateDerivative<TCpu<AFloat>>(derivatives[i], activFunc, output[i]);
-       evaluate<TCpu<AFloat>>(output[i], activFunc);
+       MultiplyTranspose(output.At(i).GetMatrix(), weights, inputTr);
+       AddConvBiases(output.At(i).GetMatrix(), biases);
 
    };
 
-   TCpuMatrix<AFloat>::GetThreadExecutor().Foreach(f, ROOT::TSeqI(input.size()));
+   TCpuMatrix<AFloat>::GetThreadExecutor().Foreach(f, ROOT::TSeqI(input.GetFirstSize()));
+
+   evaluateDerivative<TCpu<AFloat>>(derivatives, activFunc, output);
+   evaluate<TCpu<AFloat>>(output, activFunc);
 }
 
 //____________________________________________________________________________
 template <typename AFloat>
-void TCpu<AFloat>::ConvLayerBackward(std::vector<TCpuMatrix<AFloat>> &activationGradientsBackward,
+void TCpu<AFloat>::ConvLayerBackward(TCpuTensor<AFloat> &activationGradientsBackward,
                                      TCpuMatrix<AFloat> &weightGradients, TCpuMatrix<AFloat> &biasGradients,
-                                     std::vector<TCpuMatrix<AFloat>> &df,
-                                     const std::vector<TCpuMatrix<AFloat>> &activationGradients,
+                                     TCpuTensor<AFloat> &df,
+                                     const TCpuTensor<AFloat> &activationGradients,
                                      const TCpuMatrix<AFloat> &weights,
-                                     const std::vector<TCpuMatrix<AFloat>> &activationsBackward, size_t batchSize,
+                                     const TCpuTensor<AFloat> &activationsBackward, size_t batchSize,
                                      size_t inputHeight, size_t inputWidth, size_t depth, size_t height, size_t width,
                                      size_t filterDepth, size_t filterHeight, size_t filterWidth, size_t nLocalViews)
 {
@@ -411,10 +413,10 @@ void TCpu<AFloat>::ConvLayerBackward(std::vector<TCpuMatrix<AFloat>> &activation
    //    m = activationGradients[0].GetNrows();
    //    n = activationGradients[0].GetNcols();
 
-   for (size_t i = 0; i < batchSize; i++) {
-      // Compute element-wise product.
-      Hadamard(df[i], activationGradients[i]);
-   }
+ 
+   // Compute element-wise product.
+   Hadamard(df, activationGradients);
+   
 
    // Calculate the activation gradients of the previous layer
    CalculateConvActivationGradients(activationGradientsBackward, df, weights, batchSize, inputHeight, inputWidth, depth,
@@ -430,18 +432,18 @@ void TCpu<AFloat>::ConvLayerBackward(std::vector<TCpuMatrix<AFloat>> &activation
 
 //____________________________________________________________________________
 template <typename AFloat>
-void TCpu<AFloat>::CalculateConvActivationGradients(std::vector<TCpuMatrix<AFloat>> &activationGradientsBackward,
-                                                    const std::vector<TCpuMatrix<AFloat>> &df,
+void TCpu<AFloat>::CalculateConvActivationGradients(TCpuTensor<AFloat> &activationGradientsBackward,
+                                                    const TCpuTensor<AFloat> &df,
                                                     const TCpuMatrix<AFloat> &weights, size_t batchSize,
                                                     size_t inputHeight, size_t inputWidth, size_t depth, size_t height,
                                                     size_t width, size_t filterDepth, size_t filterHeight,
                                                     size_t filterWidth)
 {
-   if (activationGradientsBackward.size() == 0) return;
+   if (activationGradientsBackward.GetSize() == 0) return;
 
-   for (size_t i = 0; i < activationGradientsBackward.size(); i++) {
-      activationGradientsBackward[i].Zero();
-   }
+  
+   activationGradientsBackward.Zero();
+   
 
    // Transform the weights
 
@@ -468,13 +470,13 @@ void TCpu<AFloat>::CalculateConvActivationGradients(std::vector<TCpuMatrix<AFloa
    // An entire convolution follows
 
     std::vector<int> vIndices( tempNLocalViews * tempNLocalViewPixels );
-    Im2colIndices(vIndices, df[0], tempNLocalViews, height, width, filterHeight, filterWidth, tempStrideRows, tempStrideCols,
+    Im2colIndices(vIndices, df.At(i).GetMatrix(), tempNLocalViews, height, width, filterHeight, filterWidth, tempStrideRows, tempStrideCols,
              tempZeroPaddingHeight, tempZeroPaddingWidth);
 
 
     //for (size_t i = 0; i < batchSize; i++) {
-    R__ASSERT(batchSize == df.size() );
-    R__ASSERT(batchSize == activationGradientsBackward.size() );
+    R__ASSERT(batchSize == df.GetFirstSize() );
+    R__ASSERT(batchSize == activationGradientsBackward.GetFirstSize() );
     auto f = [&] (UInt_t i)
    {
    
@@ -483,12 +485,12 @@ void TCpu<AFloat>::CalculateConvActivationGradients(std::vector<TCpuMatrix<AFloa
 
       TCpuMatrix<AFloat> dfTr(tempNLocalViews, tempNLocalViewPixels);
       
-      Im2colFast(dfTr, df[i], vIndices); 
+      Im2colFast(dfTr, df.At(i).GetMatrix(), vIndices); 
 
        //TMVA_DNN_PrintTCpuMatrix(df[i],"df[i]");
        //TMVA_DNN_PrintTCpuMatrix(dfTr,"dfTr");
 
-       MultiplyTranspose(activationGradientsBackward[i], rotWeights, dfTr);
+       MultiplyTranspose(activationGradientsBackward.At(i).GetMatrix(), rotWeights, dfTr);
 
        //TMVA_DNN_PrintTCpuMatrix(activationGradientsBackward[i],"activGrad-result");
 
@@ -500,8 +502,8 @@ void TCpu<AFloat>::CalculateConvActivationGradients(std::vector<TCpuMatrix<AFloa
 //____________________________________________________________________________
 template <typename AFloat>
 void TCpu<AFloat>::CalculateConvWeightGradients(TCpuMatrix<AFloat> &weightGradients,
-                                                const std::vector<TCpuMatrix<AFloat>> &df,
-                                                const std::vector<TCpuMatrix<AFloat>> &activationsBackward,
+                                                const TCpuTensor<AFloat> &df,
+                                                const TCpuTensor<AFloat> &activationsBackward,
                                                 size_t batchSize, size_t inputHeight, size_t inputWidth, size_t depth,
                                                 size_t height, size_t width, size_t filterDepth, size_t filterHeight,
                                                 size_t filterWidth, size_t nLocalViews)
@@ -526,18 +528,20 @@ void TCpu<AFloat>::CalculateConvWeightGradients(TCpuMatrix<AFloat> &weightGradie
    
 
    std::vector<int> vIndices(nLocalViews * nLocalViewPixels );
-   Im2colIndices(vIndices, activationsBackward[0], nLocalViews, inputHeight, inputWidth, filterHeight , filterWidth,
+   Im2colIndices(vIndices, activationsBackward.At(0).GetMatrix(), nLocalViews, inputHeight, inputWidth, filterHeight , filterWidth,
              tempStrideRows, tempStrideCols, tempZeroPaddingHeight, tempZeroPaddingWidth);
    
    //std::cout << "do back-propagation in conv layer - compute weight gradient" << std::endl;
 
-   std::vector< TCpuMatrix<AFloat> > vres;//(batchSize); 
-   for (size_t i = 0; i < batchSize; i++) {
-      vres.emplace_back(depth, nLocalViewPixels);
-      //TMVA_DNN_PrintTCpuMatrix(df[i],"df");
-      //TMVA_DNN_PrintTCpuMatrix(activationsBackward[i],"df");
+   // std::vector< TCpuMatrix<AFloat> > vres;//(batchSize); 
+   // for (size_t i = 0; i < batchSize; i++) {
+   //    vres.emplace_back(depth, nLocalViewPixels);
+   //    //TMVA_DNN_PrintTCpuMatrix(df[i],"df");
+   //    //TMVA_DNN_PrintTCpuMatrix(activationsBackward[i],"df");
       
    }
+   //TCpuTensor<AFloat> vres( { batchSize, depth, nLocalViewPIxels} );
+   TCpuTensor<AFloat> vres( batchSize, depth, nLocalViewPIxels );
    
    auto fmap = [&](int i) { 
  
@@ -551,12 +555,12 @@ void TCpu<AFloat>::CalculateConvWeightGradients(TCpuMatrix<AFloat> &weightGradie
       //xTr.Zero(); 
       // Im2col(xTr, const_cast<TCpuMatrix<AFloat> &>(activationsBackward[i]), inputHeight, inputWidth, filterHeight , filterWidth,
       //        tempStrideRows, tempStrideCols, tempZeroPaddingHeight, tempZeroPaddingWidth);
-      Im2colFast(xTr, activationsBackward[i], vIndices);
+      Im2colFast(xTr, activationsBackward.At(i).GetMatrix(), vIndices);
 
       //std::cout << "doing im2colfast" << std::endl;
       //TMVA_DNN_PrintTCpuMatrix(xTr,"xTr-i");
       //TMVA_DNN_PrintTCpuMatrix(activationsBackward[i],"actbackward-i");
-      Multiply(vres[i], df[i], xTr);
+      Multiply(vres.At(i).GetMatrix(), df.At(i).GetMatrix(), xTr);
       //TMVA_DNN_PrintTCpuMatrix(vres[i],"res_ofMT");
 
       return;
@@ -565,16 +569,17 @@ void TCpu<AFloat>::CalculateConvWeightGradients(TCpuMatrix<AFloat> &weightGradie
 
    TCpuMatrix<AFloat>::GetThreadExecutor().Foreach(fmap, ROOT::TSeqI( batchSize ) );
 
-//   auto freduce = [&](const std::vector<TCpuMatrix<AFloat>> & vres) { 
+//   auto freduce = [&](const TCpuTensor<AFloat> & vres) { 
       R__ASSERT(vres.size() == batchSize); 
       for (size_t i = 0; i < batchSize; i++) {
          //TMVA_DNN_PrintTCpuMatrix(vres[i],"res");
+         Matrix_t vres_m = vres.At(i).GetMatrix(); 
          for (size_t j = 0; j < depth; j++) {
             for (size_t k = 0; k < filterDepth; k++) {
                size_t kOffset = k * filterSize; 
                for (size_t l = 0; l < filterSize; l++) {
                   //weightGradients(j, k * (filterHeight * filterWidth) + l) += res(k, (tempNLocalViews - 1) - l);
-                  weightGradients(j, kOffset + l) += vres[i](j,  kOffset + l);
+                  weightGradients(j, kOffset + l) += vres_m(j,  kOffset + l);
                }
             }
          }
@@ -588,7 +593,7 @@ void TCpu<AFloat>::CalculateConvWeightGradients(TCpuMatrix<AFloat> &weightGradie
 
 //____________________________________________________________________________
 template <typename AFloat>
-void TCpu<AFloat>::CalculateConvBiasGradients(TCpuMatrix<AFloat> &biasGradients, const std::vector<TCpuMatrix<AFloat>> &df,
+void TCpu<AFloat>::CalculateConvBiasGradients(TCpuMatrix<AFloat> &biasGradients, const TCpuTensor<AFloat> &df,
                                               size_t batchSize, size_t depth, size_t nLocalViews)
 {
    biasGradients.Zero();
@@ -596,7 +601,9 @@ void TCpu<AFloat>::CalculateConvBiasGradients(TCpuMatrix<AFloat> &biasGradients,
       AFloat sum = 0;
       for (size_t j = 0; j < nLocalViews; j++) {
          for (size_t k = 0; k < batchSize; k++) {
-            sum += df[k](i, j);
+            Matrix_t df_m = df.At(k).GetMatrix(); 
+            sum += df_m(i,j);
+            //sum += df[k](i, j);
          }
       }
       biasGradients(i, 0) = sum;
@@ -683,13 +690,15 @@ void TCpu<AFloat>::Reshape(TCpuMatrix<AFloat> &A, const TCpuMatrix<AFloat> &B)
 
 //____________________________________________________________________________
 template <typename AFloat>
-void TCpu<AFloat>::Flatten(TCpuMatrix<AFloat> &A, const std::vector<TCpuMatrix<AFloat>> &B, size_t size, size_t nRows,
+void TCpu<AFloat>::Flatten(TCpuMatrix<AFloat> &A, const TCpuTensor<AFloat> &B, size_t size, size_t nRows,
                            size_t nCols)
 {
    for (size_t i = 0; i < (size_t)size; i++) {
+      Matrix_t B_m = B.At(i).GetMatrix(); 
       for (size_t j = 0; j < (size_t)nRows; j++) {
          for (size_t k = 0; k < (size_t)nCols; k++) {
-            A(i, j * nCols + k) = B[i](j, k);
+            //A(i, j * nCols + k) = B[i](j, k);
+            A(i, j * nCols + k) = B_m(j, k);
          }
       }
    }
@@ -697,13 +706,14 @@ void TCpu<AFloat>::Flatten(TCpuMatrix<AFloat> &A, const std::vector<TCpuMatrix<A
 
 //____________________________________________________________________________
 template <typename AFloat>
-void TCpu<AFloat>::Deflatten(std::vector<TCpuMatrix<AFloat>> &A, const TCpuMatrix<AFloat> &B, size_t size, size_t nRows,
+void TCpu<AFloat>::Deflatten(TCpuTensor<AFloat> &A, const TCpuMatrix<AFloat> &B, size_t size, size_t nRows,
                              size_t nCols)
 {
    for (size_t i = 0; i < (size_t)size; i++) {
+      Matrix_t A_m = A.At(i).GetMatrix(); 
       for (size_t j = 0; j < (size_t)nRows; j++) {
          for (size_t k = 0; k < (size_t)nCols; k++) {
-            A[i](j, k) = B(i, j * nCols + k);
+            A_m(j, k) = B(i, j * nCols + k);
          }
       }
    }

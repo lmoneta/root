@@ -95,8 +95,8 @@ public:
     *  first partial derviatives of the activation function computed during
     *  forward propagation and modifies them. Must only be called directly
     *  a the corresponding call to Forward(...). */
-   void Backward(Tensor_t &gradients_backward, const Tensor_t &activations_backward,
-                 std::vector<Matrix_t> &inp1, std::vector<Matrix_t> &inp2);
+   void Backward(Tensor_t &gradients_backward, const Tensor_t &activations_backward );
+   ///              std::vector<Matrix_t> &inp1, std::vector<Matrix_t> &inp2);
 
    /*! Printing the layer info. */
    void Print() const;
@@ -133,26 +133,30 @@ template <typename Architecture_t>
 TDenseLayer<Architecture_t>::TDenseLayer(size_t batchSize, size_t inputWidth, size_t width, EInitialization init,
                                          Scalar_t dropoutProbability, EActivationFunction f, ERegularization reg,
                                          Scalar_t weightDecay)
-   : VGeneralLayer<Architecture_t>(batchSize, 1, 1, inputWidth, 1, 1, width, 1, width, inputWidth, 1, width, 1, 1,
+   :  VGeneralLayer<Architecture_t>(batchSize, 1, 1, inputWidth, 1, 1, width, 1, width, inputWidth, 1, width, 1, 1,
                                    batchSize, width, init),
-     fDerivatives({0}), fDropoutProbability(dropoutProbability), fF(f), fReg(reg), fWeightDecay(weightDecay)
+      fDerivatives(), fDropoutProbability(dropoutProbability), fF(f), fReg(reg), fWeightDecay(weightDecay)
 {
    fDerivatives = Tensor_t ( {batchSize, width} );
 }
 
 //______________________________________________________________________________
 template <typename Architecture_t>
-TDenseLayer<Architecture_t>::TDenseLayer(TDenseLayer<Architecture_t> *layer)
-   : VGeneralLayer<Architecture_t>(layer), fDerivatives( layer->GetDerivatives().GetShape() ), fDropoutProbability(layer->GetDropoutProbability()),
-     fF(layer->GetActivationFunction()), fReg(layer->GetRegularization()), fWeightDecay(layer->GetWeightDecay())
+TDenseLayer<Architecture_t>::TDenseLayer(TDenseLayer<Architecture_t> *layer) :
+   VGeneralLayer<Architecture_t>(layer), 
+   fDerivatives( layer->GetDerivatives().GetShape() ), 
+   fDropoutProbability(layer->GetDropoutProbability()),
+   fF(layer->GetActivationFunction()), fReg(layer->GetRegularization()), fWeightDecay(layer->GetWeightDecay())
 {
 }
 
 //______________________________________________________________________________
 template <typename Architecture_t>
-TDenseLayer<Architecture_t>::TDenseLayer(const TDenseLayer &layer)
-   : VGeneralLayer<Architecture_t>(layer), fDerivatives( layer->GetDerivatives()), fDropoutProbability(layer.fDropoutProbability), fF(layer.fF),
-     fReg(layer.fReg), fWeightDecay(layer.fWeightDecay)
+TDenseLayer<Architecture_t>::TDenseLayer(const TDenseLayer &layer) :
+   VGeneralLayer<Architecture_t>(layer), 
+   fDerivatives( layer->GetDerivatives()), 
+   fDropoutProbability(layer.fDropoutProbability), 
+   fF(layer.fF), fReg(layer.fReg), fWeightDecay(layer.fWeightDecay)
 {
 }
 
@@ -162,6 +166,9 @@ TDenseLayer<Architecture_t>::~TDenseLayer()
 {
    // Nothing to do here.
 }
+
+
+
 
 //______________________________________________________________________________
 template <typename Architecture_t>
@@ -178,21 +185,20 @@ auto TDenseLayer<Architecture_t>::Forward( Tensor_t &input, bool applyDropout) -
 
 //______________________________________________________________________________
 template <typename Architecture_t>
-auto TDenseLayer<Architecture_t>::Backward(Tensor_t &gradients_backward,
-                                           Tensor_t &activations_backward,
-                                           std::vector<Matrix_t> & /*inp1*/, std::vector<Matrix_t> &
-                                           /*inp2*/) -> void
+auto TDenseLayer<Architecture_t>::Backward(Tensor_t &gradients_backward, const Tensor_t &activations_backward) -> void
+///                                           std::vector<Matrix_t> & /*inp1*/, std::vector<Matrix_t> &
+////                                           /*inp2*/) -> void
 {
    if (gradients_backward.size() == 0) {
-      Matrix_t dummy(0, 0);
+      Tensor_t dummy( {0, 0});
       Architecture_t::Backward(dummy, this->GetWeightGradientsAt(0), this->GetBiasGradientsAt(0),
-                               this->GetDerivativesAt(0), this->GetActivationGradientsAt(0), this->GetWeightsAt(0),
-                               activations_backward[0]);
+                               this->GetDerivatives(), this->GetActivationGradients(), this->GetWeightsAt(0),
+                               activations_backward);
 
    } else {
-      Architecture_t::Backward(gradients_backward[0], this->GetWeightGradientsAt(0), this->GetBiasGradientsAt(0),
-                               this->GetDerivativesAt(0), this->GetActivationGradientsAt(0), this->GetWeightsAt(0),
-                               activations_backward[0]);
+      Architecture_t::Backward(gradients_backward, this->GetWeightGradientsAt(0), this->GetBiasGradientsAt(0),
+                               this->GetDerivatives(), this->GetActivationGradients(), this->GetWeightsAt(0),
+                               activations_backward);
    }
 
    addRegularizationGradients<Architecture_t>(this->GetWeightGradientsAt(0), this->GetWeightsAt(0),
@@ -206,9 +212,9 @@ void TDenseLayer<Architecture_t>::Print() const
    std::cout << " DENSE Layer: \t";
    std::cout << " ( Input =" << std::setw(6) << this->GetWeightsAt(0).GetNcols();  // input size 
    std::cout << " , Width =" << std::setw(6) << this->GetWeightsAt(0).GetNrows() << " ) ";  // layer width
-   if (this->GetOutput().size() > 0) {
-      std::cout << "\tOutput = ( " << std::setw(2) << this->GetOutput().size() << " ," << std::setw(6) << this->GetOutput()[0].GetNrows() << " ," << std::setw(6) << this->GetOutput()[0].GetNcols() << " ) ";
-   }
+  
+   std::cout << "\tOutput = ( " << std::setw(2) << this->GetOutput().GetSize() << " ," << std::setw(6) << this->GetOutput().GetShape()[0] << " ," << std::setw(6) << this->GetOutput().GetShape()[1] << " ) ";
+   
    std::vector<std::string> activationNames = { "Identity","Relu","Sigmoid","Tanh","SymmRelu","SoftSign","Gauss" };
    std::cout << "\t Activation Function = ";
    std::cout << activationNames[ static_cast<int>(fF) ];

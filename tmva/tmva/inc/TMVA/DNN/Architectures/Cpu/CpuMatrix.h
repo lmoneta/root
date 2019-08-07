@@ -28,6 +28,7 @@
 #include "TMVA/Config.h"
 #include "CpuBuffer.h"
 #include <TMVA/Config.h>
+#include <TMVA/RTensor.hxx>
 
 // #define DEBUG_TMVA_TCPUMATRIX
 #if defined(DEBUG_TMVA_TCPUMATRIX)
@@ -97,7 +98,7 @@ private:
 
 public:
 
-   friend class TcpuTensor<AFloat>; 
+   //friend class TCpuTensor<AFloat>; 
 
    /** Returns pointer to a vector holding only ones with a guaranteed length
     *  of the number of columns of every instantiated CpuMatrix object. */
@@ -284,36 +285,58 @@ class TCpuTensor {
 private: 
 
     TCpuBuffer<AFloat> fBuffer; ///< The buffer holding the matrix elements
-    TMVA::Experimantal::RTensor<AFloat>    fData; /// The tensor view 
+    TMVA::Experimental::RTensor<AFloat>    fTensor; /// The tensor view 
 
 
 public:
 
-   using Shape_t =  typename TMVA::Experimantal::RTensor<AFloat>::Shape_t;
+   friend class TCpuMatrix<AFloat>;
 
-   // constructor from an RTensor
-   // here we allocate the data and make the contained tensor a view
-   // TCpuTensor(const  TMVA::Experimantal::RTensor<AFloat>  & tensor ) : 
-   //    fBuffer(buffer),
-   //    fTensor( tensor)
+   using Shape_t =  typename TMVA::Experimental::RTensor<AFloat>::Shape_t;
+   using MemoryLayout = TMVA::Experimental::MemoryLayout; 
+
+   // default constructor
+   //  TCpuTensor() : 
+   //    fBuffer(0),
+   //    fTensor( fBuffer,  {0} )
    // { }
 
+   /** constructors from batch size, depth, height*width */
+   TCpuTensor(size_t bsize, size_t depth, size_t hw) : 
+      fBuffer( bsize * depth * hw ),
+      fTensor( fBuffer,  { depth, hw, bsize}, MemoryLayout::ColumnMajor )
+   { }
+
+   /** constructors from batch size, depth, height, width */
+   TCpuTensor(size_t bsize, size_t depth, size_t height, size_t width) : 
+      fBuffer( bsize * depth * height * width ),
+      fTensor( fBuffer,  { depth, height, width, bsize}, MemoryLayout::ColumnMajor )
+   { }
+  
+   /** constructors from a shape. Allocate the buffer in this case and initialize its elements to zero*/
+   TCpuTensor(const Shape_t & shape, MemoryLayout memlayout = MemoryLayout::ColumnMajor ) : 
+      fBuffer( TMVA::Experimental::Internal::GetSizeFromShape(shape)),
+      fTensor( fBuffer,  shape, memlayout )
+   { }
+
+  
+
    /** constructors from a TCpuBuffer and a rtensor */
-   TCpuTensor(const TCpuBuffer<AFloat> &buffer, const  TMVA::Experimantal::RTensor<AFloat>  & tensor ) : 
+   TCpuTensor(const TCpuBuffer<AFloat> &buffer, const  TMVA::Experimental::RTensor<AFloat>  & tensor ) : 
       fBuffer(buffer),
       fTensor( tensor)
    { }
 
    /** constructors from a TCpuBuffer and a shape */
-   TCpuTensor(const TCpuBuffer<AFloat> &buffer, const Shape_t & shape ) : 
+   TCpuTensor(const TCpuBuffer<AFloat> &buffer, const Shape_t & shape, MemoryLayout memlayout = MemoryLayout::ColumnMajor ) : 
       fBuffer(buffer),
-      fTensor( fBuffer, shape)
+      fTensor( fBuffer, shape, memlayout)
    { }
 
     /** constructors from a TCpuMatrix */
    TCpuTensor(const TCpuMatrix<AFloat> &matrix) : 
       fBuffer(matrix.fBuffer),
-      fTensor( fBuffer, { matrix.GetNrows(), matrix.GetNcols() })
+      fTensor( fBuffer, { matrix.GetNrows(), matrix.GetNcols() }, MemoryLayout::ColumnMajor )
    { }
 
    /** Return raw pointer to the elements stored contiguously in column-major
@@ -322,32 +345,155 @@ public:
    const AFloat * GetRawDataPointer()  const {return fBuffer;}
 
    AFloat *       GetData() { return fTensor.GetData();}
+   const AFloat * GetData() const { return fTensor.GetData();}
+
+   Shape_t GetShape() const { return fTensor.GetShape(); }
+
+   size_t GetNoElements() const { return fTensor.GetSize(); }
+   size_t GetSize() const { return fTensor.GetSize(); }
+
+   // return the size of the first dimension (if in row order) or last dimension if in column order
+   size_t GetFirstSize() const { 
+      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? fTensor.GetShape().first() : fTensor.GetShape().back(); 
+   }
 
    // Matrix conversion for tensors of shape 2 
-   TCpuMatrix GetMatrix() { 
+   TCpuMatrix<AFloat> GetMatrix() const { 
       assert( fTensor.GetShape().size() == 2);
-      return TCpuMatrix(fBuffer, fTensor.GetShape()[0], fTensor.GetShape()[1]);
+      return TCpuMatrix<AFloat>(fBuffer, fTensor.GetShape()[0], fTensor.GetShape()[1]);
+   }
+   // copy tensor content in a given matrix. No copy is done, just swapping the pointers
+   static void TensorToMatrix(const TMVA::Experimental::RTensor<AFloat> & tensor, TCpuMatrix<AFloat> & matrix) { 
+      assert (tensor.GetShape().size() == 2);
+      assert( tensor.GetShape()[0] == matrix.GetNRows() );
+      assert( tensor.GetShape()[1] == matrix.GetNCols() ); 
+      matrix.fBuffer = tensor.fBuffer; 
+   }
+   // copy matrix content in a given tensor. No copy is done, just swapping the pointers
+   static void MatrixToTensor(const TCpuMatrix<AFloat> & matrix, TMVA::Experimental::RTensor<AFloat> & tensor) { 
+      if (tensor.GetShape().size() != 2) tensor.fTensor.Squeeze();
+      assert (tensor.GetShape().size() == 2);
+      assert( tensor.GetShape()[0] == matrix.GetNRows() );
+      assert( tensor.GetShape()[1] == matrix.GetNCols() ); 
+      tensor.fBuffer = matrix.fBuffer;  
    }
 
-   // return slices in the first dimension
+   // return slices in the first dimension (if row wise) or last dimension if colun wise
    // so single event slides 
-   Tensor_t  operator[ size_t i] { 
-      TMVA::Experimantal::RTensor<AFloat>::Slice_t slice( fTensor.GetShape().size()); 
-      slice[0][0] = i; 
-      slice[0][1] = i+1; 
-      assert(i < fTensor.GetShape()[0]); 
+   TCpuTensor<AFloat> operator()( size_t i ) { 
+      typename TMVA::Experimental::RTensor<AFloat>::Slice_t slice( fTensor.GetShape().size()); 
       size_t buffsize = 1;
-      for (size_t j = 1; j < slice.size(); ++j) { 
-         slice[j][0] = 0; 
-         slice[j][1] = fTensor.GetShape()[j]; 
-         buffSize *= fTensor.GetShape()[j]; 
-      }
-      size_t offset = i * buffSize; 
-      return TCpuTensor(fBuffer.GetSubBuffer(offset, buffsize)   , fTensor.Slice(slice));
+      if (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) { 
+         slice[0][0] = i; 
+         slice[0][1] = i+1; 
+         assert(i < fTensor.GetShape()[0] ); 
+      
+         for (size_t j = 1; j < slice.size(); ++j) { 
+            slice[j][0] = 0; 
+            slice[j][1] = fTensor.GetShape()[j]; 
+            buffsize *= fTensor.GetShape()[j]; 
+         }
+      } else { 
+         slice.back()[0] = i; 
+         slice.back()[1] = i+1; 
+         assert(i < fTensor.GetShape().back() ); 
+      
+         for (size_t j = 0; j < slice.size()-1; ++j) { 
+            slice[j][0] = 0; 
+            slice[j][1] = fTensor.GetShape()[j]; 
+            buffsize *= fTensor.GetShape()[j]; 
+         }
+      }  
+      size_t offset = i * buffsize; 
+      return TCpuTensor<AFloat>( fBuffer.GetSubBuffer(offset, buffsize)   , fTensor.Slice(slice));
    }
-   Tensor_t At(size_t i ) { return (*this)[i]; }
+   TCpuTensor<AFloat>  At(size_t i ) { return (*this)(i); }
+
+   // set all the tensor contents to zero
+   void Zero() {
+      AFloat * data = fBuffer; 
+      for (size_t i = 0; i < fBuffer.GetSize(); ++i)
+         data[i] = 0; 
+   }
+   
+   // access single element - using first 
+   // AFloat   operator()(size_t k, size_t i, size_t j) const {return fBuffer[j * fNRows + i];}
+   // AFloat &   operator()(size_t k, size_t i, size_t j) {return fBuffer[j * fNRows + i];}
 
 
+/** Map the given function over the matrix elements. Executed in parallel
+    *  using TThreadExecutor. */
+   template <typename Function_t>
+   void Map(Function_t &f);
+
+   /** Same as maps but takes the input values from the tensor \p A and writes
+    *  the results in this tensor. */
+   template <typename Function_t>
+   void MapFrom(Function_t &f, const TCpuTensor<AFloat> & A);
+
+};
+
+//______________________________________________________________________________
+template<typename AFloat>
+template<typename Function_t>
+inline void TCpuTensor<AFloat>::Map(Function_t &f)
+{
+   AFloat  *data = GetRawDataPointer();
+   size_t nelements =  GetNoElements();
+   size_t nsteps = TCpuMatrix<AFloat>::GetNWorkItems(nelements);
+
+   auto ff = [data, &nsteps, &nelements, &f](UInt_t workerID)
+   {
+      size_t jMax = std::min(workerID+nsteps,nelements); 
+      for (size_t j = workerID; j < jMax; ++j) {
+         data[j] = f(data[j]);
+      }
+      return 0;
+   };
+
+   if (nsteps < nelements) {
+      TMVA::Config::Instance().GetThreadExecutor().Foreach(ff, ROOT::TSeqI(0,nelements,nsteps));
+
+      // for (size_t i = 0;  i < nelements; i+=nsteps)
+      //    ff(i);
+
+   }
+   else {
+      R__ASSERT(nelements == nsteps);
+      ff(0);
+   }
+}
+
+//______________________________________________________________________________
+template<typename AFloat>
+template<typename Function_t>
+inline void TCpuTensor<AFloat>::MapFrom(Function_t &f, const TCpuTensor<AFloat> &A)
+{
+         AFloat  *dataB = GetRawDataPointer();
+   const AFloat  *dataA = A.GetRawDataPointer();
+
+   size_t nelements =  GetNoElements();
+   R__ASSERT(nelements == A.GetNoElements() );
+   size_t nsteps = TCpuMatrix<AFloat>::GetNWorkItems(nelements);
+
+   auto ff = [&dataB, &dataA,  &nsteps, &nelements, &f](UInt_t workerID)
+   {
+      size_t jMax = std::min(workerID+nsteps,nelements); 
+      for (size_t j = workerID; j < jMax; ++j) {
+         dataB[j] = f(dataA[j]);
+      }
+      return 0;
+   };
+   if (nsteps < nelements) { 
+      TMVA::Config::Instance().GetThreadExecutor().Foreach(ff, ROOT::TSeqI(0,nelements,nsteps));
+      // for (size_t i = 0;  i < nelements; i+=nsteps)
+      //    ff(i);
+
+   }
+   else {
+      R__ASSERT(nelements == nsteps);
+      ff(0);
+   }
 }
 
 

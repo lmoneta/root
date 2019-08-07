@@ -106,8 +106,8 @@ public:
 
    /*! Backpropagates the error. Must only be called directly at the corresponding
     *  call to Forward(...). */
-   virtual void Backward(Tensor_t &gradients_backward, const Tensor_t &activations_backward,
-                         std::vector<Matrix_t> &inp1, std::vector<Matrix_t> &inp2) = 0;
+   virtual void Backward(Tensor_t &gradients_backward, const Tensor_t &activations_backward ) = 0;
+   /////                      std::vector<Matrix_t> &inp1, std::vector<Matrix_t> &inp2) = 0;
 
     /*! Reset some training flags after a loop on all batches
        Some layer (e.g. batchnormalization) might need to implement the function in case some operations 

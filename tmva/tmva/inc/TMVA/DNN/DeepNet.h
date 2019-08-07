@@ -237,10 +237,10 @@ public:
    void Initialize();
 
    /*! Function that executes the entire forward pass in the network. */
-   void Forward(std::vector<Matrix_t> &input, bool applyDropout = false);
+   void Forward(Tensor_t &input, bool applyDropout = false);
 
     /*! Function that reset some training flags after looping all the events but not the weights*/
-   void Reset();
+   void ResetTraining();
 
 
 
@@ -759,14 +759,14 @@ auto TDeepNet<Architecture_t, Layer_t>::ResetTraining() -> void
 }
 
 template <typename Architecture>
-auto debugTensor(const Tensor_t &A, const std::string name = "tensor") -> void
+auto debugTensor(const typename Architecture::Tensor_t &A, const std::string name = "tensor") -> void
 {
    std::cout << name << " tensor size = " << A.GetSize() << " shape = { "; 
    auto shape = A.GetShape(); 
    for (size_t k = 0; k < shape.size()-1; ++k)
-      std::cout << shape[k] << " , "
+      std::cout << shape[k] << " , ";
    std::cout << shape.back() << " } ";
-   std::coout << " is view/owner " << A.IsView() << " / " << A.IsOwner() << std::endl;
+   std::cout << " is view/owner " << A.IsView() << " / " << A.IsOwner() << std::endl;
    // print elements 
    // need to find way to nice printing all elements
    for (size_t l = 0; l < A.GetSize(); ++l) {

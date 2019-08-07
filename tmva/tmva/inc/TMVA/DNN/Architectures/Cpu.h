@@ -21,8 +21,6 @@
 #include "TMVA/DNN/Functions.h"
 #include "TMVA/DNN/CNN/ConvLayer.h"
 
-#include "TMVA/RTensor.hxx"
-
 #include "Cpu/CpuBuffer.h"
 #include "Cpu/CpuMatrix.h"
 #include <vector>
@@ -50,16 +48,16 @@ private:
 public:
 
    using Scalar_t       = AReal;
-   using Tensor_t       = TMVA::Experimental::RTensor<AReal>;
+   using Tensor_t       = TCpuTensor<AReal>;
    using Matrix_t       = TCpuMatrix<AReal>;
    using HostBuffer_t   = TCpuBuffer<AReal>;
    using DeviceBuffer_t = TCpuBuffer<AReal>;
 
 
-   // Utility function to convert from a Matrix to a Tensor
-   static Tensor_t  MatrixToTensor(Matrix_t & A) { 
-      return Tensor_t(A.GetRawDataPointer(), Shape_t({A.GetNrows(), A.GetNcols() }), RTensor::MemoryLayout::ColumnMajor);
-   }
+   // // Utility function to convert from a Matrix to a Tensor
+   // static Tensor_t  MatrixToTensor(Matrix_t & A) { 
+   //    return Tensor_t(A.GetRawDataPointer(), Shape_t({A.GetNrows(), A.GetNcols() }), RTensor::MemoryLayout::ColumnMajor);
+   // }
 
    //____________________________________________________________________________
    //
@@ -73,21 +71,24 @@ public:
    ///@{
    /** Matrix-multiply \p input with the transpose of \pweights and
     *  write the results into \p output. */
-   static void MultiplyTranspose(Tensor_t &output,
-                                 const Tensor_t &input,
-                                 const Matrix_t &weights);
+   static void MultiplyTranspose(Matrix_t &output, const Matrix_t &input, const Matrix_t &weights);
 
-   // static void MultiplyTranspose(Matrix_t &output,
-   //                               const Matrix_t &input,
-   //                               const Matrix_t &weights);
+   static void MultiplyTranspose(Tensor_t &output, const Tensor_t &input, const Matrix_t &weights) {
+      Matrix_t output_matrix = output.GetMatrix(); 
+      MultiplyTranspose( output_matrix, input.GetMatrix(), weights);
+      Tensor_t::MatrixToTensor(output_matrix, output); // this maybe is not needed
+   }
+
    /** Add the vectors biases row-wise to the matrix output */
-   static void AddRowWise(Tensor_t<Scalar_t> &output,
-                          const Matrix_t &biases);
- 
-   // static void AddRowWise(Matrix_t &output,
-   //                        const Matrix_t &biases);
+   static void AddRowWise(Matrix_t &output,const Matrix_t &biases);
 
-   /** @name Backward Propagation
+   static void AddRowWise(Tensor_t &output, const Matrix_t &biases) { 
+      Matrix_t output_matrix = output.GetMatrix(); 
+      AddRowWise(output_matrix, biases); 
+      Tensor_t::MatrixToTensor(output_matrix, output); // this maybe is not needed
+   }
+
+   /** @name Backward Propagation (Dense Layers)
     * Low-level functions required for the forward propagation of activations
     * through the network.
     */
@@ -100,24 +101,18 @@ public:
     *  in \p df and thus produces only a valid result, if it is applied the
     *  first time after the corresponding forward propagation has been per-
     *  formed. */
-   static void Backward(Matrix_t & activationGradientsBackward,
+   static void Backward(Tensor_t & activationGradientsBackward,
                         Matrix_t & weightGradients,
                         Matrix_t & biasGradients,
-                        Matrix_t & df,
-                        const Matrix_t & activationGradients,
+                        Tensor_t & df,
+                        const Tensor_t & activationGradients,
                         const Matrix_t & weights,
-                        const Matrix_t & activationBackward);
-   /** Backward pass for Recurrent Networks */
-   static Matrix_t & RecurrentLayerBackward(Matrix_t & state_gradients_backward, // BxH
-                                            Matrix_t & input_weight_gradients,
-                                            Matrix_t & state_weight_gradients,
-                                            Matrix_t & bias_gradients,
-                                            Matrix_t & df, //DxH
-                                            const Matrix_t & state, // BxH
-                                            const Matrix_t & weights_input, // HxD 
-                                            const Matrix_t & weights_state, // HxH
-                                            const Matrix_t & input,  // BxD
-                                            Matrix_t & input_gradient);
+                        const Tensor_t & activationBackward);
+
+  
+
+
+
    /** Adds a the elements in matrix B scaled by c to the elements in
     *  the matrix A. This is required for the weight update in the gradient
     *  descent step.*/
@@ -134,17 +129,17 @@ public:
 
 
    /** Above functions extended to vectors */
-   static void ScaleAdd(std::vector<Matrix_t> & A,
-                        const std::vector<Matrix_t> & B,
+   static void ScaleAdd(Tensor_t & A,
+                        const Tensor_t & B,
                         Scalar_t beta = 1.0);
 
-   static void Copy(std::vector<Matrix_t> & A,
-                    const std::vector<Matrix_t> & B);
+   static void Copy(Tensor_t & A,
+                    const Tensor_t & B);
 
-   // copy from another architecture
-   template<typename AMatrix_t>
-   static void CopyDiffArch(std::vector<Matrix_t> & A,
-                    const std::vector<AMatrix_t> & B);
+   // copy from another tensor
+   template<typename ATensor_t>
+   static void CopyDiffArch(Tensor_t & A,
+                     const ATensor_t & B);
 
    ///@}
 
@@ -160,32 +155,32 @@ public:
     * and writes the results into the result matrix.
     */
    ///@{
-   static void IdentityDerivative(Matrix_t & B,
-                                  const Matrix_t &A);
+   static void IdentityDerivative(Tensor_t & B,
+                                  const Tensor_t &A);
 
-   static void Relu(Matrix_t & B);
-   static void ReluDerivative(Matrix_t & B,
-                              const Matrix_t & A);
+   static void Relu(Tensor_t & B);
+   static void ReluDerivative(Tensor_t & B,
+                              const Tensor_t & A);
 
-   static void Sigmoid(Matrix_t & B);
-   static void SigmoidDerivative(Matrix_t & B,
-                                 const Matrix_t & A);
+   static void Sigmoid(Tensor_t & B);
+   static void SigmoidDerivative(Tensor_t & B,
+                                 const Tensor_t & A);
 
-   static void Tanh(Matrix_t & B);
-   static void TanhDerivative(Matrix_t & B,
-                              const Matrix_t & A);
+   static void Tanh(Tensor_t & B);
+   static void TanhDerivative(Tensor_t & B,
+                              const Tensor_t & A);
 
-   static void SymmetricRelu(Matrix_t & B);
-   static void SymmetricReluDerivative(Matrix_t & B,
-                                       const Matrix_t & A);
+   static void SymmetricRelu(Tensor_t & B);
+   static void SymmetricReluDerivative(Tensor_t & B,
+                                       const Tensor_t & A);
 
-   static void SoftSign(Matrix_t & B);
-   static void SoftSignDerivative(Matrix_t & B,
-                                  const Matrix_t & A);
+   static void SoftSign(Tensor_t & B);
+   static void SoftSignDerivative(Tensor_t & B,
+                                  const Tensor_t & A);
 
-   static void Gauss(Matrix_t & B);
-   static void GaussDerivative(Matrix_t & B,
-                               const Matrix_t & A);
+   static void Gauss(Tensor_t & B);
+   static void GaussDerivative(Tensor_t & B,
+                               const Tensor_t & A);
    ///@}
 
    //____________________________________________________________________________
@@ -353,15 +348,15 @@ public:
    ///@}
 
    /** Dummy placeholder - preparation is currently only required for the CUDA architecture. */
-   static void PrepareInternals(std::vector<Matrix_t> &) {}
+   static void PrepareInternals(Tensor_t &) {}
 
    /** Forward propagation in the Convolutional layer */
-   static void ConvLayerForward(std::vector<Matrix_t> & output,
-                                std::vector<Matrix_t> & derivatives,
-                                const std::vector<Matrix_t> &input,
+   static void ConvLayerForward(Tensor_t & output,
+                                Tensor_t & derivatives,
+                                const Tensor_t &input,
                                 const Matrix_t &weights, const Matrix_t & biases,
                                 const DNN::CNN::TConvParams & params, EActivationFunction activFunc,
-                                std::vector<Matrix_t> & /* inputPrime */);
+                                Tensor_t & /* inputPrime */);
 
    /** @name Backward Propagation in Convolutional Layer
     */
@@ -375,19 +370,19 @@ public:
     *  in \p df and thus produces only a valid result, if it is applied the
     *  first time after the corresponding forward propagation has been per-
     *  formed. */
-   static void ConvLayerBackward(std::vector<Matrix_t> &activationGradientsBackward,
+   static void ConvLayerBackward(Tensor_t &activationGradientsBackward,
                                  Matrix_t &weightGradients, Matrix_t &biasGradients,
-                                 std::vector<Matrix_t> &df,
-                                 const std::vector<Matrix_t> &activationGradients,
+                                 Tensor_t &df,
+                                 const Tensor_t &activationGradients,
                                  const Matrix_t &weights,
-                                 const std::vector<Matrix_t> &activationBackward, size_t batchSize,
+                                 const Tensor_t &activationBackward, size_t batchSize,
                                  size_t inputHeight, size_t inputWidth, size_t depth, size_t height, size_t width,
                                  size_t filterDepth, size_t filterHeight, size_t filterWidth, size_t nLocalViews);
 
    /** Utility function for calculating the activation gradients of the layer
     *  before the convolutional layer. */
-   static void CalculateConvActivationGradients(std::vector<Matrix_t> &activationGradientsBackward,
-                                                const std::vector<Matrix_t> &df,
+   static void CalculateConvActivationGradients(Tensor_t &activationGradientsBackward,
+                                                const Tensor_t &df,
                                                 const Matrix_t &weights, size_t batchSize,
                                                 size_t inputHeight, size_t inputWidth, size_t depth, size_t height,
                                                 size_t width, size_t filterDepth, size_t filterHeight,
@@ -396,15 +391,15 @@ public:
    /** Utility function for calculating the weight gradients of the convolutional
     * layer. */
    static void CalculateConvWeightGradients(Matrix_t &weightGradients,
-                                            const std::vector<Matrix_t> &df,
-                                            const std::vector<Matrix_t> &activations_backward,
+                                            const Tensor_t &df,
+                                            const Tensor_t &activations_backward,
                                             size_t batchSize, size_t inputHeight, size_t inputWidth, size_t depth,
                                             size_t height, size_t width, size_t filterDepth, size_t filterHeight,
                                             size_t filterWidth, size_t nLocalViews);
 
    /** Utility function for calculating the bias gradients of the convolutional
     *  layer */
-   static void CalculateConvBiasGradients(Matrix_t &biasGradients, const std::vector<Matrix_t> &df,
+   static void CalculateConvBiasGradients(Matrix_t &biasGradients, const Tensor_t &df,
                                           size_t batchSize, size_t depth, size_t nLocalViews);
    ///@}
 
@@ -467,6 +462,19 @@ public:
    static void Rearrange(std::vector<TCpuMatrix<AReal>> &out, const std::vector<TCpuMatrix<AReal>> &in); 
 
 
+ /** Backward pass for Recurrent Networks */
+   static Matrix_t & RecurrentLayerBackward(Matrix_t & state_gradients_backward, // BxH
+                                            Matrix_t & input_weight_gradients,
+                                            Matrix_t & state_weight_gradients,
+                                            Matrix_t & bias_gradients,
+                                            Matrix_t & df, //DxH
+                                            const Matrix_t & state, // BxH
+                                            const Matrix_t & weights_input, // HxD 
+                                            const Matrix_t & weights_state, // HxH
+                                            const Matrix_t & input,  // BxD
+                                            Matrix_t & input_gradient);
+
+
    ///@}
 
    //____________________________________________________________________________
@@ -497,8 +505,8 @@ public:
    /** In-place Hadamard (element-wise) product of matrices \p A and \p B
     *  with the result being written into \p A.
     */
-   static void Hadamard(Matrix_t &A,
-                        const Matrix_t &B);
+   static void Hadamard(Tensor_t &A,
+                        const Tensor_t &B);
 
    /** Sum columns of (m x n) matrixx \p A and write the results into the first
     * m elements in \p A.
@@ -559,9 +567,9 @@ void TCpu<Real_t>::CopyDiffArch(TCpuMatrix<Real_t> &B,
 
 //____________________________________________________________________________
 template <typename Real_t>
-template <typename AMatrix_t>
-void TCpu<Real_t>::CopyDiffArch(std::vector<TCpuMatrix<Real_t>> &B,
-                            const std::vector<AMatrix_t> &A)
+template <typename ATensor_t>
+void TCpu<Real_t>::CopyDiffArch(TCpuTensor<Real_t> &B,
+                            const ATensor_t &A)
 {
    for (size_t i = 0; i < B.size(); ++i) {
       CopyDiffArch(B[i], A[i]);
