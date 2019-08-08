@@ -141,6 +141,11 @@ public:
    static void CopyDiffArch(Tensor_t & A,
                      const ATensor_t & B);
 
+   // copy from vector of matrices of different types
+   template<typename AMatrix_t>
+   static void CopyDiffArch(std::vector<Matrix_t>  & A,
+                      const std::vector<AMatrix_t> & B);
+
    ///@}
 
    //____________________________________________________________________________
@@ -322,8 +327,8 @@ public:
 
    /** Transform the matrix B in local view format, suitable for
     *  convolution, and store it in matrix A */
-   static void Im2col(TCpuMatrix<AReal> &A,
-                      const TCpuMatrix<AReal> &B,
+   static void Im2col(Matrix_t &A,
+                      const Matrix_t &B,
                       size_t imgHeight,
                       size_t imgWidth,
                       size_t fltHeight,
@@ -333,14 +338,14 @@ public:
                       size_t zeroPaddingHeight,
                       size_t zeroPaddingWidth);
 
-   static void Im2colIndices(std::vector<int> &V, const TCpuMatrix<AReal> &B, size_t nLocalViews, size_t imgHeight, size_t imgWidth, size_t fltHeight,
+   static void Im2colIndices(std::vector<int> &V, const Matrix_t &B, size_t nLocalViews, size_t imgHeight, size_t imgWidth, size_t fltHeight,
                       size_t fltWidth, size_t strideRows, size_t strideCols, size_t zeroPaddingHeight,
                       size_t zeroPaddingWidth);
-   static void Im2colFast(TCpuMatrix<AReal> &A, const TCpuMatrix<AReal> &B, const std::vector<int> & V); 
+   static void Im2colFast(Matrix_t &A, const Matrix_t &B, const std::vector<int> & V); 
 
    /** Rotates the matrix \p B, which is representing a weights,
     *  and stores them in the matrix \p A. */
-   static void RotateWeights(TCpuMatrix<AReal> &A, const TCpuMatrix<AReal> &B, size_t filterDepth, size_t filterHeight,
+   static void RotateWeights(Matrix_t &A, const Matrix_t &B, size_t filterDepth, size_t filterHeight,
                              size_t filterWidth, size_t numFilters);
 
    /** Add the biases in the Convolutional Layer.  */
@@ -414,7 +419,7 @@ public:
    /** Downsample the matrix \p C to the matrix \p A, using max
     * operation, such that the winning indices are stored in matrix
     * \p B. */
-   static void Downsample(TCpuMatrix<AReal> &A, TCpuMatrix<AReal> &B, const TCpuMatrix<AReal> &C, size_t imgHeight,
+   static void Downsample(Tensor_t &A, Tensor_t &B, const Tensor_t &C, size_t imgHeight,
                           size_t imgWidth, size_t fltHeight, size_t fltWidth, size_t strideRows, size_t strideCols);
 
    ///@}
@@ -425,9 +430,9 @@ public:
    /** Perform the complete backward propagation step in a Pooling Layer. Based on the
     *  winning idices stored in the index matrix, it just forwards the actiovation
     *  gradients to the previous layer. */
-   static void MaxPoolLayerBackward(TCpuMatrix<AReal> &activationGradientsBackward,
-                                    const TCpuMatrix<AReal> &activationGradients,
-                                    const TCpuMatrix<AReal> &indexMatrix,
+   static void MaxPoolLayerBackward(Tensor_t &activationGradientsBackward,
+                                    const Tensor_t &activationGradients,
+                                    const Tensor_t &indexMatrix,
                                     size_t imgHeight,
                                     size_t imgWidth,
                                     size_t fltHeight,
@@ -447,19 +452,18 @@ public:
    ///@{
 
    /** Transform the matrix \p B to a matrix with different dimensions \p A */
-   static void Reshape(TCpuMatrix<AReal> &A, const TCpuMatrix<AReal> &B);
+   static void Reshape(Matrix_t &A, const Matrix_t &B);
 
    /** Flattens the tensor \p B, such that each matrix, is stretched in
     *  one row, resulting with a matrix \p A. */
-   static void Flatten(TCpuMatrix<AReal> &A, const std::vector<TCpuMatrix<AReal>> &B, size_t size, size_t nRows,
-                       size_t nCols);
+   static void Flatten(Tensor_t &A, const Tensor_t &B); // size_t size, size_t nRows, size_t nCols);
 
    /** Transforms each row of \p B to a matrix and stores it in the
     *  tensor \p B. */
-   static void Deflatten(std::vector<TCpuMatrix<AReal>> &A, const TCpuMatrix<AReal> &B, size_t index, size_t nRows,
-                         size_t nCols);
+   static void Deflatten(Tensor_t &A, const Tensor_t &B); // size_t index, size_t nRows,size_t nCols);
+
    /** Rearrage data accoring to time fill B x T x D out with T x B x D matrix in*/
-   static void Rearrange(std::vector<TCpuMatrix<AReal>> &out, const std::vector<TCpuMatrix<AReal>> &in); 
+   static void Rearrange(Tensor_t &out, const Tensor_t &in); 
 
 
  /** Backward pass for Recurrent Networks */
@@ -571,10 +575,24 @@ template <typename ATensor_t>
 void TCpu<Real_t>::CopyDiffArch(TCpuTensor<Real_t> &B,
                             const ATensor_t &A)
 {
-   for (size_t i = 0; i < B.size(); ++i) {
-      CopyDiffArch(B[i], A[i]);
+   // assume tensor are dim 3 and can be converted in a matrix
+   for (size_t i = 0; i < B.GetFirstSize(); ++i) {
+      CopyDiffArch(B.At(i).GetMatrix(), A.At(i).GetMatrix());
    }
 }
+
+// implementation using vector of matrices for the weights
+template <typename Real_t>
+template <typename AMatrix_t>
+void TCpu<Real_t>::CopyDiffArch(std::vector<TCpuMatrix<Real_t>> &A, const std::vector<AMatrix_t> &B)
+{
+   for (size_t i = 0; i < A.size(); ++i) {
+      CopyDiffArch(A[i], B[i]);
+   }
+}
+
+
+
 
 
 } // namespace DNN

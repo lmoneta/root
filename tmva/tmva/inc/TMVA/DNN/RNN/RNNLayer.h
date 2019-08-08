@@ -57,9 +57,9 @@ template<typename Architecture_t>
 
 public:
 
+   using Tensor_t = typename Architecture_t::Tensor_t;
    using Matrix_t = typename Architecture_t::Matrix_t;
    using Scalar_t = typename Architecture_t::Scalar_t;
-   using Tensor_t = std::vector<Matrix_t>;
 
 private:
 
@@ -74,7 +74,7 @@ private:
    Matrix_t &fWeightsState;         ///< Prev state weights, fWeights[1]
    Matrix_t &fBiases;               ///< Biases
 
-   std::vector<Matrix_t> fDerivatives; ///< First fDerivatives of the activations
+   Tensor_t fDerivatives; ///< First fDerivatives of the activations
    Matrix_t &fWeightInputGradients; ///< Gradients w.r.t. the input weights
    Matrix_t &fWeightStateGradients; ///< Gradients w.r.t. the recurring weights
    Matrix_t &fBiasGradients;        ///< Gradients w.r.t. the bias values
@@ -108,10 +108,8 @@ public:
    /*! Backpropagates the error. Must only be called directly at the corresponding
     *  call to Forward(...). */
    void Backward(Tensor_t &gradients_backward,
-                 const Tensor_t &activations_backward,
-                 std::vector<Matrix_t> &inp1,
-                 std::vector<Matrix_t> &inp2);
-
+                 const Tensor_t &activations_backward);
+  
    /* Updates weights and biases, given the learning rate */
    void Update(const Scalar_t learningRate);
 
@@ -143,10 +141,11 @@ public:
    const Matrix_t & GetWeightsInput()   const {return fWeightsInput;}
    Matrix_t        & GetWeightsState()        {return fWeightsState;}
    const Matrix_t & GetWeightsState()   const {return fWeightsState;}
-   std::vector<Matrix_t>       & GetDerivatives()        {return fDerivatives;}
-   const std::vector<Matrix_t> & GetDerivatives()   const {return fDerivatives;}
-   Matrix_t &GetDerivativesAt(size_t i) { return fDerivatives[i]; }
-   const Matrix_t &GetDerivativesAt(size_t i) const { return fDerivatives[i]; }
+   Tensor_t       & GetDerivatives()        {return fDerivatives;}
+   const Tensor_t & GetDerivatives()   const {return fDerivatives;}
+   // Matrix_t &GetDerivativesAt(size_t i) { return fDerivatives[i]; }
+   // const Matrix_t &GetDerivativesAt(size_t i) const { return fDerivatives[i]; }
+  
    Matrix_t        & GetBiasesState()              {return fBiases;}
    const Matrix_t & GetBiasesState()         const {return fBiases;}
    Matrix_t        & GetBiasStateGradients()            {return fBiasGradients;}
@@ -177,13 +176,14 @@ TBasicRNNLayer<Architecture_t>::TBasicRNNLayer(size_t batchSize, size_t stateSiz
      fWeightsInput(this->GetWeightsAt(0)),
      fWeightsState(this->GetWeightsAt(1)),
      fBiases(this->GetBiasesAt(0)),
+     fDerivatives( timeSteps, batchSize, stateSize),   // create tensor time x bs x S 
      fWeightInputGradients(this->GetWeightGradientsAt(0)),
      fWeightStateGradients(this->GetWeightGradientsAt(1)),
      fBiasGradients(this->GetBiasGradientsAt(0))
 {
-  for (size_t i = 0; i < timeSteps; ++i) {
-     fDerivatives.emplace_back(batchSize, stateSize);
-  }
+//   for (size_t i = 0; i < timeSteps; ++i) {
+//      fDerivatives.emplace_back(batchSize, stateSize);
+//   }
    // Nothing
 }
 
@@ -194,13 +194,12 @@ TBasicRNNLayer<Architecture_t>::TBasicRNNLayer(const TBasicRNNLayer &layer)
      fRememberState(layer.fRememberState), fF(layer.GetActivationFunction()),
      fState(layer.GetBatchSize(), layer.GetStateSize()), fWeightsInput(this->GetWeightsAt(0)),
      fWeightsState(this->GetWeightsAt(1)), fBiases(this->GetBiasesAt(0)),
-     fDerivatives(), fWeightInputGradients(this->GetWeightGradientsAt(0)),
+     fDerivatives( layer.GetDerivatives().GetShape() ), fWeightInputGradients(this->GetWeightGradientsAt(0)),
      fWeightStateGradients(this->GetWeightGradientsAt(1)), fBiasGradients(this->GetBiasGradientsAt(0))
 {
-   for (size_t i = 0; i < fTimeSteps; ++i) {
-     fDerivatives.emplace_back(layer.GetBatchSize(), layer.GetStateSize());
-     Architecture_t::Copy(fDerivatives[i], layer.GetDerivativesAt(i));
-   }
+
+   Architecture_t::Copy(fDerivatives, layer.GetDerivatives() );
+   
    // Gradient matrices not copied
    Architecture_t::Copy(fState, layer.GetState());
 }
@@ -259,16 +258,18 @@ auto inline TBasicRNNLayer<Architecture_t>::Forward(Tensor_t &input, bool /*isTr
    // T : time size
    // B : batch size
    
-   Tensor_t arrInput;
-   for (size_t t = 0; t < fTimeSteps; ++t) arrInput.emplace_back(this->GetBatchSize(), this->GetInputWidth()); // T x B x D
+   Tensor_t arrInput (fTimeSteps, this->GetBatchSize(), this->GetInputWidth() );
+   //for (size_t t = 0; t < fTimeSteps; ++t) arrInput.emplace_back(this->GetBatchSize(), this->GetInputWidth()); // T x B x D
    Architecture_t::Rearrange(arrInput, input);
-   Tensor_t arrOutput;
-   for (size_t t = 0; t < fTimeSteps;++t) arrOutput.emplace_back(this->GetBatchSize(), fStateSize); // T x B x H 
+   Tensor_t arrOutput ( fTimeSteps, this->GetBatchSize(), fStateSize);
+   //for (size_t t = 0; t < fTimeSteps;++t) arrOutput.emplace_back(this->GetBatchSize(), fStateSize); // T x B x H 
 
    if (!this->fRememberState) InitState(DNN::EInitialization::kZero);
    for (size_t t = 0; t < fTimeSteps; ++t) {
-      CellForward(arrInput[t], fDerivatives[t]);
-      Architecture_t::Copy(arrOutput[t], fState);
+      Matrix_t arrInput_m = arrInput.At(t).GetMatrix();
+      CellForward(arrInput_m, fDerivatives.At(t).GetMatrix());
+      Matrix_t arrOutput_m = arrOutput.At(t).GetMatrix();
+      Architecture_t::Copy(arrOutput_m, fState);
    }
    Architecture_t::Rearrange(this->GetOutput(), arrOutput);  // B x T x D
 }
@@ -285,16 +286,18 @@ auto inline TBasicRNNLayer<Architecture_t>::CellForward(const Matrix_t &input, M
    Architecture_t::MultiplyTranspose(fState, input, fWeightsInput);
    Architecture_t::ScaleAdd(fState, tmpState);
    Architecture_t::AddRowWise(fState, fBiases);
-   DNN::evaluateDerivative<Architecture_t>(dF, fAF, fState);
-   DNN::evaluate<Architecture_t>(fState, fAF);
+   Tensor_t dFt(dF); 
+   Tensor_t tState(fState);
+   DNN::evaluateDerivative<Architecture_t>(dFt, fAF, fState);
+   DNN::evaluate<Architecture_t>(tState, fAF);
 }
 
 //____________________________________________________________________________
 template <typename Architecture_t>
 auto inline TBasicRNNLayer<Architecture_t>::Backward(Tensor_t &gradients_backward,         // B x T x D
-                                                     const Tensor_t &activations_backward, // B x T x D
-                                                     std::vector<Matrix_t> & /*inp1*/, std::vector<Matrix_t> &
-                                                     /*inp2*/) -> void
+                                                     const Tensor_t &activations_backward) -> void  // B x T x D
+                                                   //   std::vector<Matrix_t> & /*inp1*/, std::vector<Matrix_t> &
+                                                   //   /*inp2*/) -> void
 {
    // activations backward is input
    // gradients_backward is activationGradients of layer before it, which is input layer

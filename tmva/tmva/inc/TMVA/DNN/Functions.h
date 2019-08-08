@@ -151,9 +151,9 @@ inline void evaluateDerivative(typename Architecture_t::Tensor_t & B,
 /*! Apply the given output function to each value in the given
 *  tensor A. */
 template<typename Architecture_t>
-inline void evaluate(typename Architecture_t::Tensor_t &A,
+inline void evaluate(typename Architecture_t::Matrix_t &A,
                     EOutputFunction f,
-                    const typename Architecture_t::Tensor_t &X)
+                    const typename Architecture_t::Matrix_t &X)
 {
     switch(f)
     {

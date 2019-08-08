@@ -42,7 +42,7 @@ namespace CNN {
 template <typename Architecture_t>
 class TConvLayer : public VGeneralLayer<Architecture_t> {
 public:
-   using Tensor_t = typename Architecture_t::Matrix_t;
+   using Tensor_t = typename Architecture_t::Tensor_t;
    using Matrix_t = typename Architecture_t::Matrix_t;
    using Scalar_t = typename Architecture_t::Scalar_t;
 

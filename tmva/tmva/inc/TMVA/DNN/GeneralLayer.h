@@ -187,13 +187,12 @@ public:
    const Tensor_t &GetActivationGradients() const { return fActivationGradients; }
    Tensor_t &GetActivationGradients() { return fActivationGradients; }
 
-#if 0
-   Matrix_t &GetOutputAt(size_t i) { return fOutput[i]; }
-   const Matrix_t &GetOutputAt(size_t i) const { return fOutput[i]; }
+   Matrix_t GetOutputAt(size_t i) { return fOutput.At(i).GetMatrix(); }
+   const Matrix_t &GetOutputAt(size_t i) const { return fOutput.At(i).GetMatrix(); }
 
-   Matrix_t &GetActivationGradientsAt(size_t i) { return fActivationGradients[i]; }
-   const Matrix_t &GetActivationGradientsAt(size_t i) const { return fActivationGradients[i]; }
-#endif
+   Matrix_t GetActivationGradientsAt(size_t i) { return fActivationGradients.At(i).GetMatrix(); }
+   const Matrix_t &GetActivationGradientsAt(size_t i) const { return fActivationGradients.At(i).GetMatrix(); }
+
 
    EInitialization GetInitialization() const { return fInit; }
 
@@ -227,8 +226,8 @@ VGeneralLayer<Architecture_t>::VGeneralLayer(size_t batchSize, size_t inputDepth
                                              size_t outputNRows, size_t outputNCols, EInitialization init)
    :  fBatchSize(batchSize), fInputDepth(inputDepth), fInputHeight(inputHeight), fInputWidth(inputWidth), fDepth(depth),
       fHeight(height), fWidth(width), fIsTraining(true), fWeights(), fBiases(), fWeightGradients(), fBiasGradients(),
-      fOutput( {outputNSlices, outputNRows, outputNCols} ),
-      fActivationGradients( {outputNSlices, outputNRows, outputNCols} ),
+      fOutput( outputNSlices, outputNRows, outputNCols ),
+      fActivationGradients( outputNSlices, outputNRows, outputNCols ),
       fInit(init)
 {
 
@@ -253,8 +252,8 @@ VGeneralLayer<Architecture_t>::VGeneralLayer(size_t batchSize, size_t inputDepth
                                              size_t outputNCols, EInitialization init)
    :  fBatchSize(batchSize), fInputDepth(inputDepth), fInputHeight(inputHeight), fInputWidth(inputWidth), fDepth(depth),
       fHeight(height), fWidth(width), fIsTraining(true), fWeights(), fBiases(), fWeightGradients(), fBiasGradients(),
-      fOutput( {outputNSlices, outputNRows, outputNCols} ),
-      fActivationGradients( {outputNSlices, outputNRows, outputNCols} ),
+      fOutput( outputNSlices, outputNRows, outputNCols ),
+      fActivationGradients( outputNSlices, outputNRows, outputNCols ),
       fInit(init)
 {
    // add constructor for weights with different shapes (e.g. in recurrent layers)
@@ -268,10 +267,10 @@ VGeneralLayer<Architecture_t>::VGeneralLayer(size_t batchSize, size_t inputDepth
       fBiasGradients.emplace_back(biasesNRows[i], biasesNCols[i]);
    }
 
-   for (size_t i = 0; i < outputNSlices; i++) {
-      fOutput.emplace_back(outputNRows, outputNCols);
-      fActivationGradients.emplace_back(outputNRows, outputNCols);
-   }
+   // for (size_t i = 0; i < outputNSlices; i++) {
+   //    fOutput.emplace_back(outputNRows, outputNCols);
+   //    fActivationGradients.emplace_back(outputNRows, outputNCols);
+   // }
 }
 
 //_________________________________________________________________________________________________

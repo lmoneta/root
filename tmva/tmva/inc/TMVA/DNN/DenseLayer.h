@@ -137,7 +137,8 @@ TDenseLayer<Architecture_t>::TDenseLayer(size_t batchSize, size_t inputWidth, si
                                    batchSize, width, init),
       fDerivatives(), fDropoutProbability(dropoutProbability), fF(f), fReg(reg), fWeightDecay(weightDecay)
 {
-   fDerivatives = Tensor_t ( {batchSize, width} );
+   std::vector<size_t> shape = {batchSize, width};
+   fDerivatives = Tensor_t ( shape );
 }
 
 //______________________________________________________________________________

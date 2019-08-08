@@ -296,10 +296,10 @@ public:
    using MemoryLayout = TMVA::Experimental::MemoryLayout; 
 
    // default constructor
-   //  TCpuTensor() : 
-   //    fBuffer(0),
-   //    fTensor( fBuffer,  {0} )
-   // { }
+   TCpuTensor() : 
+          fBuffer(0),
+      fTensor( fBuffer,  {0} )
+    { }
 
    /** constructors from batch size, depth, height*width */
    TCpuTensor(size_t bsize, size_t depth, size_t hw) : 
@@ -353,9 +353,21 @@ public:
    size_t GetSize() const { return fTensor.GetSize(); }
 
    // return the size of the first dimension (if in row order) or last dimension if in column order
+   // Tensor is  F x H x W x...for row order layout  
+   // or      H x W x ... x F  for column order layout 
    size_t GetFirstSize() const { 
-      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? fTensor.GetShape().first() : fTensor.GetShape().back(); 
+      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? fTensor.GetShape().front() : fTensor.GetShape().back(); 
    }
+   
+   // 
+   size_t GetHSize() const { 
+      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? fTensor.GetShape()[1] : fTensor.GetShape()[0]; 
+   }
+   size_t GetWSize() const { 
+      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? fTensor.GetShape()[2] : fTensor.GetShape()[1]; 
+   }
+
+   MemoryLayout GetLayout() const { return fTensor.GetMemoryLayout(); }
 
    // Matrix conversion for tensors of shape 2 
    TCpuMatrix<AFloat> GetMatrix() const { 
@@ -402,7 +414,7 @@ public:
             slice[j][0] = 0; 
             slice[j][1] = fTensor.GetShape()[j]; 
             buffsize *= fTensor.GetShape()[j]; 
-         }
+         } 
       }  
       size_t offset = i * buffsize; 
       return TCpuTensor<AFloat>( fBuffer.GetSubBuffer(offset, buffsize)   , fTensor.Slice(slice));
@@ -416,9 +428,31 @@ public:
          data[i] = 0; 
    }
    
-   // access single element - using first 
-   // AFloat   operator()(size_t k, size_t i, size_t j) const {return fBuffer[j * fNRows + i];}
-   // AFloat &   operator()(size_t k, size_t i, size_t j) {return fBuffer[j * fNRows + i];}
+   // access single element - assume tensor dim is 2 
+   AFloat  & operator()(size_t i, size_t j) { 
+      assert(fTensor.GetShape().size() == 2);
+      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? 
+      fBuffer[i * fTensor.GetShape()[1] + j] : fBuffer[j * fTensor.GetShape()[0] + i];
+   }
+   AFloat   & operator()(size_t i, size_t j, size_t k)  {
+      assert(fTensor.GetShape().size() == 3); 
+      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? 
+      fBuffer[i * fTensor.GetShape()[1]*fTensor.GetShape()[2] + j *  fTensor.GetShape()[2] + k ] : 
+      fBuffer[k * fTensor.GetShape()[0]*fTensor.GetShape()[1] + j *  fTensor.GetShape()[0] + i ];
+   }
+
+    // access single element - assume tensor dim is 2 
+   const AFloat  & operator()(size_t i, size_t j) const { 
+      assert(fTensor.GetShape().size() == 2);
+      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? 
+      fBuffer[i * fTensor.GetShape()[1] + j] : fBuffer[j * fTensor.GetShape()[0] + i];
+   }
+   const AFloat   & operator()(size_t i, size_t j, size_t k) const  {
+      assert(fTensor.GetShape().size() == 3); 
+      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? 
+      fBuffer[i * fTensor.GetShape()[1]*fTensor.GetShape()[2] + j *  fTensor.GetShape()[2] + k ] : 
+      fBuffer[k * fTensor.GetShape()[0]*fTensor.GetShape()[1] + j *  fTensor.GetShape()[0] + i ];
+   }
 
 
 /** Map the given function over the matrix elements. Executed in parallel

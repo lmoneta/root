@@ -21,7 +21,6 @@
 #include "TMVA/DNN/Functions.h"
 #include "TMVA/DNN/CNN/ConvLayer.h"
 
-#include "TMVA/RTensor.hxx"
 
 #include "cuda.h"
 #include "Cuda/CudaBuffers.h"
@@ -55,7 +54,7 @@ public:
     using Scalar_t       = AFloat;
     
     using Matrix_t       = TCudaMatrix<AFloat>;
-    using Tensor_t       = TMVA::Experimental::RTensor<AReal>;
+    using Tensor_t       = std::vector<TCudaMatrix<AFloat>>;
     using DeviceBuffer_t = TCudaDeviceBuffer<AFloat>;
     using HostBuffer_t   = TCudaHostBuffer<AFloat>;
 

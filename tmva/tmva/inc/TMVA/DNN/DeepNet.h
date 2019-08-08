@@ -285,7 +285,7 @@ public:
    Scalar_t Loss(const Matrix_t &groundTruth, const Matrix_t &weights, bool includeRegularization = true) const;
 
    /*! Function for evaluating the loss, based on the propagation of the given input. */
-   Scalar_t Loss(const Tensor_t &input, const Matrix_t &groundTruth, const Matrix_t &weights,
+   Scalar_t Loss(Tensor_t &input, const Matrix_t &groundTruth, const Matrix_t &weights,
                  bool inTraining = false, bool includeRegularization = true);
 
    /*! Function for computing the regularizaton term to be added to the loss function  */
@@ -295,7 +295,7 @@ public:
    void Prediction(Matrix_t &predictions, EOutputFunction f) const;
 
    /*! Prediction for the given inputs, based on what network learned. */
-   void Prediction(Matrix_t &predictions, std::vector<Matrix_t> input, EOutputFunction f);
+   void Prediction(Matrix_t &predictions, Tensor_t & input, EOutputFunction f);
 
    /*! Print the Deep Net Info */
    void Print() const;
@@ -918,21 +918,24 @@ template <typename Architecture_t, typename Layer_t>
 auto TDeepNet<Architecture_t, Layer_t>::Backward(const Tensor_t &input, const Matrix_t &groundTruth,
                                                  const Matrix_t &weights) -> void
 {
-   Tensor_t inp1;
-   Tensor_t inp2;
+   //Tensor_t inp1;
+   //Tensor_t inp2;
    // Last layer should be dense layer
-   evaluateGradients<Architecture_t>(fLayers.back()->GetActivationGradientsAt(0), this->GetLossFunction(), groundTruth,
-                                     fLayers.back()->GetOutputAt(0), weights);
+   Matrix_t last_actgrad = fLayers.back()->GetActivationGradientsAt(0);
+   Matrix_t last_output = fLayers.back()->GetOutputAt(0);
+   evaluateGradients<Architecture_t>(last_actgrad, this->GetLossFunction(), groundTruth,
+                                     last_output, weights);
+                                     
    for (size_t i = fLayers.size() - 1; i > 0; i--) {
       auto &activation_gradient_backward = fLayers[i - 1]->GetActivationGradients();
       auto &activations_backward = fLayers[i - 1]->GetOutput();
-      fLayers[i]->Backward(activation_gradient_backward, activations_backward, inp1, inp2);
+      fLayers[i]->Backward(activation_gradient_backward, activations_backward);
    }
 
    // need to have a dummy tensor (size=0) to pass for activation gradient backward which
    // are not computed for the first layer 
-   Tensor_t dummy;
-   fLayers[0]->Backward(dummy, input, inp1, inp2);
+   Tensor_t dummy ( {0});
+   fLayers[0]->Backward(dummy, input);
 }
 
 #ifdef USE_PARALLEL_DEEPNET
@@ -1158,7 +1161,7 @@ auto TDeepNet<Architecture_t, Layer_t>::Loss(const Matrix_t &groundTruth, const 
 
 //______________________________________________________________________________
 template <typename Architecture_t, typename Layer_t>
-auto TDeepNet<Architecture_t, Layer_t>::Loss(const Tensor_t &input, const Matrix_t &groundTruth,
+auto TDeepNet<Architecture_t, Layer_t>::Loss(Tensor_t &input, const Matrix_t &groundTruth,
                                              const Matrix_t &weights, bool inTraining, bool includeRegularization)
    -> Scalar_t
 {
@@ -1184,13 +1187,13 @@ auto TDeepNet<Architecture_t, Layer_t>::RegularizationTerm() const -> Scalar_t
 template <typename Architecture_t, typename Layer_t>
 auto TDeepNet<Architecture_t, Layer_t>::Prediction(Matrix_t &predictions, EOutputFunction f) const -> void
 {
-   // Last layer should not be deep
+   // Last layer should not be deep (assume output is a matrix)
    evaluate<Architecture_t>(predictions, f, fLayers.back()->GetOutputAt(0));
 }
 
 //______________________________________________________________________________
 template <typename Architecture_t, typename Layer_t>
-auto TDeepNet<Architecture_t, Layer_t>::Prediction(Matrix_t &predictions, std::vector<Matrix_t> input,
+auto TDeepNet<Architecture_t, Layer_t>::Prediction(Matrix_t &predictions, Tensor_t & input,
                                                    EOutputFunction f) -> void
 {
    Forward(input, false);
