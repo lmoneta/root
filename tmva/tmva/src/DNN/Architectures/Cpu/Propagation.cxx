@@ -22,62 +22,62 @@ namespace TMVA {
 namespace DNN {
 
 
-template <typename AFloat>
-void TCpu<AFloat>::MultiplyTranspose(Tensor_t &output, const Tensor_t &input,
-                                     const TCpuMatrix<AFloat> &Weights)
-{
-   // apply  multiply transpose. Assume tensor has size == 2  and is column major ordering
-   //int m = (int)input.GetNrows();
-   //int k = (int)input.GetNcols();
+// template <typename AFloat>
+// void TCpu<AFloat>::MultiplyTranspose(Tensor_t &output, const Tensor_t &input,
+//                                      const TCpuMatrix<AFloat> &Weights)
+// {
+//    // apply  multiply transpose. Assume tensor has size == 2  and is column major ordering
+//    //int m = (int)input.GetNrows();
+//    //int k = (int)input.GetNcols();
     
-   int n = (int)Weights.GetNrows();
-   int m = (int)input.GetShape()[0];
-   int k = (int)input.GetShape()[1];
+//    int n = (int)Weights.GetNrows();
+//    int m = (int)input.GetShape()[0];
+//    int k = (int)input.GetShape()[1];
 
-   if ((int)output.GetShape()[0] != m) {
-      Error("MultiplyTranspose","Invalid input - output  rows  - input:  %d != output : %d",m, (int) output.GetNrows());
-      R__ASSERT((int) GetShape()[0] == m);
-   }
-   if ((int)output.GetShape()[1] != n) {
-      Error("MultiplyTranspose","Invalid output cols or weight  rows  - output cols:  %d != weight rows : %d",(int) output.GetNcols(),n);
-      R__ASSERT((int) GetShape()[1] == n);
-   }
-   if ((int)Weights.GetNcols() != k) {
-      Error("MultiplyTranspose","Invalid input cols or weight cols  - input cols:  %d != weight cols : %d", k, (int) Weights.GetNcols());
-      R__ASSERT((int) Weights.GetNcols() == k); 
-   }
+//    if ((int)output.GetShape()[0] != m) {
+//       Error("MultiplyTranspose","Invalid input - output  rows  - input:  %d != output : %d",m, (int) output.GetNrows());
+//       R__ASSERT((int) GetShape()[0] == m);
+//    }
+//    if ((int)output.GetShape()[1] != n) {
+//       Error("MultiplyTranspose","Invalid output cols or weight  rows  - output cols:  %d != weight rows : %d",(int) output.GetNcols(),n);
+//       R__ASSERT((int) GetShape()[1] == n);
+//    }
+//    if ((int)Weights.GetNcols() != k) {
+//       Error("MultiplyTranspose","Invalid input cols or weight cols  - input cols:  %d != weight cols : %d", k, (int) Weights.GetNcols());
+//       R__ASSERT((int) Weights.GetNcols() == k); 
+//    }
 
-   char transa = 'N';
-   char transb = 'T';
+//    char transa = 'N';
+//    char transb = 'T';
 
-   AFloat alpha = 1.0;
-   AFloat beta = 0.0;
+//    AFloat alpha = 1.0;
+//    AFloat beta = 0.0;
 
-   const AFloat *A = input.GetData();
-   const AFloat *B = Weights.GetRawDataPointer();
-   AFloat *C = output.GetData();
+//    const AFloat *A = input.GetData();
+//    const AFloat *B = Weights.GetRawDataPointer();
+//    AFloat *C = output.GetData();
 
-   ::TMVA::DNN::Blas::Gemm(&transa, &transb, &m, &n, &k, &alpha, A, &m, B, &n, &beta, C, &m);
-}
+//    ::TMVA::DNN::Blas::Gemm(&transa, &transb, &m, &n, &k, &alpha, A, &m, B, &n, &beta, C, &m);
+// }
 
-template <typename AFloat>
-void TCpu<AFloat>::AddRowWise(TCpuMatrix<AFloat> &output, const TCpuMatrix<AFloat> &biases)
-{
-   int m = (int)output.GetShape()[0];
-   int n = (int)output.GetShape()[1];
+// template <typename AFloat>
+// void TCpu<AFloat>::AddRowWise(TCpuMatrix<AFloat> &output, const TCpuMatrix<AFloat> &biases)
+// {
+//    int m = (int)output.GetShape()[0];
+//    int n = (int)output.GetShape()[1];
 
-   int inc = 1.0;
-   AFloat alpha = 1.0;
+//    int inc = 1.0;
+//    AFloat alpha = 1.0;
 
-   AFloat *A = output.GetData();
-   const AFloat *x = TCpuMatrix<AFloat>::GetOnePointer();
-   const AFloat *y = biases.GetRawDataPointer();
+//    AFloat *A = output.GetData();
+//    const AFloat *x = TCpuMatrix<AFloat>::GetOnePointer();
+//    const AFloat *y = biases.GetRawDataPointer();
 
-   R__ASSERT(m <= (int)TCpuMatrix<AFloat>::GetOnePointerSize()); 
-   R__ASSERT(n <= (int)(biases.GetNcols()*biases.GetNrows())); 
+//    R__ASSERT(m <= (int)TCpuMatrix<AFloat>::GetOnePointerSize()); 
+//    R__ASSERT(n <= (int)(biases.GetNcols()*biases.GetNrows())); 
 
-   ::TMVA::DNN::Blas::Ger(&m, &n, &alpha, x, &inc, y, &inc, A, &m);
-}
+//    ::TMVA::DNN::Blas::Ger(&m, &n, &alpha, x, &inc, y, &inc, A, &m);
+// }
 
 template <typename AFloat>
 void TCpu<AFloat>::MultiplyTranspose(TCpuMatrix<AFloat> &output, const TCpuMatrix<AFloat> &input,
@@ -364,14 +364,14 @@ void TCpu<AFloat>::ConvLayerForward(TCpuTensor<AFloat> & output,
    size_t nLocalViews = height * width;
    size_t nLocalViewPixels = params.inputDepth * params.filterHeight * params.filterWidth;
 
-   R__ASSERT( input.size() > 0);
+   R__ASSERT( input.GetSize() > 0);
    std::vector<int> forwardIndices(nLocalViews * nLocalViewPixels);
-   Im2colIndices(forwardIndices, input[0], nLocalViews, params.inputHeight, params.inputWidth, params.filterHeight,
+   Im2colIndices(forwardIndices, input.At(0).GetMatrix(), nLocalViews, params.inputHeight, params.inputWidth, params.filterHeight,
                  params.filterWidth, params.strideRows, params.strideCols, params.paddingHeight, params.paddingWidth);
 
    //this should fix multi-thread inizializations of arrays
    TCpuMatrix<AFloat>::InitializeOneVector(nLocalViews);
-   TCpuMatrix<AFloat>::InitializeOneVector(output[0].GetNcols());   // since it is used in AddCOnvBiases
+   TCpuMatrix<AFloat>::InitializeOneVector(output.GetWSize());   // since it is used in AddCOnvBiases
 
 
    auto f = [&] (UInt_t i)
@@ -386,8 +386,9 @@ void TCpu<AFloat>::ConvLayerForward(TCpuTensor<AFloat> & output,
 
        Im2colFast(inputTr, input.At(i).GetMatrix(), forwardIndices);
 
-       MultiplyTranspose(output.At(i).GetMatrix(), weights, inputTr);
-       AddConvBiases(output.At(i).GetMatrix(), biases);
+       Matrix_t output_m = output.At(i).GetMatrix();
+       MultiplyTranspose(output_m, weights, inputTr);
+       AddConvBiases(output_m, biases);
 
    };
 
@@ -470,7 +471,7 @@ void TCpu<AFloat>::CalculateConvActivationGradients(TCpuTensor<AFloat> &activati
    // An entire convolution follows
 
     std::vector<int> vIndices( tempNLocalViews * tempNLocalViewPixels );
-    Im2colIndices(vIndices, df.At(i).GetMatrix(), tempNLocalViews, height, width, filterHeight, filterWidth, tempStrideRows, tempStrideCols,
+    Im2colIndices(vIndices, df.At(0).GetMatrix(), tempNLocalViews, height, width, filterHeight, filterWidth, tempStrideRows, tempStrideCols,
              tempZeroPaddingHeight, tempZeroPaddingWidth);
 
 
@@ -490,7 +491,8 @@ void TCpu<AFloat>::CalculateConvActivationGradients(TCpuTensor<AFloat> &activati
        //TMVA_DNN_PrintTCpuMatrix(df[i],"df[i]");
        //TMVA_DNN_PrintTCpuMatrix(dfTr,"dfTr");
 
-       MultiplyTranspose(activationGradientsBackward.At(i).GetMatrix(), rotWeights, dfTr);
+      Matrix_t agb_m = activationGradientsBackward.At(i).GetMatrix();
+      MultiplyTranspose(agb_m, rotWeights, dfTr);
 
        //TMVA_DNN_PrintTCpuMatrix(activationGradientsBackward[i],"activGrad-result");
 
@@ -539,10 +541,10 @@ void TCpu<AFloat>::CalculateConvWeightGradients(TCpuMatrix<AFloat> &weightGradie
    //    //TMVA_DNN_PrintTCpuMatrix(df[i],"df");
    //    //TMVA_DNN_PrintTCpuMatrix(activationsBackward[i],"df");
       
-   }
+   //}
    //TCpuTensor<AFloat> vres( { batchSize, depth, nLocalViewPIxels} );
-   TCpuTensor<AFloat> vres( batchSize, depth, nLocalViewPIxels );
-   
+   TCpuTensor<AFloat> vres( batchSize, depth, nLocalViewPixels);
+
    auto fmap = [&](int i) { 
  
       //TMVA_DNN_PrintTCpuMatrix(df[i],"df-i");
@@ -560,7 +562,8 @@ void TCpu<AFloat>::CalculateConvWeightGradients(TCpuMatrix<AFloat> &weightGradie
       //std::cout << "doing im2colfast" << std::endl;
       //TMVA_DNN_PrintTCpuMatrix(xTr,"xTr-i");
       //TMVA_DNN_PrintTCpuMatrix(activationsBackward[i],"actbackward-i");
-      Multiply(vres.At(i).GetMatrix(), df.At(i).GetMatrix(), xTr);
+      Matrix_t mres = vres.At(i).GetMatrix();
+      Multiply( mres, df.At(i).GetMatrix(), xTr);
       //TMVA_DNN_PrintTCpuMatrix(vres[i],"res_ofMT");
 
       return;
@@ -570,7 +573,7 @@ void TCpu<AFloat>::CalculateConvWeightGradients(TCpuMatrix<AFloat> &weightGradie
    TCpuMatrix<AFloat>::GetThreadExecutor().Foreach(fmap, ROOT::TSeqI( batchSize ) );
 
 //   auto freduce = [&](const TCpuTensor<AFloat> & vres) { 
-      R__ASSERT(vres.size() == batchSize); 
+      R__ASSERT(vres.GetFirstSize() == batchSize); 
       for (size_t i = 0; i < batchSize; i++) {
          //TMVA_DNN_PrintTCpuMatrix(vres[i],"res");
          Matrix_t vres_m = vres.At(i).GetMatrix(); 
@@ -612,44 +615,52 @@ void TCpu<AFloat>::CalculateConvBiasGradients(TCpuMatrix<AFloat> &biasGradients,
 
 //____________________________________________________________________________
 template <typename AFloat>
-void TCpu<AFloat>::Downsample(TCpuMatrix<AFloat> &A, TCpuMatrix<AFloat> &B, const TCpuMatrix<AFloat> &C,
+void TCpu<AFloat>::Downsample(TCpuTensor<AFloat> &tA, TCpuTensor<AFloat> &tB, const TCpuTensor<AFloat> &tC,
                               size_t imgHeight, size_t imgWidth, size_t fltHeight, size_t fltWidth, size_t strideRows,
                               size_t strideCols)
 {
    // A is output , B is a cached index tensor used for backward pass and C is the input
 
-   // image boudaries
-   int imgHeightBound = imgHeight - (fltHeight - 1) / 2 - 1;
-   int imgWidthBound = imgWidth - (fltWidth - 1) / 2 - 1;
-   size_t currLocalView = 0;
+   assert( tA.GetFirstSize() == tC.GetFirstSize());
+   for (int l = 0; l < tC.GetFirstSize(); ++l) {
 
-   // centers
-   for (int i = fltHeight / 2; i <= imgHeightBound; i += strideRows) {
-      for (int j = fltWidth / 2; j <= imgWidthBound; j += strideCols) {
-         // within local views
-         for (int m = 0; m < (Int_t)C.GetNrows(); m++) {
-            AFloat value = -std::numeric_limits<AFloat>::max();
+      Matrix_t A = tA.At(l).GetMatrix();
+      Matrix_t B = tB.At(l).GetMatrix();
+      Matrix_t C = tC.At(l).GetMatrix();
 
-            for (int k = i - fltHeight / 2; k <= Int_t(i + (fltHeight - 1) / 2); k++) {
-               for (int l = j - fltWidth / 2; l <= Int_t(j + (fltWidth - 1) / 2); l++) {
-                  if (C(m, k * imgWidth + l) > value) {
-                     value = C(m, k * imgWidth + l);
-                     B(m, currLocalView) = k * imgWidth + l;
+      // image boudaries
+      int imgHeightBound = imgHeight - (fltHeight - 1) / 2 - 1;
+      int imgWidthBound = imgWidth - (fltWidth - 1) / 2 - 1;
+      size_t currLocalView = 0;
+
+      // centers
+      for (int i = fltHeight / 2; i <= imgHeightBound; i += strideRows) {
+         for (int j = fltWidth / 2; j <= imgWidthBound; j += strideCols) {
+            // within local views
+            for (int m = 0; m < (Int_t)C.GetNrows(); m++) {
+               AFloat value = -std::numeric_limits<AFloat>::max();
+
+               for (int k = i - fltHeight / 2; k <= Int_t(i + (fltHeight - 1) / 2); k++) {
+                  for (int l = j - fltWidth / 2; l <= Int_t(j + (fltWidth - 1) / 2); l++) {
+                     if (C(m, k * imgWidth + l) > value) {
+                        value = C(m, k * imgWidth + l);
+                        B(m, currLocalView) = k * imgWidth + l;
+                     }
                   }
                }
+               A(m, currLocalView) = value;
             }
-            A(m, currLocalView) = value;
+            currLocalView++;
          }
-         currLocalView++;
       }
    }
 }
 
 //____________________________________________________________________________
 template <typename AFloat>
-void TCpu<AFloat>::MaxPoolLayerBackward(TCpuMatrix<AFloat> &activationGradientsBackward,
-                                        const TCpuMatrix<AFloat> &activationGradients,
-                                        const TCpuMatrix<AFloat> &indexMatrix,
+void TCpu<AFloat>::MaxPoolLayerBackward(TCpuTensor<AFloat> &activationGradientsBackward,
+                                        const TCpuTensor<AFloat> &activationGradients,
+                                        const TCpuTensor<AFloat> &indexMatrix,
                                         size_t /* imgHeight */,
                                         size_t /* imgWidth */,
                                         size_t /* fltHeight */,
@@ -658,19 +669,28 @@ void TCpu<AFloat>::MaxPoolLayerBackward(TCpuMatrix<AFloat> &activationGradientsB
                                         size_t /* strideCols */,
                                         size_t nLocalViews)
 {
-   size_t depth = activationGradientsBackward.GetNrows();
 
-   for (size_t j = 0; j < depth; j++) {
-      // initialize to zeros
-      for (size_t t = 0; t < (size_t)activationGradientsBackward.GetNcols(); t++) {
-         activationGradientsBackward(j, t) = 0;
-      }
+   assert( activationGradientsBackward.GetFirstSize() == activationGradients.GetFirstSize());
+   for (int l = 0; l < activationGradients.GetFirstSize(); ++l) {
 
-      // set values
-      for (size_t k = 0; k < nLocalViews; k++) {
-         AFloat grad = activationGradients(j, k);
-         size_t winningIdx = indexMatrix(j, k);
-         activationGradientsBackward(j, winningIdx) += grad;
+      Matrix_t activationGradientsBackward_m = activationGradientsBackward.At(l).GetMatrix(); 
+      Matrix_t activationGradients_m = activationGradients.At(l).GetMatrix(); 
+      Matrix_t indexMatrix_m = indexMatrix.At(l).GetMatrix(); 
+
+      size_t depth = activationGradientsBackward_m.GetNrows();
+
+      for (size_t j = 0; j < depth; j++) {
+         // initialize to zeros
+         for (size_t t = 0; t < (size_t)activationGradientsBackward_m.GetNcols(); t++) {
+            activationGradientsBackward_m(j, t) = 0;
+         }
+
+         // set values
+         for (size_t k = 0; k < nLocalViews; k++) {
+            AFloat grad = activationGradients_m(j, k);
+            size_t winningIdx = indexMatrix_m(j, k);
+            activationGradientsBackward_m(j, winningIdx) += grad;
+         }
       }
    }
 }
@@ -753,8 +773,8 @@ void TCpu<AFloat>::Deflatten(TCpuTensor<AFloat> &A, const TCpuTensor<AFloat> &B 
 }
 
 //______________________________________________________________________________
-template <typename AReal>
-void TCpu<AReal>::Rearrange(Tensor_t &out, const Tensor_t &in)
+template <typename AFloat>
+void TCpu<AFloat>::Rearrange(Tensor_t &out, const Tensor_t &in)
 {
    // B x T x D out --- T x B x D in*/
    assert ( out.GetShape().size() == 3 && in.GetShape().size() == 3);
@@ -765,7 +785,7 @@ void TCpu<AReal>::Rearrange(Tensor_t &out, const Tensor_t &in)
    size_t D = out.GetWSize();  // 2 for row-major
    if ((T != in.GetFirstSize()) || (B != in.GetHSize()) || (D != in.GetWSize()) ) {
       std::cout << "Incompatible Dimensions\n"
-                << in.GetFirstSize() << "x" << in.GetHSize() << "x" << in[0].GetWSize() << " --> " << B << "x" << T << "x"
+                << in.GetFirstSize() << "x" << in.GetHSize() << "x" << in.GetWSize() << " --> " << B << "x" << T << "x"
                 << D << "\n";
       return;
    }

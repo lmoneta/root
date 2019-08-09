@@ -66,7 +66,7 @@ public:
     operator AFloat * () const {return (* fBuffer) + fOffset;}
 
     /** Return sub-buffer of size \p start starting at element \p offset. */
-    TCpuBuffer GetSubBuffer(size_t offset, size_t start);
+    TCpuBuffer GetSubBuffer(size_t offset, size_t start) const;
 
     AFloat & operator[](size_t i)       {return (*fBuffer.get())[fOffset + i];}
     AFloat   operator[](size_t i) const {return (*fBuffer.get())[fOffset + i];}
@@ -77,6 +77,10 @@ public:
     /** Copy data to another buffer. No real copying is performed, only the
      *  data pointers are swapped. */
     void CopyTo(TCpuBuffer &);
+
+    /**
+     * copy pointer from an external 
+     */
 
     size_t GetSize() const {return fSize;}
 };

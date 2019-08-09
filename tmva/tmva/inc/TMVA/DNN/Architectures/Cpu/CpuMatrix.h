@@ -91,8 +91,10 @@ class TCpuMatrix
 private:
    static std::vector<AFloat> fOnes;  ///< Vector filled with ones used for BLAS calls.
 
+public:
    TCpuBuffer<AFloat> fBuffer; ///< The buffer holding the matrix elements
                                ///< in column-major format.
+private:
    size_t     fNCols;
    size_t     fNRows;
 
@@ -419,7 +421,8 @@ public:
       size_t offset = i * buffsize; 
       return TCpuTensor<AFloat>( fBuffer.GetSubBuffer(offset, buffsize)   , fTensor.Slice(slice));
    }
-   TCpuTensor<AFloat>  At(size_t i ) { return (*this)(i); }
+   TCpuTensor<AFloat>  At(size_t i )  { return (*this)(i); }
+   TCpuTensor<AFloat>  At(size_t i )  const { return (const_cast<TCpuTensor<AFloat> &>(*this)) (i); }
 
    // set all the tensor contents to zero
    void Zero() {

@@ -308,7 +308,8 @@ public:
    static void Dropout(Tensor_t & A, Scalar_t p);
 
    static void Dropout(Matrix_t & A, Scalar_t p) { 
-      Dropout( MatrixToTensor(A), p );
+      Tensor_t tA(A);
+      Dropout( tA, p );
    }
 
    ///@}
@@ -512,10 +513,11 @@ public:
    static void Hadamard(Tensor_t &A,
                         const Tensor_t &B);
    static void Hadamard(Matrix_t &A,
-                        const Matrix_t &B) {
-      Tensor_t tA(A);
-      Hadamard( tA, Tensor_t(B));
-   }
+                        const Matrix_t &B);
+   // {
+   //    Tensor_t tA(A);
+   //    Hadamard( tA, Tensor_t(B));
+   // }
 
    /** Sum columns of (m x n) matrixx \p A and write the results into the first
     * m elements in \p A.

@@ -94,11 +94,7 @@ private:
    using MatrixImpl_t =  typename ArchitectureImpl_t::Matrix_t;
    using TensorImpl_t =  typename ArchitectureImpl_t::Tensor_t;
    using ScalarImpl_t =  typename ArchitectureImpl_t::Scalar_t;
-
-   TensorImpl_t fXInput;  // input tensor used to evaluate fNet
-   std::unique_ptr<MatrixImpl_t> fYHat;   // output prediction matrix of fNet
-   std::unique_ptr<DeepNetImpl_t> fNet;
-   
+ 
 
    /*! The option handling methods */
    void DeclareOptions();
@@ -190,6 +186,11 @@ private:
 
    KeyValueVector_t fSettings;                       ///< Map for the training strategy
    std::vector<TTrainingSettings> fTrainingSettings; ///< The vector defining each training strategy
+
+   TensorImpl_t fXInput;  // input tensor used to evaluate fNet
+   std::unique_ptr<MatrixImpl_t> fYHat;   // output prediction matrix of fNet
+   std::unique_ptr<DeepNetImpl_t> fNet;
+  
 
    ClassDef(MethodDL, 0);
 

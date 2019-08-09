@@ -191,7 +191,7 @@ auto TDenseLayer<Architecture_t>::Backward(Tensor_t &gradients_backward, const T
 ////                                           /*inp2*/) -> void
 {
    if (gradients_backward.GetSize() == 0) {
-      Tensor_t dummy( {0, 0});
+      Tensor_t dummy;
       Architecture_t::Backward(dummy, this->GetWeightGradientsAt(0), this->GetBiasGradientsAt(0),
                                this->GetDerivatives(), this->GetActivationGradients(), this->GetWeightsAt(0),
                                activations_backward);

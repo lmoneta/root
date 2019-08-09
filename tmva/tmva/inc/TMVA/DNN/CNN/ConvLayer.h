@@ -368,7 +368,7 @@ auto TConvLayer<Architecture_t>::Print() const -> void
    std::cout << " H = " << this->GetFilterHeight() << " ) ";
    //std::cout << "\t Local Views = " << this->GetNLocalViews()  << " " ;
    if (this->GetOutput().GetSize() > 0) {
-      std::cout << "\tOutput = ( " << this->GetOutput().size() << " , " << this->GetOutput()[0].GetNrows() << " , " << this->GetOutput()[0].GetNcols() << " ) ";
+      std::cout << "\tOutput = ( " << this->GetOutput().GetFirstSize() << " , " << this->GetOutput().GetHSize() << " , " << this->GetOutput().GetWSize() << " ) ";
    }
    std::vector<std::string> activationNames = { "Identity","Relu","Sigmoid","Tanh","SymmRelu","SoftSign","Gauss" };
    std::cout << "\t Activation Function = ";

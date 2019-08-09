@@ -307,7 +307,7 @@ auto TBatchNormLayer<Architecture_t>::Backward(Tensor_t &gradients_backward,
    // outputs gradients
    Matrix_t &dgamma = this->GetWeightGradientsAt(0);
    Matrix_t &dbeta = this->GetWeightGradientsAt(1);
-   Matrix_t &dx = gradients_backward.At(0).GetMatrix();
+   Matrix_t dx = gradients_backward.At(0).GetMatrix();
 
    // compute first gradients for gamma and beta
    for (int k = 0; k < d; k++) {
