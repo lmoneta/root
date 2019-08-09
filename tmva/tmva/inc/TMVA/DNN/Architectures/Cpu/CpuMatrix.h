@@ -437,11 +437,13 @@ public:
       return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? 
       fBuffer[i * fTensor.GetShape()[1] + j] : fBuffer[j * fTensor.GetShape()[0] + i];
    }
+    // access single element - assume tensor dim is 3. First index i is always the major  indipendent of row-major or column major 
+    // row- major  I - J - K    . Column- major  is  J - K - I  
    AFloat   & operator()(size_t i, size_t j, size_t k)  {
       assert(fTensor.GetShape().size() == 3); 
       return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? 
       fBuffer[i * fTensor.GetShape()[1]*fTensor.GetShape()[2] + j *  fTensor.GetShape()[2] + k ] : 
-      fBuffer[k * fTensor.GetShape()[0]*fTensor.GetShape()[1] + j *  fTensor.GetShape()[0] + i ];
+      fBuffer[i * fTensor.GetShape()[0]*fTensor.GetShape()[1] + k *  fTensor.GetShape()[0] + j ];   // note that is J-K-I
    }
 
     // access single element - assume tensor dim is 2 

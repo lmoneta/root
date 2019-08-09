@@ -113,6 +113,14 @@ inline void evaluate(typename Architecture_t::Tensor_t &A,
         break;
     }
 }
+/*  impl using Matrix */
+template<typename Architecture_t>
+inline void evaluate(typename Architecture_t::Matrix_t &A,
+                    EActivationFunction f)
+{
+    typename Architecture_t::Tensor_t tA(A);
+    evaluate(tA,f);
+}
 
 
 /*! Compute the first partial derivative of the activation function for
@@ -141,8 +149,16 @@ inline void evaluateDerivative(typename Architecture_t::Tensor_t & B,
         break;
     }
 }
-
-
+/*  impl using Matrix */
+template<typename Architecture_t>
+inline void evaluateDerivative(typename Architecture_t::Matrix_t & B,
+                                EActivationFunction f,
+                                const typename Architecture_t::Matrix & A)
+{
+    typename Architecture_t::Tensor_t tA(A);
+    typename Architecture_t::Tensor_t tB(B);
+    evaluateDerivative(tB, f, tA);
+}
 //______________________________________________________________________________
 //
 //  Output Functions

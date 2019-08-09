@@ -24,7 +24,7 @@
 #define TMVA_TEST_DNN_TEST_ACTIVATION_FUNCTIONS
 
 #include "TMatrixT.h"
-#include "TMVA/DNN/Architectures/Reference.h"
+//#include "TMVA/DNN/Architectures/Reference.h"
 #include "TMVA/DNN/Functions.h"
 #include "TMVA/DNN/Net.h"
 #include "Utility.h"

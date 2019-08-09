@@ -115,12 +115,15 @@ if ( old-dnn-test )
   ROOT_EXECUTABLE(testDataLoaderCpu TestDataLoaderCpu.cxx
     LIBRARIES ${Libraries})
   ROOT_ADD_TEST(TMVA-DNN-Data-Loader-Cpu COMMAND testDataLoaderCpu)
-endif ()
 
   # DNN - Minimization CPU
   ROOT_EXECUTABLE(testMinimizationCpu TestMinimizationCpu.cxx
     LIBRARIES ${Libraries})
   ROOT_ADD_TEST(TMVA-DNN-Minimization-Cpu COMMAND testMinimizationCpu)
+  
+endif ()
+
+  
 
   # DNN - Optimization CPU
   ROOT_EXECUTABLE(testOptimizationCpu TestOptimizationCpu.cxx
