@@ -174,7 +174,7 @@ auto TReshapeLayer<Architecture_t>::Backward(Tensor_t &gradients_backward, const
       // deflatten in backprop
       // size_t nRows = gradients_backward[0].GetNrows();
       // size_t nCols = gradients_backward[0].GetNcols();
-      Architecture_t::Deflatten(gradients_backward, this->GetActivationGradients);
+      Architecture_t::Deflatten(gradients_backward, this->GetActivationGradients());
       return;
    } else {
       // size_t input_size = this->GetActivationGradients().size();
@@ -182,7 +182,7 @@ auto TReshapeLayer<Architecture_t>::Backward(Tensor_t &gradients_backward, const
       //    // deflatten operator:  flatten in bakprop
          size_t nRows = this->GetActivationGradientsAt(0).GetNrows();
          size_t nCols = this->GetActivationGradientsAt(0).GetNcols();
-         Architecture_t::Flatten(gradients_backward[0], this->GetActivationGradients() );
+         Architecture_t::Flatten(gradients_backward, this->GetActivationGradients() );
          return;
       //}
       // if (size == input_size) {
@@ -200,7 +200,7 @@ auto TReshapeLayer<Architecture_t>::Print() const -> void
 {
    std::cout << " RESHAPE Layer \t ";
    std::cout << "Input = ( " << this->GetInputDepth() << " , " <<  this->GetInputHeight() << " , " << this->GetInputWidth() << " ) ";
-   if (this->GetOutput().size() > 0) {
+   if (this->GetOutput().GetSize() > 0) {
       std::cout << "\tOutput = ( " << this->GetOutput().size() << " , " << this->GetOutput()[0].GetNrows() << " , " << this->GetOutput()[0].GetNcols() << " ) ";
    }
    std::cout << std::endl;

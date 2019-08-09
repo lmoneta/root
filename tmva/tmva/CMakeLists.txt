@@ -96,7 +96,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(TMVA
     TMVA/MethodCrossValidation.h
     TMVA/MethodCuts.h
     TMVA/MethodDL.h
-    TMVA/MethodDNN.h
+#TMVA/MethodDNN.h
     TMVA/MethodDT.h
     TMVA/MethodFDA.h
     TMVA/MethodFisher.h
@@ -258,7 +258,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(TMVA
     src/MethodCrossValidation.cxx
     src/MethodCuts.cxx
     src/MethodDL.cxx
-    src/MethodDNN.cxx
+#    src/MethodDNN.cxx
     src/MethodDT.cxx
     src/MethodFDA.cxx
     src/MethodFisher.cxx

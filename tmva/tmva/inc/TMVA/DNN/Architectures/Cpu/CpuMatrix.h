@@ -375,14 +375,14 @@ public:
       return TCpuMatrix<AFloat>(fBuffer, fTensor.GetShape()[0], fTensor.GetShape()[1]);
    }
    // copy tensor content in a given matrix. No copy is done, just swapping the pointers
-   static void TensorToMatrix(const TMVA::Experimental::RTensor<AFloat> & tensor, TCpuMatrix<AFloat> & matrix) { 
+   static void TensorToMatrix(const TCpuTensor<AFloat> & tensor, TCpuMatrix<AFloat> & matrix) {
       assert (tensor.GetShape().size() == 2);
       assert( tensor.GetShape()[0] == matrix.GetNRows() );
       assert( tensor.GetShape()[1] == matrix.GetNCols() ); 
       matrix.fBuffer = tensor.fBuffer; 
    }
    // copy matrix content in a given tensor. No copy is done, just swapping the pointers
-   static void MatrixToTensor(const TCpuMatrix<AFloat> & matrix, TMVA::Experimental::RTensor<AFloat> & tensor) { 
+   static void MatrixToTensor(const TCpuMatrix<AFloat> & matrix, TCpuTensor<AFloat> & tensor) { 
       if (tensor.GetShape().size() != 2) tensor.fTensor.Squeeze();
       assert (tensor.GetShape().size() == 2);
       assert( tensor.GetShape()[0] == matrix.GetNRows() );

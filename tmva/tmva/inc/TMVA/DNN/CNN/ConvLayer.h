@@ -284,7 +284,7 @@ auto TConvLayer<Architecture_t>::Forward(Tensor_t &input, bool /*applyDropout*/)
                       this->GetDepth(), this->GetFilterHeight(), this->GetFilterWidth(),
                       this->GetStrideRows(), this->GetStrideCols(), this->GetPaddingHeight(), this->GetPaddingWidth());
 
-   R__ASSERT( input.size() > 0);
+   //R__ASSERT( input.size() > 0);
    Architecture_t::ConvLayerForward(this->GetOutput(), this->GetDerivatives(), input, this->GetWeightsAt(0),
                                     this->GetBiasesAt(0), params, this->GetActivationFunction(),
                                     this->GetForwardMatrices());
@@ -367,7 +367,7 @@ auto TConvLayer<Architecture_t>::Print() const -> void
    std::cout << "\t Filter ( W = " << this->GetFilterWidth() << " , ";
    std::cout << " H = " << this->GetFilterHeight() << " ) ";
    //std::cout << "\t Local Views = " << this->GetNLocalViews()  << " " ;
-   if (this->GetOutput().size() > 0) {
+   if (this->GetOutput().GetSize() > 0) {
       std::cout << "\tOutput = ( " << this->GetOutput().size() << " , " << this->GetOutput()[0].GetNrows() << " , " << this->GetOutput()[0].GetNcols() << " ) ";
    }
    std::vector<std::string> activationNames = { "Identity","Relu","Sigmoid","Tanh","SymmRelu","SoftSign","Gauss" };

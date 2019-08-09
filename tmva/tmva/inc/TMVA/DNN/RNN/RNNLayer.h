@@ -267,7 +267,8 @@ auto inline TBasicRNNLayer<Architecture_t>::Forward(Tensor_t &input, bool /*isTr
    if (!this->fRememberState) InitState(DNN::EInitialization::kZero);
    for (size_t t = 0; t < fTimeSteps; ++t) {
       Matrix_t arrInput_m = arrInput.At(t).GetMatrix();
-      CellForward(arrInput_m, fDerivatives.At(t).GetMatrix());
+      Matrix_t df_m = fDerivatives.At(t).GetMatrix();
+      CellForward(arrInput_m, df_m );
       Matrix_t arrOutput_m = arrOutput.At(t).GetMatrix();
       Architecture_t::Copy(arrOutput_m, fState);
    }

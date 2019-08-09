@@ -183,7 +183,7 @@ auto TMaxPoolLayer<Architecture_t>::Print() const -> void
    std::cout << "\t Filter ( W = " << this->GetFilterWidth() << " , ";
    std::cout << " H = " << this->GetFilterHeight() << " ) ";
 
-   if (this->GetOutput().size() > 0) {
+   if (this->GetOutput().GetSize() > 0) {
       std::cout << "\tOutput = ( " << this->GetOutput().size() << " , " << this->GetOutput()[0].GetNrows() << " , " << this->GetOutput()[0].GetNcols() << " ) ";
    }
    std::cout << std::endl;

@@ -76,7 +76,7 @@ public:
    static void MultiplyTranspose(Tensor_t &output, const Tensor_t &input, const Matrix_t &weights) {
       Matrix_t output_matrix = output.GetMatrix(); 
       MultiplyTranspose( output_matrix, input.GetMatrix(), weights);
-      Tensor_t::MatrixToTensor(output_matrix, output); // this maybe is not needed
+      //ensor_t::MatrixToTensor(output_matrix, output); // this maybe is not needed
    }
 
    /** Add the vectors biases row-wise to the matrix output */
@@ -85,7 +85,7 @@ public:
    static void AddRowWise(Tensor_t &output, const Matrix_t &biases) { 
       Matrix_t output_matrix = output.GetMatrix(); 
       AddRowWise(output_matrix, biases); 
-      Tensor_t::MatrixToTensor(output_matrix, output); // this maybe is not needed
+      //Tensor_t::MatrixToTensor(output_matrix, output); // this maybe is not needed
    }
 
    /** @name Backward Propagation (Dense Layers)
@@ -511,6 +511,11 @@ public:
     */
    static void Hadamard(Tensor_t &A,
                         const Tensor_t &B);
+   static void Hadamard(Matrix_t &A,
+                        const Matrix_t &B) {
+      Tensor_t tA(A);
+      Hadamard( tA, Tensor_t(B));
+   }
 
    /** Sum columns of (m x n) matrixx \p A and write the results into the first
     * m elements in \p A.
