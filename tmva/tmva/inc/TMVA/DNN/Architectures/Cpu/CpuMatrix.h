@@ -397,24 +397,28 @@ public:
    TCpuTensor<AFloat> operator()( size_t i ) { 
       typename TMVA::Experimental::RTensor<AFloat>::Slice_t slice( fTensor.GetShape().size()); 
       size_t buffsize = 1;
-      if (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) { 
-         slice[0][0] = i; 
-         slice[0][1] = i+1; 
+      slice[0].reserve(2);
+      if (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) {
+
+         slice[0].push_back(i);
+         slice[0].push_back(i+1);
          assert(i < fTensor.GetShape()[0] ); 
       
-         for (size_t j = 1; j < slice.size(); ++j) { 
-            slice[j][0] = 0; 
-            slice[j][1] = fTensor.GetShape()[j]; 
+         for (size_t j = 1; j < slice.size(); ++j) {
+            slice[j].reserve(2);
+            slice[j].push_back( 0) ;
+            slice[j].push_back( fTensor.GetShape()[j] );
             buffsize *= fTensor.GetShape()[j]; 
          }
       } else { 
-         slice.back()[0] = i; 
-         slice.back()[1] = i+1; 
+         slice.back().push_back(i);
+         slice.back().push_back(i+1);
          assert(i < fTensor.GetShape().back() ); 
       
-         for (size_t j = 0; j < slice.size()-1; ++j) { 
-            slice[j][0] = 0; 
-            slice[j][1] = fTensor.GetShape()[j]; 
+         for (size_t j = 0; j < slice.size()-1; ++j) {
+            slice[j].reserve(2);
+            slice[j].push_back( 0) ;
+            slice[j].push_back( fTensor.GetShape()[j] );
             buffsize *= fTensor.GetShape()[j]; 
          } 
       }  
