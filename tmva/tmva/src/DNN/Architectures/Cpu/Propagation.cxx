@@ -715,34 +715,28 @@ template <typename AFloat>
 void TCpu<AFloat>::Flatten(TCpuTensor<AFloat> &A, const TCpuTensor<AFloat> &B )
 {
 
-   assert( B.GetShape().size() == 3);
+   //printf ( "input tensor %f \n",B(0,0,0));
+   
+   assert( B.GetShape().size() == 3  );
+   assert( A.GetShape().size() == 3  );
 
-   if (B.GetLayout() == TCpuTensor<AFloat>::MemoryLayout::ColumnMajor ) { 
-      size_t bsize = B.GetFirstSize(); 
-      assert (bsize == B.GetShape().back());
-      size_t nRows = B.GetShape()[0];
-      size_t nCols = B.GetShape()[1];
-      for (size_t i = 0; i < bsize; i++) {
-         for (size_t j = 0; j < nRows; j++) {
-            for (size_t k = 0; k < nCols; k++) {
-                A(i, j * nCols + k) = B(j, k,i);
-            }
-          }
+
+   size_t bsize = B.GetFirstSize(); 
+   size_t nRows = B.GetHSize();
+   size_t nCols = B.GetWSize();
+
+   assert (  A.GetFirstSize() == 1);
+   assert (  A.GetHSize() == bsize);
+   assert (  A.GetWSize() == nRows*nCols);
+
+   for (size_t i = 0; i < bsize; i++) {
+      for (size_t j = 0; j < nRows; j++) {
+         for (size_t k = 0; k < nCols; k++) {
+            A( 0, i, j * nCols + k) = B(i, j, k);
+         }  
       }
    }
-   else { 
-      size_t bsize = B.GetFirstSize(); 
-      assert (bsize == B.GetShape().front());
-      size_t nRows = B.GetShape()[1];
-      size_t nCols = B.GetShape()[2];
-      for (size_t i = 0; i < bsize; i++) {
-         for (size_t j = 0; j < nRows; j++) {
-            for (size_t k = 0; k < nCols; k++) {
-                A(i, j * nCols + k) = B(i, j, k );
-            }
-          }
-      }
-   }
+
    // size_t bsize = B.GetFirstSize();
    // size_t n = B.GetSize()/bsize; 
    // if (B.GetLayout() == TCpuTensor<AFloat>::MemoryLayout::ColumnMajor ) { 
@@ -755,18 +749,21 @@ void TCpu<AFloat>::Flatten(TCpuTensor<AFloat> &A, const TCpuTensor<AFloat> &B )
 template <typename AFloat>
 void TCpu<AFloat>::Deflatten(TCpuTensor<AFloat> &A, const TCpuTensor<AFloat> &B )
 {
+
+   assert( B.GetShape().size() == 3  );
+   assert( A.GetShape().size() == 3  );
+
    size_t size = A.GetFirstSize(); 
-   size_t nRows = (A.GetLayout() == TCpuTensor<AFloat>::MemoryLayout::ColumnMajor ) ?  A.GetShape()[0] : A.GetShape()[1];
-   size_t nCols = (A.GetLayout() == TCpuTensor<AFloat>::MemoryLayout::ColumnMajor ) ?  A.GetShape()[1] : A.GetShape()[2];
-   assert (  B.GetShape()[0] == size);
-   assert (  B.GetShape()[1] == nRows*nCols);
+   size_t nRows = A.GetHSize();
+   size_t nCols = A.GetWSize();
+
+   assert (  B.GetFirstSize() == 1);
+   assert (  B.GetHSize() == size);
+   assert (  B.GetWSize() == nRows*nCols);
    for (size_t i = 0; i < (size_t)size; i++) {
       for (size_t j = 0; j < (size_t)nRows; j++) {
          for (size_t k = 0; k < (size_t)nCols; k++) {
-            if (A.GetLayout() == TCpuTensor<AFloat>::MemoryLayout::ColumnMajor )   
-               A(j, k, i) = B(i, j * nCols + k);
-            else 
-               A(i, j, k) = B(i, j * nCols + k);
+               A(i, j, k) = B(0, i, j * nCols + k);
          }
       }
    }
@@ -792,10 +789,7 @@ void TCpu<AFloat>::Rearrange(Tensor_t &out, const Tensor_t &in)
    for (size_t i = 0; i < B; ++i) {
       for (size_t j = 0; j < T; ++j) {
          for (size_t k = 0; k < D; ++k) {
-            if (out.GetLayout() == TCpuTensor<AFloat>::MemoryLayout::ColumnMajor )
-               out( j, k, i ) = in( i, k, j );
-            else 
-               out( i, j, k ) = in( j, i, k);
+            out( i, j, k ) = in( j, i, k);
          }
       }
    }

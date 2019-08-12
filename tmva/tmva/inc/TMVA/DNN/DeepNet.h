@@ -758,23 +758,6 @@ auto TDeepNet<Architecture_t, Layer_t>::ResetTraining() -> void
    }
 }
 
-template <typename Architecture>
-auto debugTensor(const typename Architecture::Tensor_t &A, const std::string name = "tensor") -> void
-{
-   std::cout << name << " tensor size = " << A.GetSize() << " shape = { "; 
-   auto shape = A.GetShape(); 
-   for (size_t k = 0; k < shape.size()-1; ++k)
-      std::cout << shape[k] << " , ";
-   std::cout << shape.back() << " } ";
-   std::cout << " is view/owner " << A.IsView() << " / " << A.IsOwner() << std::endl;
-   // print elements 
-   // need to find way to nice printing all elements
-   for (size_t l = 0; l < A.GetSize(); ++l) {
-         std::cout << A[l] << " ";
-   }
-   std::cout << "\n";
-   std::cout << "********\n";
-}
 
 //______________________________________________________________________________
 template <typename Architecture_t, typename Layer_t>
@@ -925,7 +908,7 @@ auto TDeepNet<Architecture_t, Layer_t>::Backward(const Tensor_t &input, const Ma
    Matrix_t last_output = fLayers.back()->GetOutputAt(0);
    evaluateGradients<Architecture_t>(last_actgrad, this->GetLossFunction(), groundTruth,
                                      last_output, weights);
-                                     
+
    for (size_t i = fLayers.size() - 1; i > 0; i--) {
       auto &activation_gradient_backward = fLayers[i - 1]->GetActivationGradients();
       auto &activations_backward = fLayers[i - 1]->GetOutput();

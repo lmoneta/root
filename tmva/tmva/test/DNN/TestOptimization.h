@@ -64,7 +64,7 @@ auto testOptimization(typename Architecture_t::Scalar_t momentum, EOptimizer opt
    typename Architecture_t::Scalar_t
 {
    using Matrix_t = typename Architecture_t::Matrix_t;
-   using Matrix_t = typename Architecture_t::Tensor_t;
+   using Tensor_t = typename Architecture_t::Tensor_t;
    using Scalar_t = typename Architecture_t::Scalar_t; 
    using Layer_t = VGeneralLayer<Architecture_t>;
    using DeepNet_t = TDeepNet<Architecture_t, Layer_t>;

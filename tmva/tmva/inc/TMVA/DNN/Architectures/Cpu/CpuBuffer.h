@@ -83,6 +83,8 @@ public:
      */
 
     size_t GetSize() const {return fSize;}
+
+    size_t GetUseCount() const { return fBuffer.use_count(); }
 };
 
 } // namespace DNN

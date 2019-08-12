@@ -137,7 +137,17 @@ auto TReshapeLayer<Architecture_t>::Forward(Tensor_t &input, bool /*applyDropout
       //size_t size = input.size();
       //size_t nRows = input[0].GetNrows();
       //size_t nCols = input[0].GetNcols();
+
+      //printf ( "input tensor %f \n",input(0,0,0));
+      //printf ( "output tensor %f \n",this->GetOutput()(0,0,0));
+
+      //Tensor_t input2(input);
+
+      //TMVA::DNN::debugTensor<Architecture_t>(this->GetOutput(),"output");
       Architecture_t::Flatten(this->GetOutput(), input);
+
+      //TMVA::DNN::debugTensor<Architecture_t>(input2,"input");
+      
       return;
    } else {
       // size_t out_size = this->GetOutput().size();
@@ -145,6 +155,9 @@ auto TReshapeLayer<Architecture_t>::Forward(Tensor_t &input, bool /*applyDropout
       //    // deflatten
       //    size_t nRows = this->GetOutput()[0].GetNrows();
       //    size_t nCols = this->GetOutput()[0].GetNcols();
+
+         
+
          Architecture_t::Deflatten(this->GetOutput(), input); //, out_size, nRows, nCols);
          return;
       }
@@ -180,8 +193,8 @@ auto TReshapeLayer<Architecture_t>::Backward(Tensor_t &gradients_backward, const
       // size_t input_size = this->GetActivationGradients().size();
       // if (size == 1 && input_size  > 1 ) {
       //    // deflatten operator:  flatten in bakprop
-         size_t nRows = this->GetActivationGradientsAt(0).GetNrows();
-         size_t nCols = this->GetActivationGradientsAt(0).GetNcols();
+         //size_t nRows = this->GetActivationGradientsAt(0).GetNrows();
+         //size_t nCols = this->GetActivationGradientsAt(0).GetNcols();
          Architecture_t::Flatten(gradients_backward, this->GetActivationGradients() );
          return;
       //}

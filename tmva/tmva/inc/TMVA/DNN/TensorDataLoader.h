@@ -259,7 +259,8 @@ TTensorBatch<Architecture_t> TTensorDataLoader<Data_t, Architecture_t>::GetTenso
 
    deviceBuffer.CopyFrom(hostBuffer);
 
-   Tensor_t inputTensor (inputDeviceBuffer, { fBatchDepth, fBatchHeight, fBatchWidth} );
+   // now we build tensors with columnmajor layout . Note Batch depth is the major shape (last of the shape)
+   Tensor_t inputTensor (inputDeviceBuffer, { fBatchHeight, fBatchWidth, fBatchDepth } );  
    // size_t jump = fBatchHeight * fBatchWidth;
    // for (size_t i = 0; i < fBatchDepth; i++) {
    //    DeviceBuffer_t subInputDeviceBuffer = inputDeviceBuffer.GetSubBuffer(i * jump, jump);

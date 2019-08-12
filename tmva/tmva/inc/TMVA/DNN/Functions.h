@@ -153,7 +153,7 @@ inline void evaluateDerivative(typename Architecture_t::Tensor_t & B,
 template<typename Architecture_t>
 inline void evaluateDerivative(typename Architecture_t::Matrix_t & B,
                                 EActivationFunction f,
-                                const typename Architecture_t::Matrix & A)
+                                const typename Architecture_t::Matrix_t & A)
 {
     typename Architecture_t::Tensor_t tA(A);
     typename Architecture_t::Tensor_t tB(B);
