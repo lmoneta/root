@@ -350,7 +350,7 @@ void TBatchNormLayer<Architecture_t>::Print() const
 template <typename Architecture_t>
 void TBatchNormLayer<Architecture_t>::AddWeightsXMLTo(void *parent)
 {
-#if 0
+
    // write layer width activation function + weigbht and bias matrices
 
    auto layerxml = gTools().xmlengine().NewChild(parent, 0, "BatchNormLayer");
@@ -366,34 +366,37 @@ void TBatchNormLayer<Architecture_t>::AddWeightsXMLTo(void *parent)
    //using Scalar_t = typename Architecture_t::Scalar_t;
 
    TMatrixT<Scalar_t> muMat(1, fMu_Training.size(), fMu_Training.data());
-   VGeneralLayer<TMVA::DNN::TReference<Scalar_t> >::WriteMatrixToXML(layerxml, "Training-mu", muMat);
+   //VGeneralLayer<TMVA::DNN::TReference<Scalar_t> >::WriteMatrixToXML(layerxml, "Training-mu", muMat);
+   this->WriteMatrixToXML(layerxml, "Training-mu", Matrix_t(muMat) );
    TMatrixT<Scalar_t> varMat(1, fVar_Training.size(), fVar_Training.data());
-   VGeneralLayer<TMVA::DNN::TReference<Scalar_t> >::WriteMatrixToXML(layerxml, "Training-variance", varMat);
+   //VGeneralLayer<TMVA::DNN::TReference<Scalar_t> >::WriteMatrixToXML(layerxml, "Training-variance", varMat);
+   this->WriteMatrixToXML(layerxml, "Training-variance", Matrix_t(varMat) );
 
    // write weights (gamma and beta)
    this->WriteMatrixToXML(layerxml, "Gamma", this->GetWeightsAt(0));
    this->WriteMatrixToXML(layerxml, "Beta", this->GetWeightsAt(1));
-#endif
+
 }
 
 //______________________________________________________________________________
 template <typename Architecture_t>
 void TBatchNormLayer<Architecture_t>::ReadWeightsFromXML(void *parent)
 {
-#if 0
    // momentum and epsilon can be added after constructing the class
    gTools().ReadAttr(parent, "Momentum", fMomentum);
    gTools().ReadAttr(parent, "Epsilon", fEpsilon);
    // Read layer weights and biases from XML
-   //using Scalar_t = typename Architecture_t::Scalar_t;
-   TMatrixT<Scalar_t> muMat(1, fMu_Training.size(), fMu_Training.data());
-   VGeneralLayer<TMVA::DNN::TReference<Scalar_t> >::ReadMatrixXML(parent, "Training-mu", muMat);
-   TMatrixT<Scalar_t> varMat(1, fVar_Training.size(), fVar_Training.data());
-   VGeneralLayer<TMVA::DNN::TReference<Scalar_t> >::ReadMatrixXML(parent, "Training-variance", varMat);
+ 
+   Matrix_t muMat(1, fMu_Training.size());
+   this->ReadMatrixXML(parent, "Training-mu", muMat);
+   std::copy(muMat.GetRawDataPointer(), muMat.GetRawDataPointer()+fMu_Training.size(), fMu_Training.begin() );
+
+   Matrix_t varMat(1, fVar_Training.size());
+   this->ReadMatrixXML(parent, "Training-variance", varMat);
+   std::copy(varMat.GetRawDataPointer(), varMat.GetRawDataPointer()+fVar_Training.size(), fVar_Training.begin() );
 
    this->ReadMatrixXML(parent, "Gamma", this->GetWeightsAt(0));
    this->ReadMatrixXML(parent, "Beta", this->GetWeightsAt(1));
-#endif
 }
 
 } // namespace DNN
