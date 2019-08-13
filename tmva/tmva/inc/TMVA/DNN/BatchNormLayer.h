@@ -281,10 +281,10 @@ auto TBatchNormLayer<Architecture_t>::Forward(Tensor_t &x, bool inTraining) -> v
    if (inTraining) fTrainedBatches++;
    else fTrainedBatches = 0; 
    // fVar.Print();
-   if (inTraining) 
-      std::cout << " training batch " << fTrainedBatches << " mu var0" << fMu_Training[0] << std::endl;
-   else
-      std::cout << " testing batch  " << fTrainedBatches << " mu var0" << fMu_Training[0] << std::endl;
+   // if (inTraining) 
+   //    std::cout << " training batch " << fTrainedBatches << " mu var0" << fMu_Training[0] << std::endl;
+   // else
+   //    std::cout << " testing batch  " << fTrainedBatches << " mu var0" << fMu_Training[0] << std::endl;
 }
 
 //______________________________________________________________________________

@@ -1314,7 +1314,7 @@ void MethodDL::TrainDeepNet()
          auto outputMatrix = batch.GetOutput();
          auto weights = batch.GetWeights();
 
-         std::cout << " input use count " << inputTensor.GetBufferUseCount() << std::endl;
+         //std::cout << " input use count " << inputTensor.GetBufferUseCount() << std::endl;
          // should we apply droput to the loss ??
          minValError += deepNet.Loss(inputTensor, outputMatrix, weights, false, false);
       }

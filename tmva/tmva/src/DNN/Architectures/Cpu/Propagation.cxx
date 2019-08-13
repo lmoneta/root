@@ -142,11 +142,15 @@ void TCpu<AFloat>::Backward(TCpuTensor<AFloat> &activationGradientsBackward, TCp
    // Compute element-wise product.
    Hadamard(df, activationGradients);
 
-   // Activation gradients.
-   Matrix_t  activationGradientsBackward_m = activationGradientsBackward.GetMatrix(); 
    Matrix_t df_m = df.GetMatrix(); 
+
+   // Activation gradients (exclude if it is first layer)
+   if (activationGradientsBackward.GetSize() > 0 ) { 
    
-   if (activationGradientsBackward.GetNoElements() > 0) Multiply(activationGradientsBackward_m, df_m, weights);
+      Matrix_t  activationGradientsBackward_m = activationGradientsBackward.GetMatrix(); 
+     
+      Multiply(activationGradientsBackward_m, df_m, weights);
+   }
 
    // Weight gradients.
    if (weightGradients.GetNoElements() > 0) TransposeMultiply(weightGradients, df_m, activationsBackward.GetMatrix());
