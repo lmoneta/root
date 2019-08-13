@@ -282,6 +282,7 @@ public:
 
    using Shape_t = typename TMVA::Experimental::RTensor<AFloat>::Shape_t;
    using MemoryLayout = TMVA::Experimental::MemoryLayout;
+   using Matrix_t = TCpuMatrix<AFloat>; 
 
    // default constructor
    TCpuTensor() : fBuffer(0), fTensor(fBuffer, {0}) {}
@@ -322,10 +323,20 @@ public:
    {
    }
 
-   /** constructors from a TCpuMatrix */
-   TCpuTensor(const TCpuMatrix<AFloat> &matrix)
-      : fBuffer(matrix.fBuffer), fTensor(fBuffer, {matrix.GetNrows(), matrix.GetNcols()}, MemoryLayout::ColumnMajor)
+   /** constructors from a TCpuMatrix. Memory layout is forced to be same as matrix (i.e. columnlayout) */
+   TCpuTensor(const TCpuMatrix<AFloat> &matrix, size_t dim = 3, MemoryLayout memlayout = MemoryLayout::ColumnMajor)
+      :  fBuffer(matrix.fBuffer), fTensor(fBuffer, {matrix.GetNrows(), matrix.GetNcols()}, memlayout) 
    {
+      if (dim >  2) {
+         Shape_t shape = fTensor.GetShape();
+
+         if (memlayout == MemoryLayout::ColumnMajor) {
+            shape.insert(shape.end()-1,dim-2, 1);
+         } else {
+            shape.insert(shape.begin(), dim - 2, 1);
+         }
+         fTensor.Reshape(shape);
+      }
    }
 
    /** Return raw pointer to the elements stored contiguously in column-major
@@ -463,13 +474,13 @@ public:
    }
 
    // access single element - assume tensor dim is 2
-   const AFloat &operator()(size_t i, size_t j) const
+   const AFloat & operator()(size_t i, size_t j) const
    {
       assert(fTensor.GetShape().size() == 2);
-      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? fBuffer[i * fTensor.GetShape()[1] + j]
-                                                                   : fBuffer[j * fTensor.GetShape()[0] + i];
+      return (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? GetData()[i * fTensor.GetShape()[1] + j]
+                                                                   : GetData()[j * fTensor.GetShape()[0] + i];
    }
-   const AFloat &operator()(size_t i, size_t j, size_t k) const
+   const AFloat & operator()(size_t i, size_t j, size_t k) const
    {
       // note that i is condidered always the first dimension !!!
       assert(fTensor.GetShape().size() == 3);
@@ -550,6 +561,7 @@ inline void TCpuTensor<AFloat>::MapFrom(Function_t &f, const TCpuTensor<AFloat> 
       ff(0);
    }
 }
+
 
 } // namespace DNN
 } // namespace TMVA

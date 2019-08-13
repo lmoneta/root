@@ -119,7 +119,7 @@ inline void evaluate(typename Architecture_t::Matrix_t &A,
                     EActivationFunction f)
 {
     typename Architecture_t::Tensor_t tA(A);
-    evaluate(tA,f);
+    evaluate<Architecture_t>(tA,f);
 }
 
 
@@ -157,7 +157,7 @@ inline void evaluateDerivative(typename Architecture_t::Matrix_t & B,
 {
     typename Architecture_t::Tensor_t tA(A);
     typename Architecture_t::Tensor_t tB(B);
-    evaluateDerivative(tB, f, tA);
+    evaluateDerivative<Architecture_t>(tB, f, tA);
 }
 //______________________________________________________________________________
 //

@@ -626,11 +626,11 @@ void TCpu<AFloat>::Downsample(TCpuTensor<AFloat> &tA, TCpuTensor<AFloat> &tB, co
    // A is output , B is a cached index tensor used for backward pass and C is the input
 
    assert( tA.GetFirstSize() == tC.GetFirstSize());
-   for (int l = 0; l < tC.GetFirstSize(); ++l) {
+   for (size_t ifirst = 0; ifirst < tC.GetFirstSize(); ++ifirst) {
 
-      Matrix_t A = tA.At(l).GetMatrix();
-      Matrix_t B = tB.At(l).GetMatrix();
-      Matrix_t C = tC.At(l).GetMatrix();
+      Matrix_t A = tA.At(ifirst).GetMatrix();
+      Matrix_t B = tB.At(ifirst).GetMatrix();
+      Matrix_t C = tC.At(ifirst).GetMatrix();
 
       // image boudaries
       int imgHeightBound = imgHeight - (fltHeight - 1) / 2 - 1;
@@ -675,7 +675,7 @@ void TCpu<AFloat>::MaxPoolLayerBackward(TCpuTensor<AFloat> &activationGradientsB
 {
 
    assert( activationGradientsBackward.GetFirstSize() == activationGradients.GetFirstSize());
-   for (int l = 0; l < activationGradients.GetFirstSize(); ++l) {
+   for (size_t l = 0; l < activationGradients.GetFirstSize(); ++l) {
 
       Matrix_t activationGradientsBackward_m = activationGradientsBackward.At(l).GetMatrix(); 
       Matrix_t activationGradients_m = activationGradients.At(l).GetMatrix(); 

@@ -562,6 +562,9 @@ public:
    static void AdamUpdateFirstMom(Matrix_t & A, const Matrix_t & B, Scalar_t beta);
    static void AdamUpdateSecondMom(Matrix_t & A, const Matrix_t & B, Scalar_t beta);
 
+   // printing of tensor
+   static void PrintTensor( const Tensor_t & A, const std::string name = "tensor");
+
 };
 
 //____________________________________________________________________________
@@ -598,6 +601,48 @@ void TCpu<Real_t>::CopyDiffArch(std::vector<TCpuMatrix<Real_t>> &A, const std::v
    }
 }
 
+template <typename Real_t>
+void TCpu<Real_t>::PrintTensor(const typename TCpu<Real_t>::Tensor_t & A, const std::string name ) 
+{
+   std::cout << name << " tensor size = " << A.GetSize() << " shape = { "; 
+   auto shape = A.GetShape(); 
+   for (size_t k = 0; k < shape.size()-1; ++k)
+      std::cout << shape[k] << " , ";
+   std::cout << shape.back() << " } ";
+   //std::cout << " is view/owner " << A.IsView() << " / " << A.IsOwner() << " layout " << A.GetLayout() << std::endl;
+   //std::cout << " layout " << A.GetLayout() << std::endl;
+   // print elements 
+   // need to find way to nice printing all elements
+   std::cout << " tensor count " << A.GetBufferUseCount() << std::endl;
+   if (A.GetShape().size() == 2 ) { 
+      for (size_t i = 0; i < A.GetShape()[0]; ++i) {
+         std::cout << "{ ";
+         for (size_t j = 0; j < A.GetShape()[1]; ++j) {
+            std::cout << A(i,j) << " ";
+         }
+         std::cout << " } " << std::endl;      
+      }
+   } else if  (A.GetShape().size() == 3 ) {
+      for (size_t i = 0; i < A.GetFirstSize(); ++i) {
+         std::cout << "{ ";
+         for (size_t j = 0; j < A.GetHSize(); ++j) {
+            std::cout << "{ ";
+            for (size_t k = 0; k < A.GetWSize(); ++k) {
+               std::cout << A(i,j,k) << " ";
+            }
+            std::cout << " } " << std::endl;
+         }
+         std::cout << " } " << std::endl;
+      }    
+   }
+   else {  
+      for (size_t l = 0; l < A.GetSize(); ++l) {
+         std::cout << A.GetData()[l] << " ";
+      }
+   }  
+   std::cout << "\n";
+   std::cout << "********\n";
+}
 
 
 
