@@ -112,11 +112,11 @@ auto testDownsample(const typename Architecture::Matrix_t &A, const typename Arc
 
    typename Architecture::Matrix_t AInd(m2, n2);
 
-   typename Architecture::Tensor_t tDown(ADown); 
-   typename Architecture::Tensor_t tInd(AInd); 
-   typename Architecture::Tensor_t tA(A); 
+   typename Architecture::Tensor_t tDown(ADown,3); // convert to tensors of dims 3 
+   typename Architecture::Tensor_t tInd(AInd,3); 
+   typename Architecture::Tensor_t tA(A,3); 
 
-
+   Architecture::PrintTensor(tA);
 
    Architecture::Downsample(tDown, tInd, tA, imgHeight, imgWidth, fltHeight, fltWidth, strideRows, strideCols);
 
@@ -401,11 +401,11 @@ auto evaluate_net_weight(TDeepNet<Architecture> &net, typename Architecture::Ten
     //using Matrix_t = typename Architecture::Matrix_t;
 
     // shift the weight value and compute the Loss
-    auto & netW = net.GetLayerAt(l)->GetWeights();
-    netW[k](i,j) += dx;
+    auto & netW = net.GetLayerAt(l)->GetWeightsAt(k);
+    netW(i,j) += dx;
     Scalar_t res = net.Loss(X, Y, W);
     // rest weight to original value
-    netW[k](i,j) -= dx;
+    netW(i,j) -= dx;
     //std::cout << "loss(w+dx = " << res << " loss(w) " << net.Loss(X,Y,W) << std::endl;
     return res;
 }
@@ -494,22 +494,25 @@ auto testConvBackwardPass(size_t batchSize, size_t imgDepth, size_t imgHeight, s
       std::cout << "\rTesting weight gradients:      layer: " << l << " / " << convNet.GetDepth();
       std::cout << std::flush;
       auto & layer = *(convNet.GetLayerAt(l));
-      auto &gw = layer.GetWeightGradientsAt(0);
+     
+      std::vector<Matrix_t> &gw = layer.GetWeightGradients();
 
       std::cout << std::endl;
 
-      if (gw.GetNoElements() > 0) { 
-         std::cout << "Weight gradient from back-propagation -"  << std::endl;
+      if (gw.size() > 0) { 
+         std::cout << "Weight gradient from back-propagation - vector size is " << gw.size()  << std::endl;
 
-         if (gw.GetNoElements() < 100 ) {
-            gw.Print();
+         if (gw[0].GetNoElements() < 100 ) {
+            gw[0].Print();
          }
          else
-            std::cout << "BP Weight Gradient ( " << gw.GetNrows() << " x " << gw.GetNcols() << " ) , ...... skip printing (too many elements ) " << std::endl;  
+            std::cout << "BP Weight Gradient ( " << gw[0].GetNrows() << " x " << gw[0].GetNcols() << " ) , ...... skip printing (too many elements ) " << std::endl;  
       }
       else {
          std::cout << "Layer " << l << " has no weights " << std::endl;
+         continue;
       }
+     
       auto & actGrad = layer.GetActivationGradients();
       if (actGrad.GetFirstSize() > 0)  {
          std::cout << "Activation gradient from back-propagation  - vector size is " << actGrad.GetFirstSize() << std::endl;
@@ -546,14 +549,15 @@ auto testConvBackwardPass(size_t batchSize, size_t imgDepth, size_t imgHeight, s
       // for (size_t k = 0; k <  gw.GetFirstSize() ; ++k) {
       // for (size_t i = 0; i < layer.GetWidth(); i++) {
       size_t k = 0;
-      for (size_t i = 0; i < gw.GetNrows(); i++) {
+      Matrix_t & gwm = gw[k]; 
+      for (size_t i = 0; i < gwm.GetNrows(); i++) {
          // for (size_t j = 0; j < layer.GetInputWidth(); j++) {
-         for (size_t j = 0; j < gw.GetNcols(); j++) {
+         for (size_t j = 0; j < gwm.GetNcols(); j++) {
             auto f = [&convNet, &X, &Y, &W, l, i, j, k](Scalar_t x) {
                return evaluate_net_weight(convNet, X, Y, W, l, i, j, k, x);
             };
             Scalar_t dy = finiteDifference(f, dx) / (2.0 * dx);
-            Scalar_t dy_ref = gw(i, j);
+            Scalar_t dy_ref = gwm(i, j);
             // Compute the relative error if dy != 0.
             Scalar_t error;
             if (std::fabs(dy_ref) > 1e-15) {

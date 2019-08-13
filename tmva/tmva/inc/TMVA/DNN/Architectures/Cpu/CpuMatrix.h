@@ -331,11 +331,13 @@ public:
          Shape_t shape = fTensor.GetShape();
 
          if (memlayout == MemoryLayout::ColumnMajor) {
-            shape.insert(shape.end()-1,dim-2, 1);
+            shape.insert(shape.end(),dim-2, 1);
          } else {
             shape.insert(shape.begin(), dim - 2, 1);
          }
-         fTensor.Reshape(shape);
+         // reshape does not add ones
+         //fTensor.Reshape(shape);
+         fTensor = TMVA::Experimental::RTensor<AFloat>( fBuffer, shape, memlayout);
       }
    }
 

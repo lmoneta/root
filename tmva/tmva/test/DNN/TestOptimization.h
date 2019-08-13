@@ -210,9 +210,9 @@ auto testOptimization(typename Architecture_t::Scalar_t momentum, EOptimizer opt
 
    Tensor_t tI(1, batchSize, nFeatures);
    for (size_t i = 0; i < batchSize; ++i) { 
-      for (size_t j = 0; i < nFeatures; ++j) { 
-        tI(0,i,j) =  1.;
-      }
+      //for (size_t j = 0; j < nFeatures; ++j) { 
+        tI(0,i,i) =  1.;
+      //}
    } 
 
    deepNet.Forward(tI, false);

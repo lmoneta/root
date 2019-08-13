@@ -263,7 +263,6 @@ auto testFullRNN2(size_t batchSize, size_t stateSize,
    else std::cout << "ERROR : Test full RNN failed : "; 
    std::cout << "Efficiencies are " << eff1 << " and " << eff2 << std::endl;
    
-
 }
 
 

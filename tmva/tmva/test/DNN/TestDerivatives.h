@@ -58,8 +58,8 @@ template<typename Architecture, typename F, typename dF>
       Matrix_t mX(10,10), mY(10,10);
       randomMatrix(mY);
       
-      Tensor_t X(mX); 
-      Tensor_t Y(mY); 
+      Tensor_t X(mX,2); 
+      Tensor_t Y(mY,2); 
 
       df(X, Y);
       Scalar_t dy = X(0,0);

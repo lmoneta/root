@@ -788,6 +788,7 @@ void TCpu<AFloat>::Rearrange(Tensor_t &out, const Tensor_t &in)
       std::cout << "Incompatible Dimensions\n"
                 << in.GetFirstSize() << "x" << in.GetHSize() << "x" << in.GetWSize() << " --> " << B << "x" << T << "x"
                 << D << "\n";
+      assert(false);
       return;
    }
    for (size_t i = 0; i < B; ++i) {

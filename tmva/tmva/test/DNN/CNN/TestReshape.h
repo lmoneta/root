@@ -185,7 +185,7 @@ bool testDeflatten()
         }
     }
 
-    Tensor_t B;
+    Tensor_t B(size, nRows, nCols);
     for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < nRows; j++) {
             for (size_t k = 0; k < nCols; k++) {
