@@ -407,11 +407,10 @@ public:
    {
    
       const Shape_t & shape = GetShape();
-      const Shape_t & sliced_shape = (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor)
+      Shape_t sliced_shape = (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor)
                                 ? Shape_t(shape.begin() + 1, shape.end())
                                 : Shape_t(shape.begin(), shape.end() - 1);
 
-      const Shape_t & strides = fTensor.GetStrides();
       size_t buffsize = (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? fTensor.GetStrides().front()
                                                                               : fTensor.GetStrides().back();
 

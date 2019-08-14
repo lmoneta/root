@@ -608,8 +608,7 @@ void TCpu<AFloat>::CalculateConvBiasGradients(TCpuMatrix<AFloat> &biasGradients,
       AFloat sum = 0;
       for (size_t j = 0; j < nLocalViews; j++) {
          for (size_t k = 0; k < batchSize; k++) {
-            Matrix_t df_m = df.At(k).GetMatrix(); 
-            sum += df_m(i,j);
+            sum += df(k,i,j);
             //sum += df[k](i, j);
          }
       }
