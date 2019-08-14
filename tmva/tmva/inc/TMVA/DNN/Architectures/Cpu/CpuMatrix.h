@@ -403,41 +403,15 @@ public:
 
    // return slices in the first dimension (if row wise) or last dimension if colun wise
    // so single event slides
-   TCpuTensor<AFloat> operator()(size_t i)
+   TCpuTensor<AFloat> At(size_t i)
    {
-      // typename TMVA::Experimental::RTensor<AFloat>::Slice_t slice( fTensor.GetShape().size());
-      // size_t buffsize = 1;
-      // slice[0].reserve(2);
-      // if (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) {
-
-      //    slice[0].push_back(i);
-      //    slice[0].push_back(i+1);
-      //    assert(i < fTensor.GetShape()[0] );
-
-      //    for (size_t j = 1; j < slice.size(); ++j) {
-      //       slice[j].reserve(2);
-      //       slice[j].push_back( 0) ;
-      //       slice[j].push_back( fTensor.GetShape()[j] );
-      //       buffsize *= fTensor.GetShape()[j];
-      //    }
-      // } else {
-      //    slice.back().push_back(i);
-      //    slice.back().push_back(i+1);
-      //    assert(i < fTensor.GetShape().back() );
-
-      //    for (size_t j = 0; j < slice.size()-1; ++j) {
-      //       slice[j].reserve(
-      //       slice[j].push_back( 0) ;
-      //       slice[j].push_back( fTensor.GetShape()[j] );
-      //       buffsize *= fTensor.GetShape()[j];
-      //    }
-      // }
-      Shape_t shape = GetShape();
-      Shape_t sliced_shape = (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor)
+   
+      const Shape_t & shape = GetShape();
+      const Shape_t & sliced_shape = (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor)
                                 ? Shape_t(shape.begin() + 1, shape.end())
                                 : Shape_t(shape.begin(), shape.end() - 1);
 
-      Shape_t strides = fTensor.GetStrides();
+      const Shape_t & strides = fTensor.GetStrides();
       size_t buffsize = (fTensor.GetMemoryLayout() == MemoryLayout::RowMajor) ? fTensor.GetStrides().front()
                                                                               : fTensor.GetStrides().back();
 
@@ -445,8 +419,7 @@ public:
 
       return TCpuTensor<AFloat>(fBuffer.GetSubBuffer(offset, buffsize), sliced_shape, GetLayout());
    }
-   TCpuTensor<AFloat> At(size_t i) { return (*this)(i); }
-   TCpuTensor<AFloat> At(size_t i) const { return (const_cast<TCpuTensor<AFloat> &>(*this))(i); }
+   TCpuTensor<AFloat> At(size_t i) const { return (const_cast<TCpuTensor<AFloat> &>(*this)).At(i); }
 
    // set all the tensor contents to zero
    void Zero()
