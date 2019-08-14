@@ -73,7 +73,11 @@ class MethodDNN : public MethodBase
 {
    friend struct TestMethodDNNValidationSize;
 
+#ifdef DNNCPU
+   using Architecture_t = DNN::TCpu<Float_t>;
+#else
    using Architecture_t = DNN::TReference<Float_t>;
+#endif
    using Net_t          = DNN::TNet<Architecture_t>;
    using Matrix_t       = typename Architecture_t::Matrix_t;
    using Scalar_t       = typename Architecture_t::Scalar_t;
@@ -122,10 +126,12 @@ private:
 
    ClassDef(MethodDNN,0); // neural network
 
+   template<typename AFloat>
    static inline void WriteMatrixXML(void *parent, const char *name,
-                                     const TMatrixT<Double_t> &X);
+                                     const TMatrixT<AFloat> &X);
+   template<typename AFloat>
    static inline void ReadMatrixXML(void *xml, const char *name,
-                                    TMatrixT<Double_t> &X);
+                                    TMatrixT<AFloat> &X);
 protected:
 
    void MakeClassSpecific( std::ostream&, const TString& ) const;
@@ -171,9 +177,10 @@ public:
 
 };
 
+template<typename AFloat>
 inline void MethodDNN::WriteMatrixXML(void *parent,
                                       const char *name,
-                                      const TMatrixT<Double_t> &X)
+                                      const TMatrixT<AFloat> &X)
 {
    std::stringstream matrixStringStream("");
    matrixStringStream.precision( 16 );
@@ -194,9 +201,10 @@ inline void MethodDNN::WriteMatrixXML(void *parent,
    gTools().xmlengine().AddRawLine (matxml, s.c_str());
 }
 
+template<typename AFloat>
 inline void MethodDNN::ReadMatrixXML(void *xml,
                                      const char *name,
-                                     TMatrixT<Double_t> &X)
+                                     TMatrixT<AFloat> &X)
 {
    void *matrixXML = gTools().GetChild(xml, name);
    size_t rows, cols;

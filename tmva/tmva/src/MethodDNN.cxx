@@ -1367,8 +1367,10 @@ void TMVA::MethodDNN::AddWeightsXMLTo( void* parent ) const
       int activationFunction = static_cast<int>(layer.GetActivationFunction());
       gTools().xmlengine().NewAttr(layerxml, 0, "ActivationFunction",
                                    TString::Itoa(activationFunction, 10));
-      WriteMatrixXML(layerxml, "Weights", layer.GetWeights());
-      WriteMatrixXML(layerxml, "Biases",  layer.GetBiases());
+      TMatrixT<Scalar_t> weights =  layer.GetWeights();
+      TMatrixT<Scalar_t> biases =  layer.GetBiases();
+      WriteMatrixXML(layerxml, "Weights", weights);
+      WriteMatrixXML(layerxml, "Biases", biases );
    }
 }
 
@@ -1412,8 +1414,8 @@ void TMVA::MethodDNN::ReadWeightsFromXML(void* rootXML)
       gTools().ReadAttr(matrixXML, "rows", width);
 
       fNet.AddLayer(width, f);
-      TMatrixT<Double_t> weights(width, previousWidth);
-      TMatrixT<Double_t> biases(width, 1);
+      TMatrixT<Scalar_t> weights(width, previousWidth);
+      TMatrixT<Scalar_t> biases(width, 1);
       ReadMatrixXML(layerXML, "Weights", weights);
       ReadMatrixXML(layerXML, "Biases",  biases);
       fNet.GetLayer(i).GetWeights() = weights;
