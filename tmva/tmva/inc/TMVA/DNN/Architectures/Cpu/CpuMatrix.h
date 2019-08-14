@@ -349,7 +349,7 @@ public:
    AFloat *GetData() { return fTensor.GetData(); }
    const AFloat *GetData() const { return fTensor.GetData(); }
 
-   Shape_t GetShape() const { return fTensor.GetShape(); }
+   const Shape_t & GetShape() const { return fTensor.GetShape(); }
 
    size_t GetNoElements() const { return fTensor.GetSize(); }
    size_t GetSize() const { return fTensor.GetSize(); }
