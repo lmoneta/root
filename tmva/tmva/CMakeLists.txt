@@ -369,6 +369,9 @@ ROOT_STANDARD_LIBRARY_PACKAGE(TMVA
     src/DNN/Architectures/Reference.cxx
     src/DNN/Architectures/Reference/DataLoader.cxx
     src/DNN/Architectures/Reference/TensorDataLoader.cxx
+    src/DNN/Architectures/Cpu.cxx
+    src/DNN/Architectures/Cpu/CpuBuffer.cxx
+    src/DNN/Architectures/Cpu/CpuMatrix.cxx
     ${TMVA_EXTRA_SOURCES}
     #src/DNN/Architectures/Reference/ActivationFunctions.cxx
     #src/DNN/Architectures/Reference/Arithmetic.cxx
@@ -409,9 +412,6 @@ endif()
 
 if(tmva-cpu)
   target_sources(TMVA PRIVATE
-    src/DNN/Architectures/Cpu.cxx
-    src/DNN/Architectures/Cpu/CpuBuffer.cxx
-    src/DNN/Architectures/Cpu/CpuMatrix.cxx
     #src/DNN/Architectures/Cpu/ActivationFunctions.cxx
     #src/DNN/Architectures/Cpu/Arithmetic.cxx
     #src/DNN/Architectures/Cpu/DataLoader.cxx
