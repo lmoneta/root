@@ -739,16 +739,31 @@ TBatchNormLayer<Architecture_t> *TDeepNet<Architecture_t, Layer_t>::AddBatchNorm
 template <typename Architecture_t, typename Layer_t>
 TBatchNormLayer<Architecture_t> *TDeepNet<Architecture_t, Layer_t>::AddBatchNormLayer(Scalar_t momentum, Scalar_t epsilon)
 {
+   int axis = -1;
    size_t batchSize = this->GetBatchSize();
+   size_t inputDepth = 0;
+   size_t inputHeight = 0;
    size_t inputWidth = 0;
+   Shape_t shape = {1, 1, 1};
    if (fLayers.size() == 0) {
+      inputDepth = this->GetInputDepth();
+      inputHeight = this->GetInputHeight();
       inputWidth = this->GetInputWidth();
+      shape[1] = batchSize;
+      shape[2] = inputWidth;
    } else {
       Layer_t *lastLayer = fLayers.back();
+      inputDepth = lastLayer->GetDepth();
+      inputHeight = lastLayer->GetHeight();
       inputWidth = lastLayer->GetWidth();
+      shape = lastLayer->GetOutput().GetShape();
+      if (dynamic_cast < TConvLayer<Architecture_t *>(lastLayer) != nullptr)
+         axis = 1; // use axis = channel axis for convolutional layer
+
    }
 
-   auto bnormLayer = new TBatchNormLayer<Architecture_t>(batchSize, inputWidth, momentum, epsilon);
+   auto bnormLayer =
+      new TBatchNormLayer<Architecture_t>(batchSize, inputDepth, inputHeight, inputWidth, shape, axis, momentum, epsilon);
 
    fLayers.push_back(bnormLayer);
 

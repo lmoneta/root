@@ -753,49 +753,76 @@ void TCpu<AFloat>::MaxPoolLayerBackward(TCpuTensor<AFloat> &activationGradientsB
 
 //____________________________________________________________________________
 template <typename AFloat>
-void TCpu<AFloat>::BatchNormLayerForwardTraining(Matrix_t input,
-                                                 Matrix_t & gamma,
-                                                 Matrix_t & beta,
-                                                 Matrix_t outputActivation,
-                                                 Matrix_t & Xmu,
-                                                 Matrix_t & output,
-                                                 Matrix_t & Variance,
-                                                 Matrix_t & IVariance,
-                                                 # if 0
+TCpuTensor<AFloat> TCpu<AFloat>::BatchNormLayerReshapeTensor(int axis, const TCpuTensor<AFloat> &x) {
+   // reshape tensor for batch norm layer according to normalization axis
+   // input x - output reshpe of X
+   if (axis == 1) {
+
+      // reshape to a RowMajor tensor so I can use same indices, in this case channel
+       Shape_t newShape = { x.GetSize() / (x.GetShape().front(), x.GetShape().front() }; // shape is HXWXB , C
+       TCpuTensor<AFloat> xtmp(x.GetDeviceBuffer(), newShape, MemoryLayout::RowMajor);
+       return xtmp;
+   }
+    // default case (axis == -1)
+   return  x.Reshape({x.GetStrides().back(), x.GetShape().back()});
+}
+
+//____________________________________________________________________________
+template <typename AFloat>
+void TCpu<AFloat>::BatchNormLayerForwardTraining(int axis, const TCpuTensor<AFloat> &x,
+                                                 Matrix_t &gamma, Matrix_t &beta, Matrix_t outputActivation,
+                                                 Matrix_t &Xmu, Matrix_t &output, Matrix_t &Variance,
+                                                 Matrix_t &IVariance,
+#if 0
                                                  const BNormDescriptors_t & /*descriptors*/,
                                                  BNormWorkspace_t & /*workspace*/,
-                                                 # endif
-                                                 std::vector<Scalar_t> & RunningMeans,
-                                                 std::vector<Scalar_t> & RunningVars,
-                                                 Scalar_t nTrainedBatches,
-                                                 Scalar_t momentum,
-                                                 Scalar_t epsilon)
+#endif
+
+                                                 std::vector<Scalar_t> &RunningMeans,
+                                                 std::vector<Scalar_t> &RunningVars, Scalar_t nTrainedBatches,
+                                                 Scalar_t momentum, Scalar_t epsilon)
 {
+   TCpuTensor<AFloat> input;
+   TCpuTensor<AFloat> output;
+   // layout for CPU is ColumnMajor  !!!
+   if (axis == -1) {
+      // reshape to a 2-dim tensor
+      input = x.Reshape({x.GetStrides().back(), x.GetShape().back()});
+      output = y.Reshape({y.GetStrides().back(), y.GetShape().back()});
+   }
+   else if (axis==1) {
+      // reshape to a RowMajor tensor so I can use same indices, in this case channel
+      Shape_t newShape = { x.GetSize() / (x.GetShape().front(), x.GetShape().front() }; // shape is HXWXB , C
+      TCpuTensor<AFloat> xtmp(x.GetDeviceBuffer(), newShape, MemoryLayout::RowMajor);
+      // assume x and y shape are the same
+      TCpuTensor<AFloat> ytmp(ytmp.GetDeviceBuffer(), newShape, MemoryLayout::RowMajor);
+      input = xtmp;
+      output = ytmp;
+   }
+
    int n = input.GetNrows();
    int d = input.GetNcols();
 
    for (int k = 0; k < d; ++k) {
 
-      double mean = 0;
+      mean[k] = 0;
       for (int i = 0; i < n; i++) {
-         mean = mean + input(i, k);
+         mean[k] += input(i, k);
       }
-      mean = mean / n;
+      mean[k] = mean[k] / n;
 
-      for (int i = 0; i < n; i++) {
-         Xmu(i, k) = input(i, k) - mean;
-      }
       double sq = 0;
       for (int i = 0; i < n; i++) {
-         sq = sq + (Xmu(i, k) * Xmu(i, k));
+         Scalar_t xmu = input(i, k) - mean[k];
+         sq = sq + (xmu * xmu;
       }
-      Variance(0, k) = sq / n;
+      variance[k] = sq / n;
       // fVar(0,k) = fVar(0,k) + epsilon;
       // sqrtvar(0,k) =
-      IVariance(0, k) = 1. / std::sqrt(Variance(0, k) + epsilon);
+      ivariance[k] = 1. / std::sqrt(Variance[k] + epsilon);
       for (int i = 0; i < n; i++) {
-         output(i, k) = Xmu(i, k) * IVariance(0, k);
-         outputActivation(i, k) = gamma(0, k) * output(i, k) + beta(0, k);
+         Scalar_t xhat = ( input(i,k) - mean[k] ) * IVariance(0, k);
+         output(i, k) = gamma(0, k) * xhat + beta(0, k);
       }
 
       // fVar(0,k) -= epsilon;
