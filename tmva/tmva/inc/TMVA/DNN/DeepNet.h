@@ -744,7 +744,7 @@ TBatchNormLayer<Architecture_t> *TDeepNet<Architecture_t, Layer_t>::AddBatchNorm
    size_t inputDepth = 0;
    size_t inputHeight = 0;
    size_t inputWidth = 0;
-   Shape_t shape = {1, 1, 1};
+   std::vector<size_t>  shape = {1, 1, 1};
    if (fLayers.size() == 0) {
       inputDepth = this->GetInputDepth();
       inputHeight = this->GetInputHeight();
@@ -757,7 +757,7 @@ TBatchNormLayer<Architecture_t> *TDeepNet<Architecture_t, Layer_t>::AddBatchNorm
       inputHeight = lastLayer->GetHeight();
       inputWidth = lastLayer->GetWidth();
       shape = lastLayer->GetOutput().GetShape();
-      if (dynamic_cast < TConvLayer<Architecture_t *>(lastLayer) != nullptr)
+      if (dynamic_cast < TConvLayer<Architecture_t> *>(lastLayer) != nullptr)
          axis = 1; // use axis = channel axis for convolutional layer
 
    }

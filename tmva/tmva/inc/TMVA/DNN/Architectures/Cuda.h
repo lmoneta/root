@@ -81,6 +81,7 @@ public:
    using DropoutDescriptor_t     = CudaDropoutDescriptor;
    //using OpTensorDescriptor_t    = CudaOpTensorDescriptor;
    using PoolingDescriptor_t     = CudaPoolingDescriptor;
+   using TensorDescriptor_t      = DummyType; 
    //using ReductionDescriptor_t   = CudaReduceTensorDescriptor;
    using AlgorithmForward_t      = CudaConvolutionFwdAlgo;
    using AlgorithmBackward_t     = CudaConvolutionBwdDataAlgo;

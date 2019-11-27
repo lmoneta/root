@@ -112,9 +112,8 @@ size_t TCudnn<AFloat>::calculateDimension(size_t imgDim, size_t fltDim, size_t p
 // Initialization of the cuDNN objects for the different layers
 // ...
 ///////////////////////////////////////////////////////////////////////////////
-# if 0
 template<typename AFloat>
-void TCudnn<AFloat>::InitializeBNormDescriptors(TDescriptors * & descriptors, ConvLayer_t *L)
+void TCudnn<AFloat>::InitializeBNormDescriptors(TDescriptors * & descriptors, typename TCudnn<AFloat>::BNormLayer_t *L)
 {
    auto bnormDescriptors = new CNN::TCNNDescriptors<typename TCudnn<AFloat>::BNormLayer_t> ();
 
@@ -126,15 +125,14 @@ void TCudnn<AFloat>::InitializeBNormDescriptors(TDescriptors * & descriptors, Co
    Tensor_t inputTensor  ({L->GetBatchSize(), L->GetInputDepth(), L->GetInputHeight(), L->GetInputWidth()}, MemoryLayout::RowMajor, 0, 0);
 
    // derived BNormdescr
-   CUDNNCHECK(cudnnCreateTensorDescriptor(&bnormDescriptors->HeplerDescriptor));
+   CUDNNCHECK(cudnnCreateTensorDescriptor(&bnormDescriptors->HelperDescriptor));
 
-   CUDNNCHECK(cudnnDeriveBNTensorDescriptor(bnormDescriptors->HeplerDescriptor
+   CUDNNCHECK(cudnnDeriveBNTensorDescriptor(bnormDescriptors->HelperDescriptor
                                             inputTensor.GetTensorDescriptor(),
                                             CUDNN_BATCHNORM_PER_ACTIVATION));
 
    descriptors = bnormDescriptors;
 }
-# endif
 
 template <typename AFloat>
 void TCudnn<AFloat>::InitializeActivationDescriptor(TCudnn<AFloat>::ActivationDescriptor_t &descriptor,
@@ -242,11 +240,26 @@ void TCudnn<AFloat>::InitializePoolDescriptors(TDescriptors * & descriptors,
 
 //____________________________________________________________________________
 template<typename AFloat>
-void TCudnn<AFloat>::ReleaseConvDescriptors(TDescriptors * descriptors, ConvLayer_t *L) {
+void TCudnn<AFloat>::ReleaseConvDescriptors(TDescriptors * descriptors) {
    auto convDescriptors = static_cast<ConvDescriptors_t *>(descriptors);
    ReleaseDescriptor(convDescriptors->LayerDescriptor);
    ReleaseDescriptor(convDescriptors->HelperDescriptor);
    ReleaseDescriptor(convDescriptors->WeightsDescriptor);
+}
+
+//____________________________________________________________________________
+template <typename AFloat>
+void TCudnn<AFloat>::ReleasePoolDescriptors(TDescriptors * descriptors) {
+   auto poolDescriptors = static_cast<PoolingDescriptors_t *>(descriptors);
+   ReleaseDescriptor(poolDescriptors->LayerDescriptor);
+   ReleaseDescriptor(poolDescriptors->HelperDescriptor);
+   ReleaseDescriptor(poolDescriptors->WeightsDescriptor);
+}
+
+//____________________________________________________________________________
+template <typename AFloat>
+void TCudnn<AFloat>::ReleaseBNormDescriptors(TDescriptors * descriptors) {
+   ReleaseDescriptor(descriptors->HelperDescriptor);  // it is a tensor descriptor
 }
 
 //____________________________________________________________________________
@@ -266,6 +279,11 @@ template <typename AFloat>
 void TCudnn<AFloat>::ReleaseDescriptor(DropoutDescriptor_t & dropoutDescr) {
    CUDNNCHECK(cudnnDestroyDropoutDescriptor(dropoutDescr));
 }
+//____________________________________________________________________________
+template <typename AFloat>
+void TCudnn<AFloat>::ReleaseDescriptor(TensorDescriptor_t & tensorDescr) {
+   CUDNNCHECK(cudnnDestroyTensorDescriptor(tensorDescr));
+}
 
 //____________________________________________________________________________
 template <typename AFloat>
@@ -279,14 +297,6 @@ void TCudnn<AFloat>::ReleaseDescriptor(PoolingDescriptor_t & poolingDescr) {
    CUDNNCHECK(cudnnDestroyPoolingDescriptor(poolingDescr));
 }
 
-//____________________________________________________________________________
-template <typename AFloat>
-void TCudnn<AFloat>::ReleasePoolDescriptors(TDescriptors * descriptors, PoolingLayer_t *L) {
-   auto poolDescriptors = static_cast<PoolingDescriptors_t *>(descriptors);
-   ReleaseDescriptor(poolDescriptors->LayerDescriptor);
-   ReleaseDescriptor(poolDescriptors->HelperDescriptor);
-   ReleaseDescriptor(poolDescriptors->WeightsDescriptor);
-}
 
 //____________________________________________________________________________
 template <typename AFloat>
@@ -627,45 +637,86 @@ void TCudnn<AFloat>::FreePoolDropoutWorkspace(TWorkspace * workspace, PoolingLay
 }
 
 //____________________________________________________________________________
-// template <typename AFloat>
-// void TCudnn<AFloat>::BatchNormLayerForwardTraining(Matrix_t input,
-//                                           Matrix_t & gamma,
-//                                           Matrix_t & beta,
-//                                           Matrix_t outputActivation,
-//                                           Matrix_t & Xmu,
-//                                           Matrix_t & output,
-//                                           Matrix_t & Variance,
-//                                           Matrix_t & IVariance,
-//                                           # if 0
-//                                           const BNormDescriptors_t & descriptors,
-//                                           BNormWorkspace_t & workspace,
-//                                           # endif
-//                                           std::vector<Scalar_t> & RunningMeans,
-//                                           std::vector<Scalar_t> & RunningVars,
-//                                           Scalar_t nTrainedBatches,
-//                                           Scalar_t momentum,
-//                                           Scalar_t epsilon)
-// {
-   //AFloat a = 1.0;
-   //AFloat b = 0.0;
-   /*CUDNNCHECK(cudnnBatchNormalizationForwardTraining(input.GetCudnnHandle(),
-      cudnnBatchNormMode_t             mode,
-                                                     &alpha,
-                                                     &beta,
-                                                     input.GetTensorDescriptor(),
-                                                     input.GetDataPointer(),
-      const cudnnTensorDescriptor_t    yDesc,
-      void                            *y,
-      const cudnnTensorDescriptor_t    bnScaleBiasMeanVarDesc,
-      const void                      *bnScale,
-      const void                      *bnBias,
-      double                           exponentialAverageFactor,
-      void                            *resultRunningMean,
-      void                            *resultRunningVariance,
-                                                      epsilon,
-      void                            *resultSaveMean,
-      void                            *resultSaveInvVariance));*/
-//}
+template <typename AFloat>
+void TCudnn<AFloat>::BatchNormLayerForwardTraining(int axis, const Tensor_t &x,
+                                                    Tensor_t & y,
+                                                    Matrix_t &gamma, Matrix_t &beta, 
+                                                    Matrix_t & mean, Matrix_t &, Matrix_t & iVariance,
+                                                    Matrix_t & runningMeans, Matrix_t & runningVars, 
+                                                    Scalar_t nTrainedBatches, Scalar_t momentum, Scalar_t epsilon,
+                                                    const TensorDescriptor_t & bnParDescriptor )
+
+{
+   AFloat a = 1.0;
+   AFloat b = 0.0;
+   cudnnBatchNormMode_t    bnMode = CUDNN_BATCHNORM_PER_ACTIVATION;
+   if (axis == 1) bnMode = CUDNN_BATCHNORM_SPATIAL; 
+
+   double exponentialAverageFactor = momentum; 
+   CUDNNCHECK(cudnnBatchNormalizationForwardTraining(x.GetCudnnHandle(), bnMode, 
+                                                      &alpha, &beta, 
+                                                      x.GetTensorDescriptor(), x.GetDataPointer(),
+                                                      y.GetTensorDescriptor(), y.GetDataPointer(),
+                                                      bnParDescriptor,
+                                                      gamma.GetDataPointer(), beta.GetDataPointer(), 
+                                                      exponentialAverageFactor,
+                                                      runningMeans.GetDataPointer(),
+                                                      runningVars.GetDataPointer(),
+                                                      epsilon, mean.GetDataPointer(), iVariance.GetDataPointer() ); 
+      
+}
+
+//____________________________________________________________________________
+template <typename AFloat>
+void TCudnn<AFloat>::BatchNormLayerForwardInference(int axis, const Tensor_t &x, Matrix_t &gamma, Matrix_t &beta,
+                                                    Tensor_t &y, const Matrix_t &runningMeans,
+                                                    const Matrix_t &runningVars, Scalar_t epsilon,
+                                                    const TensorDescriptor_t & bnParDescriptor)
+
+{
+   AFloat a = 1.0;
+   AFloat b = 0.0;
+   cudnnBatchNormMode_t    bnMode = CUDNN_BATCHNORM_PER_ACTIVATION;
+   if (axis == 1) bnMode = CUDNN_BATCHNORM_SPATIAL; 
+
+   CUDNNCHECK(cudnnBatchNormalizationForwardInference(x.GetCudnnHandle(), bnMode, 
+                                                      &alpha, &beta, 
+                                                      x.GetTensorDescriptor(), x.GetDataPointer(),
+                                                      y.GetTensorDescriptor(), y.GetDataPointer(),
+                                                      bnParDescriptor,
+                                                      gamma.GetDataPointer(), beta.GetDataPointer(), 
+                                                      runningMeans.GetDataPointer(),
+                                                      runningVars.GetDataPointer(),
+                                                      epsilon); 
+      
+}
+
+//____________________________________________________________________________
+template <typename AFloat>
+void TCudnn<AFloat>::BatchNormLayerBackward(int axis, const Tensor_t &x, const Tensor_t &dy, Tensor_t &dx,
+                                             Matrix_t &gamma, //  Matrix_t &beta, (not needed)
+                                             Matrix_t &dgamma, Matrix_t &dbeta, const Matrix_t &mean,
+                                             const Matrix_t &variance, const Matrix_t &iVariance,
+                                             const Matrix_t &runningMeans, const Matrix_t &runningVars,
+                                             Scalar_t epsilon, const TensorDescriptor_t & bnParDescriptor);
+
+{
+   AFloat a = 1.0;
+   AFloat b = 0.0;
+   cudnnBatchNormMode_t    bnMode = CUDNN_BATCHNORM_PER_ACTIVATION;
+   if (axis == 1) bnMode = CUDNN_BATCHNORM_SPATIAL; 
+
+   CUDNNCHECK(cudnnBatchNormalizationBackward(x.GetCudnnHandle(), bnMode, 
+                                                      &alpha, &beta, &alpha, &beta, 
+                                                      x.GetTensorDescriptor(), x.GetDataPointer(),
+                                                      dy.GetTensorDescriptor(), dy.GetDataPointer(),
+                                                      dx.GetTensorDescriptor(), dx.GetDataPointer(),
+                                                      bnParDescriptor, gamma.GetDataPointer(), 
+                                                      dgamma.GetDataPointer(), dbeta.GetDataPointer(),
+                                                      epsilon, mean.GetDataPointer(), iVariance.GetDataPointer() ); 
+      
+}
+
 
 //____________________________________________________________________________
 
