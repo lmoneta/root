@@ -34,11 +34,13 @@ int test()
     if (error > 1e-3)
         return 1;
 
-    
+    error = testCNNBackpropagationWeights<TCpu<double>>(0.00001);
+    if (error > 1e-3)
+       return 1;
 
     return 0;
 }
 
 int main() {
-    return test(); 
+    return test();
 }
