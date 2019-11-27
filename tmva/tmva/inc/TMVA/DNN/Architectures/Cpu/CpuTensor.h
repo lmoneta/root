@@ -287,14 +287,24 @@ public:
 
       size_t GetBufferUseCount() const { return this->GetContainer()->GetUseCount(); }
 
-      void Print() const
+      void Print(const char *name = "Tensor") const
       {
-
+         PrintShape(name);
          auto &fData = this->GetData();
          auto &fSize = this->GetSize();
          for (size_t i = 0; i < fSize; i++)
             std::cout << fData[i] << "  ";
          std::cout << std::endl;
+      }
+      void PrintShape(const char *name = "Tensor") const
+      {
+         std::string memlayout = (GetLayout() == MemoryLayout::RowMajor) ? "RowMajor" : "ColMajor";
+         std::cout << name << " shape : { ";
+         auto &shape = this->GetShape();
+         for (size_t i = 0; i < shape.size() - 1; ++i)
+            std::cout << shape[i] << " , ";
+         std::cout << shape.back() << " } "
+                   << " Layout : " << memlayout << std::endl;
       }
 };
 

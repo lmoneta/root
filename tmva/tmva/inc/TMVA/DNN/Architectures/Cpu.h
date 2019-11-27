@@ -77,7 +77,7 @@ public:
    using DropoutDescriptor_t     = DummyDescriptor;
    //using OpTensorDescriptor_t    = DummyOpTensorDescriptor;
    using PoolingDescriptor_t     = DummyDescriptor;
-   using TensorDescriptor_t      = DummyDescriptor; 
+   using TensorDescriptor_t      = DummyDescriptor;
    //using ReductionDescriptor_t   = DummyReduceTensorDescriptor;
    using AlgorithmForward_t      = DummyConvolutionFwdAlgo;
    using AlgorithmBackward_t     = DummyConvolutionBwdDataAlgo;
@@ -87,8 +87,8 @@ public:
 
    using EmptyDescriptor_t       = DummyDescriptor;        // Used if a descriptor is not needed in a class
 
-   using BNormLayer_t            = DNN::TBatchNormLayer<TCpu<AReal>>;
-   using BNormDescriptors_t      = CNN::TCNNDescriptors<BNormLayer_t>;
+   using BNormLayer_t            = TBatchNormLayer<TCpu<AReal>>;
+   using BNormDescriptors_t      = TDNNGenDescriptors<BNormLayer_t>;
    //using BNormWorkspace_t        = CNN::TCNNWorkspace<BNormLayer_t>;
    using ConvLayer_t             = CNN::TConvLayer<TCpu<AReal>>;
    using ConvDescriptors_t       = CNN::TCNNDescriptors<ConvLayer_t>;
@@ -119,11 +119,11 @@ public:
    //____________________________________________________________________________
 
    /** Initialize CNN data/operator descriptors. Not used at the moment.*/
-   
+
    static void InitializeBNormDescriptors(TDescriptors * & /*descriptors*/,
                                           BNormLayer_t */*L = nullptr*/) {}
-   
-   static void InitializeConvDescriptors(TDescriptors * & /*descriptors*/, double /*coef = 0.0*/,
+
+   static void InitializeConvDescriptors(TDescriptors * & /*descriptors*/,
                                          ConvLayer_t */*L = nullptr*/) {}
    static void InitializePoolDescriptors(TDescriptors * & /*descriptors*/,
                                          PoolingLayer_t */*L = nullptr*/) {}
@@ -131,9 +131,9 @@ public:
    static void InitializeActivationDescriptor(ActivationDescriptor_t &/*descriptors*/, EActivationFunction /*activFunc */ , double /*coef*/ = 0.0) {}
 
    /** Release CNN data/operator descriptors. Not used at the moment.*/
-   static void ReleaseConvDescriptors(TDescriptors * & /*descriptors*/, ConvLayer_t */*L = nullptr*/) {}
-   static void ReleasePoolDescriptors(TDescriptors * & /*descriptors*/, PoolingLayer_t */*L = nullptr*/) {}
-   static void ReleaseBNormDescriptors(TDescriptors * & /*descriptors*/, BNormLayer_t */*L = nullptr*/) {}
+   static void ReleaseConvDescriptors(TDescriptors * & /*descriptors*/) {}
+   static void ReleasePoolDescriptors(TDescriptors * & /*descriptors*/) {}
+   static void ReleaseBNormDescriptors(TDescriptors * & /*descriptors*/) {}
 
    static void InitializeConvWorkspace(TWorkspace * & /*workspace*/,
                                        TDescriptors * & /*descriptors*/,
@@ -462,8 +462,10 @@ public:
    static void BatchNormLayerBackward(int axis, const Tensor_t &x, const Tensor_t &dy, Tensor_t &dx,
                                       Matrix_t &gamma, //  Matrix_t &beta, (not needed)
                                       Matrix_t &dgamma, Matrix_t &dbeta, const Matrix_t &mean, const Matrix_t &variance,
-                                      const Matrix_t &iVariance, const Matrix_t &runningMeans,
-                                      const Matrix_t &runningVars, Scalar_t epsilon, const TensorDescriptor_t &);
+                                      const Matrix_t &iVariance, Scalar_t epsilon, const TensorDescriptor_t &);
+
+   // helper function for BNorm layer
+   static Tensor_t BatchNormLayerReshapeTensor(int axis, const Tensor_t &x);
 
    ///@}
 
@@ -476,26 +478,20 @@ public:
     */
    ///@{
 
-   /** Calculate how many neurons "fit" in the output layer, given the input as well as the layer's hyperparameters. */
+   /** Calculate how many neurons "fit" in the output layer, given the input as well as the layer's hyperparameters.
+    */
    static size_t calculateDimension(size_t imgDim, size_t fltDim, size_t padding, size_t stride);
 
    /** Transform the matrix B in local view format, suitable for
     *  convolution, and store it in matrix A */
-   static void Im2col(Matrix_t &A,
-                      const Matrix_t &B,
-                      size_t imgHeight,
-                      size_t imgWidth,
-                      size_t fltHeight,
-                      size_t fltWidth,
-                      size_t strideRows,
-                      size_t strideCols,
-                      size_t zeroPaddingHeight,
-                      size_t zeroPaddingWidth);
-
-   static void Im2colIndices(std::vector<int> &V, const Matrix_t &B, size_t nLocalViews, size_t imgHeight, size_t imgWidth, size_t fltHeight,
+   static void Im2col(Matrix_t &A, const Matrix_t &B, size_t imgHeight, size_t imgWidth, size_t fltHeight,
                       size_t fltWidth, size_t strideRows, size_t strideCols, size_t zeroPaddingHeight,
                       size_t zeroPaddingWidth);
-   static void Im2colFast(Matrix_t &A, const Matrix_t &B, const std::vector<int> & V);
+
+   static void Im2colIndices(std::vector<int> &V, const Matrix_t &B, size_t nLocalViews, size_t imgHeight,
+                             size_t imgWidth, size_t fltHeight, size_t fltWidth, size_t strideRows, size_t strideCols,
+                             size_t zeroPaddingHeight, size_t zeroPaddingWidth);
+   static void Im2colFast(Matrix_t &A, const Matrix_t &B, const std::vector<int> &V);
 
    /** Rotates the matrix \p B, which is representing a weights,
     *  and stores them in the matrix \p A. */
@@ -510,15 +506,12 @@ public:
    static void PrepareInternals(Tensor_t &) {}
 
    /** Forward propagation in the Convolutional layer */
-   static void ConvLayerForward(Tensor_t & output,
-                                Tensor_t & inputActivationFunc,
-                                const Tensor_t &input,
-                                const Matrix_t &weights, const Matrix_t & biases,
-                                const DNN::CNN::TConvParams & params, EActivationFunction activFunc,
-                                Tensor_t & /* inputPrime */,
-                                const ConvDescriptors_t & /*descriptors*/,   // Empty struct for cuda architecture
-                                ConvWorkspace_t & /*workspace*/);       // Empty struct for cuda architecture
-                                //void * cudnnWorkspace = nullptr);          // Remains nullptr for cuda architecture
+   static void ConvLayerForward(Tensor_t &output, Tensor_t &inputActivationFunc, const Tensor_t &input,
+                                const Matrix_t &weights, const Matrix_t &biases, const DNN::CNN::TConvParams &params,
+                                EActivationFunction activFunc, Tensor_t & /* inputPrime */,
+                                const ConvDescriptors_t & /*descriptors*/, // Empty struct for cuda architecture
+                                ConvWorkspace_t & /*workspace*/);          // Empty struct for cuda architecture
+   // void * cudnnWorkspace = nullptr);          // Remains nullptr for cuda architecture
 
    /** @name Backward Propagation in Convolutional Layer
     */
@@ -532,44 +525,33 @@ public:
     *  in \p df and thus produces only a valid result, if it is applied the
     *  first time after the corresponding forward propagation has been per-
     *  formed. */
-   static void ConvLayerBackward(Tensor_t &activationGradientsBackward,
-                                 Matrix_t &weightGradients, Matrix_t &biasGradients,
-                                 Tensor_t &df,
-                                 Tensor_t &activationGradients,
-                                 const Matrix_t &weights,
-                                 const Tensor_t &activationBackward,
-                                 const Tensor_t &  outputTensor,
-                                 EActivationFunction activFunc,
-                                 const ConvDescriptors_t & /*descriptors*/,
-                                 ConvWorkspace_t & /*workspace*/,
-                                 size_t batchSize,   size_t inputHeight,
-                                 size_t inputWidth,  size_t depth,
-                                 size_t height,      size_t width,
-                                 size_t filterDepth, size_t filterHeight,
-                                 size_t filterWidth, size_t nLocalViews );
+   static void
+   ConvLayerBackward(Tensor_t &activationGradientsBackward, Matrix_t &weightGradients, Matrix_t &biasGradients,
+                     Tensor_t &df, Tensor_t &activationGradients, const Matrix_t &weights,
+                     const Tensor_t &activationBackward, const Tensor_t &outputTensor, EActivationFunction activFunc,
+                     const ConvDescriptors_t & /*descriptors*/, ConvWorkspace_t & /*workspace*/, size_t batchSize,
+                     size_t inputHeight, size_t inputWidth, size_t depth, size_t height, size_t width,
+                     size_t filterDepth, size_t filterHeight, size_t filterWidth, size_t nLocalViews);
 
    /** Utility function for calculating the activation gradients of the layer
     *  before the convolutional layer. */
-   static void CalculateConvActivationGradients(Tensor_t &activationGradientsBackward,
-                                                const Tensor_t &df,
-                                                const Matrix_t &weights, size_t batchSize,
-                                                size_t inputHeight, size_t inputWidth, size_t depth, size_t height,
-                                                size_t width, size_t filterDepth, size_t filterHeight,
-                                                size_t filterWidth);
+   static void CalculateConvActivationGradients(Tensor_t &activationGradientsBackward, const Tensor_t &df,
+                                                const Matrix_t &weights, size_t batchSize, size_t inputHeight,
+                                                size_t inputWidth, size_t depth, size_t height, size_t width,
+                                                size_t filterDepth, size_t filterHeight, size_t filterWidth);
 
    /** Utility function for calculating the weight gradients of the convolutional
     * layer. */
-   static void CalculateConvWeightGradients(Matrix_t &weightGradients,
-                                            const Tensor_t &df,
-                                            const Tensor_t &activations_backward,
-                                            size_t batchSize, size_t inputHeight, size_t inputWidth, size_t depth,
-                                            size_t height, size_t width, size_t filterDepth, size_t filterHeight,
-                                            size_t filterWidth, size_t nLocalViews);
+   static void CalculateConvWeightGradients(Matrix_t &weightGradients, const Tensor_t &df,
+                                            const Tensor_t &activations_backward, size_t batchSize, size_t inputHeight,
+                                            size_t inputWidth, size_t depth, size_t height, size_t width,
+                                            size_t filterDepth, size_t filterHeight, size_t filterWidth,
+                                            size_t nLocalViews);
 
    /** Utility function for calculating the bias gradients of the convolutional
     *  layer */
-   static void CalculateConvBiasGradients(Matrix_t &biasGradients, const Tensor_t &df,
-                                          size_t batchSize, size_t depth, size_t nLocalViews);
+   static void CalculateConvBiasGradients(Matrix_t &biasGradients, const Tensor_t &df, size_t batchSize, size_t depth,
+                                          size_t nLocalViews);
    ///@}
 
    //____________________________________________________________________________
@@ -583,12 +565,9 @@ public:
    /** Downsample the matrix \p C to the matrix \p A, using max
     * operation, such that the winning indices are stored in matrix
     * \p B. */
-   static void Downsample(Tensor_t &A, Tensor_t &B, const Tensor_t &C,
-                          const PoolingDescriptors_t & /*descriptors*/,
-                          PoolingWorkspace_t & /*workspace*/,
-                          size_t imgHeight, size_t imgWidth,
-                          size_t fltHeight, size_t fltWidth,
-                          size_t strideRows, size_t strideCols);
+   static void Downsample(Tensor_t &A, Tensor_t &B, const Tensor_t &C, const PoolingDescriptors_t & /*descriptors*/,
+                          PoolingWorkspace_t & /*workspace*/, size_t imgHeight, size_t imgWidth, size_t fltHeight,
+                          size_t fltWidth, size_t strideRows, size_t strideCols);
 
    ///@}
 
@@ -598,19 +577,11 @@ public:
    /** Perform the complete backward propagation step in a Pooling Layer. Based on the
     *  winning idices stored in the index matrix, it just forwards the actiovation
     *  gradients to the previous layer. */
-   static void MaxPoolLayerBackward(Tensor_t &activationGradientsBackward,
-                                    const Tensor_t &activationGradients,
-                                    const Tensor_t &indexMatrix,
-                                    const Tensor_t & /*inputActivation*/,
-                                    const Tensor_t & /*outputTensor*/,
-                                    const PoolingDescriptors_t & /*descriptors*/,
-                                    PoolingWorkspace_t & /*workspace*/,
-                                    size_t imgHeight,
-                                    size_t imgWidth,
-                                    size_t fltHeight,
-                                    size_t fltWidth,
-                                    size_t strideRows,
-                                    size_t strideCols,
+   static void MaxPoolLayerBackward(Tensor_t &activationGradientsBackward, const Tensor_t &activationGradients,
+                                    const Tensor_t &indexMatrix, const Tensor_t & /*inputActivation*/,
+                                    const Tensor_t & /*outputTensor*/, const PoolingDescriptors_t & /*descriptors*/,
+                                    PoolingWorkspace_t & /*workspace*/, size_t imgHeight, size_t imgWidth,
+                                    size_t fltHeight, size_t fltWidth, size_t strideRows, size_t strideCols,
                                     size_t nLocalViews);
 
    ///@}
@@ -637,19 +608,16 @@ public:
    /** Rearrage data accoring to time fill B x T x D out with T x B x D matrix in*/
    static void Rearrange(Tensor_t &out, const Tensor_t &in);
 
-
- /** Backward pass for Recurrent Networks */
-   static Matrix_t & RecurrentLayerBackward(Matrix_t & state_gradients_backward, // BxH
-                                            Matrix_t & input_weight_gradients,
-                                            Matrix_t & state_weight_gradients,
-                                            Matrix_t & bias_gradients,
-                                            Matrix_t & df, //DxH
-                                            const Matrix_t & state, // BxH
-                                            const Matrix_t & weights_input, // HxD
-                                            const Matrix_t & weights_state, // HxH
-                                            const Matrix_t & input,  // BxD
-                                            Matrix_t & input_gradient);
-
+   /** Backward pass for Recurrent Networks */
+   static Matrix_t &RecurrentLayerBackward(Matrix_t &state_gradients_backward, // BxH
+                                           Matrix_t &input_weight_gradients, Matrix_t &state_weight_gradients,
+                                           Matrix_t &bias_gradients,
+                                           Matrix_t &df,                  // DxH
+                                           const Matrix_t &state,         // BxH
+                                           const Matrix_t &weights_input, // HxD
+                                           const Matrix_t &weights_state, // HxH
+                                           const Matrix_t &input,         // BxD
+                                           Matrix_t &input_gradient);
 
    ///@}
 
@@ -668,23 +636,17 @@ public:
    /** Standard multiplication of two matrices \p A and \p B with the result being
     *  written into C.
     */
-   static void Multiply(Matrix_t &C,
-                        const Matrix_t &A,
-                        const Matrix_t &B);
+   static void Multiply(Matrix_t &C, const Matrix_t &A, const Matrix_t &B);
    /** Matrix multiplication of two matrices \p A and \p B^T (transposed) with the
     *  result being written into C.
     */
-   static void TransposeMultiply(Matrix_t &output,
-                                 const Matrix_t &input,
-                                 const Matrix_t &Weights,
-                                 Scalar_t alpha = 1.0, Scalar_t beta = 0.);
+   static void TransposeMultiply(Matrix_t &output, const Matrix_t &input, const Matrix_t &Weights, Scalar_t alpha = 1.0,
+                                 Scalar_t beta = 0.);
    /** In-place Hadamard (element-wise) product of matrices \p A and \p B
     *  with the result being written into \p A.
     */
-   static void Hadamard(Tensor_t &A,
-                        const Tensor_t &B);
-   static void Hadamard(Matrix_t &A,
-                        const Matrix_t &B);
+   static void Hadamard(Tensor_t &A, const Tensor_t &B);
+   static void Hadamard(Matrix_t &A, const Matrix_t &B);
    // {
    //    Tensor_t tA(A);
    //    Hadamard( tA, Tensor_t(B));
@@ -693,9 +655,7 @@ public:
    /** Sum columns of (m x n) matrixx \p A and write the results into the first
     * m elements in \p A.
     */
-   static void SumColumns(Matrix_t &B,
-                          const Matrix_t &A,
-                          Scalar_t alpha = 1.0, Scalar_t beta = 0.);
+   static void SumColumns(Matrix_t &B, const Matrix_t &A, Scalar_t alpha = 1.0, Scalar_t beta = 0.);
 
    /** Compute the sum of all elements in \p A */
    static Scalar_t Sum(const Matrix_t &A);
@@ -728,13 +688,13 @@ public:
     */
    static void SqrtElementWise(Matrix_t &A);
 
-     // optimizer functions
-   static void AdamUpdate(Matrix_t & A, const Matrix_t & M, const Matrix_t & V, Scalar_t alpha, Scalar_t eps);
-   static void AdamUpdateFirstMom(Matrix_t & A, const Matrix_t & B, Scalar_t beta);
-   static void AdamUpdateSecondMom(Matrix_t & A, const Matrix_t & B, Scalar_t beta);
+   // optimizer functions
+   static void AdamUpdate(Matrix_t &A, const Matrix_t &M, const Matrix_t &V, Scalar_t alpha, Scalar_t eps);
+   static void AdamUpdateFirstMom(Matrix_t &A, const Matrix_t &B, Scalar_t beta);
+   static void AdamUpdateSecondMom(Matrix_t &A, const Matrix_t &B, Scalar_t beta);
 
    // printing of tensor
-   static void PrintTensor( const Tensor_t & A, const std::string name = "Cpu-tensor", bool truncate = false);
+   static void PrintTensor(const Tensor_t &A, const std::string name = "Cpu-tensor", bool truncate = false);
 
 };
 

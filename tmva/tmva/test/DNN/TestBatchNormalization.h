@@ -76,15 +76,17 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx_eps)
    // FCLayer_t* l1 = net.AddDenseLayer(outputSize, EActivationFunction::kIdentity);
    net.AddDenseLayer(outputSize, EActivationFunction::kIdentity);
 
-   auto & layers = net.GetLayers();
-   auto bnlayer = new TBatchNormLayer<Architecture>(tbatchSize, outputSize);
-   layers.push_back( bnlayer);
+   net.AddBatchNormLayer();
+
+   //    auto &layers = net.GetLayers();
+   // auto bnlayer = new TBatchNormLayer<Architecture>(tbatchSize, 1, 1, outputSize);
+   // layers.push_back( bnlayer);
+
    net.AddDenseLayer(1, EActivationFunction::kIdentity);
 
-    
-    //net.AddBatchNormLayer()
 
-   net.Print(); 
+
+   net.Print();
 
    // Random training data.
    Tensor_t X(1, tbatchSize, inputSize); // T x B x D
@@ -92,12 +94,12 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx_eps)
    net.Initialize();
    randomBatch(X);
    // Matrix_t & input = X[0];
-   // for (int i = 0; i < tbatchSize; ++i) { 
-   //    for (int j = 0; j < inputSize; ++j) { 
+   // for (int i = 0; i < tbatchSize; ++i) {
+   //    for (int j = 0; j < inputSize; ++j) {
    //       input(i,j) = i*2 + j;
    //    }
    // }
-   //input.Print(); 
+   //input.Print();
 
    fillMatrix(Y,0.0);
    fillMatrix(weights, 1.0);
@@ -106,7 +108,10 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx_eps)
    //X[0].Print();
 
    //auto & w2 = net.GetLayerAt(2)->GetWeightsAt(0);
-  
+   net.GetLayerAt(0)->GetOutput().PrintShape();
+   net.GetLayerAt(1)->GetOutput().PrintShape();
+   net.GetLayerAt(2)->GetOutput().PrintShape();
+
    net.Forward(X, true);
 
    std::cout << "output DL \n";
@@ -137,10 +142,10 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx_eps)
    // compare to result obtained from backpropagation.
    ROOT::Math::RichardsonDerivator deriv;
    for (size_t l = 0; l < net.GetLayers().size(); l++) {
-      //if (l < 1) continue; 
+      //if (l < 1) continue;
       auto layer = net.GetLayerAt(l);
       for (size_t k = 0; k < layer->GetWeights().size(); k++) {
-         //if (k != 1 ) continue; 
+         //if (k != 1 ) continue;
          std::cout << "\rTesting weight gradients   for    layer " << l << std::endl;
          std::cout << std::flush;
          auto &dW = layer->GetWeightGradientsAt(k);
@@ -148,9 +153,9 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx_eps)
          dW.Print();
          auto &W = layer->GetWeightsAt(k);
          std::cout << "weights for layer " << l << std::endl;
-         W.Print(); 
+         W.Print();
 
-         int i = 0; 
+         int i = 0;
          for (size_t j = 0; j < layer->GetInputWidth(); j++) {
             auto f = [&net, &X, &Y, &weights, l, k, i, j](Scalar_t x) {
                return evaluate_net_weight(net, X, Y, weights, l, k, i, j, x);
@@ -178,4 +183,3 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx_eps)
    std::cout << "maximum relative error: " << print_error(maximum_error) << std::endl;
    return maximum_error;
 }
-

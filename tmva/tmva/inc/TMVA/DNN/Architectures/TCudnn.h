@@ -21,7 +21,7 @@
 #include "TMVA/DNN/Functions.h"
 #include "TMVA/DNN/CNN/ContextHandles.h"
 //#include "TMVA/DNN/CNN/Descriptors.h"
-//#include "TMVA/DNN/BatchNormLayer.h"
+#include "TMVA/DNN/BatchNormLayer.h"
 #include "TMVA/DNN/CNN/ConvLayer.h"
 #include "TMVA/DNN/CNN/MaxPoolLayer.h"
 
@@ -77,12 +77,12 @@ public:
    using AlgorithmHelper_t       = cudnnConvolutionBwdFilterAlgo_t;
    using AlgorithmDataType_t     = cudnnDataType_t;
    using ReduceTensorDescriptor_t = cudnnReduceTensorDescriptor_t;
-   using TensorDescriptor_t       = cudnnTensorDescriptor_t; 
+   using TensorDescriptor_t       = cudnnTensorDescriptor_t;
 
    using EmptyDescriptor_t       = TCudnnEmptyDescriptor;        // Used if a descriptor is not needed in a class
 
-   using BNormLayer_t            = DNN::TBatchNormLayer<TCudnn<AFloat>>;
-   using BNormDescriptors_t      = CNN::TCNNDescriptors<BNormLayer_t>;
+   using BNormLayer_t            = TBatchNormLayer<TCudnn<AFloat>>;
+   using BNormDescriptors_t      = TDNNGenDescriptors<BNormLayer_t>;
    //using BNormWorkspace_t        = CNN::TCNNWorkspace<BNormLayer_t>;*/
    using ConvLayer_t             = CNN::TConvLayer<TCudnn<AFloat>>;
    using ConvDescriptors_t       = CNN::TCNNDescriptors<ConvLayer_t>;
@@ -90,6 +90,9 @@ public:
    using PoolingLayer_t          = CNN::TMaxPoolLayer<TCudnn<AFloat>>;
    using PoolingDescriptors_t    = CNN::TCNNDescriptors<PoolingLayer_t>;
    using PoolingWorkspace_t      = CNN::TCNNWorkspace<PoolingLayer_t>;
+
+   // template <typename AFloat>
+   // using ConvDescriptors_t = CNN::TCNNDescriptors<CNN::TConvLayer<TCudnn<AFloat>>>;
 
    // convolution options
    // default is -1 (left to cudnn)
@@ -128,11 +131,11 @@ public:
    //
    // Architecture Initialization
    //____________________________________________________________________________
-   
+
    static void InitializeBNormDescriptors(TDescriptors * & descriptors,
                                           BNormLayer_t *L = nullptr);
 
-   static void InitializeConvDescriptors(TDescriptors * & descriptors, double coef = 0.0,
+   static void InitializeConvDescriptors(TDescriptors * & descriptors,
                                          ConvLayer_t *L = nullptr);
 
    static void InitializePoolDescriptors(TDescriptors * & descriptors,
@@ -379,13 +382,12 @@ public:
    static void BatchNormLayerForwardInference(int axis, const Tensor_t &x, Matrix_t &gamma, Matrix_t &beta,
                                               Tensor_t &y, const Matrix_t &runningMeans,
                                               const Matrix_t &runningVars, Scalar_t epsilon,
-                                              const TensorDescriptors_t &);
+                                              const TensorDescriptor_t &);
 
    static void BatchNormLayerBackward(int axis, const Tensor_t &x, const Tensor_t &dy, Tensor_t &dx,
                                       Matrix_t &gamma, //  Matrix_t &beta, (not needed)
                                       Matrix_t &dgamma, Matrix_t &dbeta, const Matrix_t &mean, const Matrix_t &variance,
-                                      const Matrix_t &iVariance, const Matrix_t &runningMeans,
-                                      const Matrix_t &runningVars, Scalar_t epsilon, const TensorDescriptors_t &);
+                                      const Matrix_t &iVariance, Scalar_t epsilon, const TensorDescriptor_t &);
 
    //____________________________________________________________________________
    //

@@ -435,7 +435,7 @@ void TCpu<AFloat>::ConvLayerForward(TCpuTensor<AFloat> & output,
    Copy(inputActivationFunc, output);
 
    //evaluate<TCpu<AFloat>>(output, activFunc);
-   ActivationFunctionForward(output, activFunc, DummyActivationDescriptor());
+   ActivationFunctionForward(output, activFunc, ActivationDescriptor_t());
 }
 
 //____________________________________________________________________________
@@ -466,7 +466,7 @@ void TCpu<AFloat>::ConvLayerBackward(TCpuTensor<AFloat> &activationGradientsBack
    //  put resulting dx of activation in activationgradients
    Tensor_t df(activationGradients.GetShape() );   // this is a deep copy, could be put as data member of class
    ActivationFunctionBackward(df, outputTensor, activationGradients, inputActivationFunc,
-                              activFunc, DummyActivationDescriptor() );
+                              activFunc, ActivationDescriptor_t() );
 
    // Hadamard(df, activationGradients);
 
@@ -757,13 +757,12 @@ TCpuTensor<AFloat> TCpu<AFloat>::BatchNormLayerReshapeTensor(int axis, const TCp
    // reshape tensor for batch norm layer according to normalization axis
    // input x - output reshpe of X
    if (axis == 1) {
-
       // reshape to a RowMajor tensor so I can use same indices, in this case channel
-       Shape_t newShape = { x.GetSize() / (x.GetShape().front(), x.GetShape().front() }; // shape is HXWXB , C
-       TCpuTensor<AFloat> xtmp(x.GetDeviceBuffer(), newShape, MemoryLayout::RowMajor);
-       return xtmp;
+      typename TCpuTensor<AFloat>::Shape_t newShape = { x.GetSize() / x.GetShape().front() , x.GetShape().front() }; // shape is HXWXB , C
+      TCpuTensor<AFloat> xtmp(x.GetDeviceBuffer(), newShape, TCpuTensor<AFloat>::MemoryLayout::RowMajor);
+      return xtmp;
    }
-    // default case (axis == -1)
+   // default case (axis == -1)
    return  x.Reshape({x.GetStrides().back(), x.GetShape().back()});
 }
 
@@ -771,26 +770,26 @@ TCpuTensor<AFloat> TCpu<AFloat>::BatchNormLayerReshapeTensor(int axis, const TCp
 template <typename AFloat>
 void TCpu<AFloat>::BatchNormLayerForwardTraining(int axis, const TCpuTensor<AFloat> &x,
                                                  TCpuTensor<AFloat> & y,
-                                                 Matrix_t &gamma, Matrix_t &beta, 
+                                                 Matrix_t &gamma, Matrix_t &beta,
                                                  Matrix_t & mean,
-                                                 Matrix_t & variance, 
+                                                 Matrix_t & variance,
                                                  Matrix_t & iVariance,
                                                  Matrix_t & runningMeans,
-                                                 Matrix_t & runningVars, 
+                                                 Matrix_t & runningVars,
                                                  Scalar_t nTrainedBatches,
                                                  Scalar_t momentum, Scalar_t epsilon,
                                                  const TensorDescriptor_t &  )
                                                  //BNormWorkspace_t * workspace )
 {
-   // the tensor are reshaped in order to 
+   // the tensor are reshaped in order to
    // have a first coordinate the normalized coordinates and second the feature we are computing the norm
-   // e.g. batch size , number of features  or 
+   // e.g. batch size , number of features  or
    //  B x H x W , C
 
    TCpuTensor<AFloat> input = BatchNormLayerReshapeTensor(axis,x);
    TCpuTensor<AFloat> output = BatchNormLayerReshapeTensor(axis,y);
-   
-   assert (input.GetShape().size() == 2); 
+
+   assert (input.GetShape().size() == 2);
    int n = input.GetShape()[0];   // size of coordinates we are normalizing (e.g batch size)
    int d = input.GetShape()[1];   // size of the coordinate we are not normalizing (e.g. feature size)
 
@@ -805,7 +804,7 @@ void TCpu<AFloat>::BatchNormLayerForwardTraining(int axis, const TCpuTensor<AFlo
       double sq = 0;
       for (int i = 0; i < n; i++) {
          Scalar_t xmu = input(i, k) - mean(0,k);
-         sq = sq + (xmu * xmu;
+         sq = sq + (xmu * xmu);
       }
       variance(0,k) = sq / n;
       // fVar(0,k) = fVar(0,k) + epsilon;
@@ -845,15 +844,13 @@ void TCpu<AFloat>::BatchNormLayerForwardInference(int axis, const TCpuTensor<AFl
                                                   const Matrix_t & runningVars,
                                                   Scalar_t epsilon,
                                                   const TensorDescriptor_t & )
-                                                  //BNormWorkspace_t * workspace)
-                                                  
 {
    TCpuTensor<AFloat> input = BatchNormLayerReshapeTensor(axis,x);
    TCpuTensor<AFloat> output = BatchNormLayerReshapeTensor(axis,y);
-   
-   assert (input.GetShape().size() == 2); 
+
+   assert (input.GetShape().size() == 2);
    int n = input.GetShape()[0];   // size of coordinates we are normalizing (e.g batch size)
-   int d = input.GetShape()[1]; 
+   int d = input.GetShape()[1];
 
    for (int k = 0; k < d; ++k) {
       // during inference just use stored mu and variance
@@ -876,22 +873,19 @@ void TCpu<AFloat>::BatchNormLayerBackward(int axis, const TCpuTensor<AFloat> &x,
                                                  Matrix_t &gamma, //  Matrix_t &beta, (not needed)
                                                  Matrix_t &dgamma, Matrix_t &dbeta,
                                                  const Matrix_t & mean,
-                                                 const Matrix_t & variance, 
+                                                 const Matrix_t & variance,
                                                  const Matrix_t & iVariance,
-                                                 const Matrix_t & runningMeans,
-                                                 const Matrix_t & runningVars, 
                                                  Scalar_t epsilon,
                                                  const TensorDescriptor_t & )
-                                                 //BNormWorkspace_t * workspace )
 {
    TCpuTensor<AFloat> input = BatchNormLayerReshapeTensor(axis,x);
    TCpuTensor<AFloat> inputGrad = BatchNormLayerReshapeTensor(axis,dx);
    TCpuTensor<AFloat> outputGrad = BatchNormLayerReshapeTensor(axis,dy);
-   
-   assert (outputGrad.GetShape().size() == 2); 
+
+   assert (outputGrad.GetShape().size() == 2);
    int n = outputGrad.GetShape()[0];   // size of coordinates we are normalizing (e.g batch size)
-   int d = outputGrad.GetShape()[1];    
-  
+   int d = outputGrad.GetShape()[1];
+
 
    // compute first gradients for gamma and beta
    for (int k = 0; k < d; k++) {
@@ -900,7 +894,7 @@ void TCpu<AFloat>::BatchNormLayerBackward(int axis, const TCpuTensor<AFloat> &x,
       for (int i = 0; i < n; i++) {
          Scalar_t xhat = (input(i,k) - mean(0,k)) * iVariance(0,k);
          dbeta(0, k) += outputGrad(i, k);
-         dgamma(0, k) += outputGrad(i, k) * xhat; 
+         dgamma(0, k) += outputGrad(i, k) * xhat;
          // dxhat(i,k) = dout(i,k) * gamma(0,k);
       }
    }
@@ -912,7 +906,7 @@ void TCpu<AFloat>::BatchNormLayerBackward(int axis, const TCpuTensor<AFloat> &x,
    for (int k = 0; k < d; k++) {
       for (int i = 0; i < n; i++) {
          npSumDy += outputGrad(i, k);
-         npSumDyHMu += outputGrad(i, k) * (input(i,k) - mean(0,k))
+         npSumDyHMu += outputGrad(i, k) * (input(i, k) - mean(0, k));
       }
       for (int i = 0; i < n; i++) {
          Scalar_t xmu = (input(i,k) - mean(0,k));

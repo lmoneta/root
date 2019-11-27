@@ -70,6 +70,7 @@ public:
    using Tensor_t = typename Architecture_t::Tensor_t;
 
    using HelperDescriptor_t  = typename Architecture_t::TensorDescriptor_t;
+   using BNormDescriptors_t = typename Architecture_t::BNormDescriptors_t;
 
    //using Matrix_t = TMatrixD;
 
@@ -99,14 +100,17 @@ private:
    Matrix_t fMu_Training;
    Matrix_t fVar_Training;
 
+   // cached tensor used for Cudnn to get correct shape
+   Tensor_t fReshapedData;  // cached reshaped data tensor
+
    // counter of trained batches for computing tesing and variance means
    int fTrainedBatches = 0;
 
-   TDescriptors * fDescriptors = nullptr; 
+   TDescriptors * fDescriptors = nullptr;
 
 public:
    /*! Constructor */
-   TBatchNormLayer(size_t batchSize, size_t inputDepth, size_t inputHeight, size_t inputWidth, 
+   TBatchNormLayer(size_t batchSize, size_t inputDepth, size_t inputHeight, size_t inputWidth,
                    const std::vector<size_t> & shape, int axis = -1, Scalar_t momentum = -1., Scalar_t epsilon = 0.0001);
 
    /*! Copy the dense layer provided as a pointer */
@@ -178,58 +182,66 @@ public:
 
    // Scalar_t GetWeightDecay() const { return fWeightDecay; }
 
-   /*  Get the momentum of the gradient descent */
-   const Scalar_t GetMomentum() const { return fMomentum;}
-   Scalar_t GetMomentum() { return fMomentum;}
+   /*  Get the momentum of the running mean/variance */
+   Scalar_t GetMomentum() const { return fMomentum;}
 
    /*  Get epsilon */
-   const Scalar_t GetEpsilon() const { return fEpsilon;}
-   Scalar_t GetEpsilon() { return fEpsilon;}
+   Scalar_t GetEpsilon() const { return fEpsilon;}
 
+   /*  Get normalization axis (the one which will have each element normalized) */
+   Scalar_t GetNormAxis() const { return fNormAxis;}
+
+   const Matrix_t &GetReshapedData() const { return fReshapedData; }
+   Matrix_t &GetReshapedData() { return fReshapedData; }
+
+protected:
+   static size_t CalculateNormDim(int axis, size_t c, size_t h, size_t w)
+   {
+      if (axis == -1)
+         return c * h * w;
+      else if (axis == 1)
+         return c;
+      else if (axis == 2)
+         return h;
+      else if (axis == 3)
+         return w;
+      return 0;
+      }
 };
 
-size_t calculateBNormDim(int axis, size_t c, size_t h, size_t w) {
-   if (axis == -1)
-      return c * h * w;
-   else if (axis == 1)
-      return c;
-   else if (axis == 2)
-      return h;
-   else if (axis == 3)
-      return w;
-   return 0;
-}
+
 //
 //
 //  The Dense Layer Class - Implementation
 //______________________________________________________________________________
 template <typename Architecture_t>
 TBatchNormLayer<Architecture_t>::TBatchNormLayer(size_t batchSize, size_t inputDepth, size_t inputHeight,
-                                                 size_t inputWidth, const std::vector<size_t> & shape, 
-                                                 int axis, Scalar_t momentum,
-                                                 Scalar_t epsilon)
+                                                 size_t inputWidth, const std::vector<size_t> &shape, int axis,
+                                                 Scalar_t momentum, Scalar_t epsilon)
    : VGeneralLayer<Architecture_t>(batchSize, inputDepth, inputHeight, inputWidth, // bs + input shape
                                    inputDepth, inputHeight, inputWidth,            // output shape
-                                   2, 1, calculateBNormDim(axis, inputDepth, inputHeight, inputWidth), // weight tensor dim.
+                                   2, 1,
+                                   CalculateNormDim(axis, inputDepth, inputHeight, inputWidth), // weight tensor dim.
                                    1, 1, 1,                                                      // bias
-                                   shape[0], shape[1], shape[2],                                 // output tensor shape
+                                   shape[2], shape[0], shape[1],                                 // output tensor shape as bsize, depth, hw
                                    EInitialization::kZero),
-     fNormAxis(axis), fMomentum(momentum), fEpsilon(epsilon)
+     fNormAxis(axis), fMomentum(momentum), fEpsilon(epsilon),
+     fMu(1, VGeneralLayer<Architecture_t>::GetWeightsAt(0).GetNcols()), // dimension is same as weights
+     fVar(1, VGeneralLayer<Architecture_t>::GetWeightsAt(0).GetNcols()),
+     fIVar(1, VGeneralLayer<Architecture_t>::GetWeightsAt(0).GetNcols()),
+     fMu_Training(1, VGeneralLayer<Architecture_t>::GetWeightsAt(0).GetNcols()),
+     fVar_Training(1, VGeneralLayer<Architecture_t>::GetWeightsAt(0).GetNcols()),
+     fReshapedData(1,1,1)  // use a dummy single element tensor
 
-   //   fXmu(batchSize, inputWidth), fXhat(batchSize, inputWidth),
-   //   // dgammax(batchSize, inputWidth),
-   //   fVar(1, inputWidth),
-   //   // sqrtvar(1, inputWidth),
-   //   fMu(calculateBNormDim(axis, inputDepth, inpuyHeight, inputWidth)),
-   //   fIvar(1, inputWidth), fMu_Training(inputWidth),
-   //   fVar_Training(inputWidth)
+//   fXmu(batchSize, inputWidth), fXhat(batchSize, inputWidth),
+//   // dgammax(batchSize, inputWidth),
+//   fVar(1, inputWidth),
+//   // sqrtvar(1, inputWidth),
+//   fMu(calculateBNormDim(axis, inputDepth, inpuyHeight, inputWidth)),
+//   fIvar(1, inputWidth), fMu_Training(inputWidth),
+//   fVar_Training(inputWidth)
 {
-   size_t bndim = calculateBNormDim(axis, inputDepth, inputHeight, inputWidth);
-   fMu = Matrix_t(1,bndim);
-   fVar = Matrix_t(1,bndim);
-   fIVar = Matrix_t(1,bndim);
-   fMu_Training = Matrix_t(1,bndim);
-   fVar_Training = Matrix_t(1,bndim);
+
 }
 //______________________________________________________________________________
 template <typename Architecture_t>
@@ -254,7 +266,7 @@ TBatchNormLayer<Architecture_t>::~TBatchNormLayer()
 {
    // release descriptors
    if (fDescriptors) {
-      Architecture_t::ReleaseBNormDescriptors(fDescriptors, this);
+      Architecture_t::ReleaseBNormDescriptors(fDescriptors);
       delete fDescriptors;
    }
 }
@@ -270,8 +282,8 @@ auto TBatchNormLayer<Architecture_t>::Initialize() -> void
    for (size_t i = 0; i < bndim; ++i) {
       gamma(0, i) = 1.;
       // assign default values for the other parameters
-      fMu_Training(0,i) = 0; 
-      fVar_Training(0,i) = 1; 
+      fMu_Training(0,i) = 0;
+      fVar_Training(0,i) = 1;
    }
 
    Matrix_t &dgamma = this->GetWeightGradientsAt(0);
@@ -288,19 +300,30 @@ auto TBatchNormLayer<Architecture_t>::Initialize() -> void
 template <typename Architecture_t>
 auto TBatchNormLayer<Architecture_t>::Forward(Tensor_t &x, bool inTraining) -> void
 {
-   auto descr = static_cast<CNN::TCNNDescriptors<TBatchNormLayer<Architecture_t>> *> (fDescriptors); 
+   Tensor_t x2;
+   Tensor_t y2;
+   if (x.GetLayout() != fReshapedData.GetLayout()) {
+      x2 = Tensor_t(x.GetDeviceBuffer(), fReshapedData.GetShape(), fReshapedData.GetLayout());
+      y2 = Tensor_t(this->GetOutput().GetDeviceBuffer(), fReshapedData.GetShape(), fReshapedData.GetLayout());
+   }
+   else{
+      x2 = x;
+      y2 = this->GetOutput();
+   }
+
+   auto descr = static_cast<BNormDescriptors_t *> (fDescriptors);
    if (inTraining)
-      Architecture_t::BatchNormLayerForwardTraining(fNormAxis, x, this->GetOutput(),
+      Architecture_t::BatchNormLayerForwardTraining(fNormAxis, x2, y2,
                                                     this->GetWeightsAt(0), this->GetWeightsAt(1),
                                                     this->GetBatchMean(), this->GetVariance(), this->GetIVariance(),
                                                     this->GetMuVector(),
                                                     this->GetVarVector(), this->GetNTrainedBatches(),
-                                                    this->GetMomentum(), this->GetEpsilon(), 
+                                                    this->GetMomentum(), this->GetEpsilon(),
                                                     descr->HelperDescriptor);
 
    else
-      Architecture_t::BatchNormLayerForwardInference(fNormAxis, x, this->GetWeightsAt(0), this->GetWeightsAt(1),
-                                                     this->GetOutput(), this->GetMuVector(), this->GetVarVector(),
+      Architecture_t::BatchNormLayerForwardInference(fNormAxis, x2, this->GetWeightsAt(0), this->GetWeightsAt(1),
+                                                     y2, this->GetMuVector(), this->GetVarVector(),
                                                      this->GetEpsilon(), descr->HelperDescriptor);
 
 #if 0
@@ -381,14 +404,30 @@ auto TBatchNormLayer<Architecture_t>::Backward(Tensor_t &gradients_backward,
                                                const Tensor_t & activations_backward ) -> void
 //                                               Tensor_t &, Tensor_t &) -> void
 {
-   auto descr = static_cast<CNN::TCNNDescriptors<TBatchNormLayer<Architecture_t> >*> (fDescriptors); 
-   Architecture_t::BatchNormLayerBackward(fNormAxis, activations_backward, // x
+   auto descr = static_cast<BNormDescriptors_t *> (fDescriptors);
+
+
+   if (activations_backward.GetLayout() != fReshapedData.GetLayout()) {
+      Tensor_t x = Tensor_t(activations_backward.GetDeviceBuffer(), fReshapedData.GetShape(), fReshapedData.GetLayout());
+      Tensor_t dx = Tensor_t(gradients_backward.GetDeviceBuffer(), fReshapedData.GetShape(), fReshapedData.GetLayout());
+      Tensor_t dy = Tensor_t(this->GetActivationGradients().GetDeviceBuffer(), fReshapedData.GetShape(), fReshapedData.GetLayout());
+
+      Architecture_t::BatchNormLayerBackward(fNormAxis, x, dy, dx,
+                                             this->GetWeightsAt(0),           // gamma (beta is not needed)
+                                             this->GetWeightGradientsAt(0), this->GetWeightGradientsAt(1),
+                                             this->GetBatchMean(), this->GetVariance(), this->GetIVariance(),
+                                             this->GetEpsilon(), descr->HelperDescriptor);
+
+   } else {
+
+      Architecture_t::BatchNormLayerBackward(fNormAxis, activations_backward, // x
                                           this->GetActivationGradients(), // dy
                                           gradients_backward,             // dx
                                           this->GetWeightsAt(0),          // gamma (beta is not needed)
                                           this->GetWeightGradientsAt(0), this->GetWeightGradientsAt(1),
                                           this->GetBatchMean(), this->GetVariance(), this->GetIVariance(),
                                           this->GetEpsilon(), descr->HelperDescriptor);
+   }
 # if 0
    double epsilon = fEpsilon;
 
@@ -438,7 +477,15 @@ template <typename Architecture_t>
 void TBatchNormLayer<Architecture_t>::Print() const
 {
    std::cout << " BATCH NORM Layer: \t";
-   std::cout << " ( Input =" << std::setw(6) << this->GetWeightsAt(0).GetNcols() << " ) ";
+   std::cout << " Input/Output = ( " ;
+   auto &shape = this->GetOutput().GetShape();
+   for (size_t i = 0; i < shape.size(); ++i) {
+      if (i > 0) std::cout << " , ";
+      std::cout << shape[i];
+   }
+   std::cout  << " ) ";
+   std::cout << "\t Norm dim =" << std::setw(6) << this->GetWeightsAt(0).GetNcols();
+   std::cout << "\t axis = " << fNormAxis << std::endl;
    std::cout << std::endl;
 }
 
@@ -462,12 +509,15 @@ void TBatchNormLayer<Architecture_t>::AddWeightsXMLTo(void *parent)
    // write stored mean and variances
    //using Scalar_t = typename Architecture_t::Scalar_t;
 
-   TMatrixT<Scalar_t> muMat(1, fMu_Training.size(), fMu_Training.data());
-   //VGeneralLayer<TMVA::DNN::TReference<Scalar_t> >::WriteMatrixToXML(layerxml, "Training-mu", muMat);
-   this->WriteMatrixToXML(layerxml, "Training-mu", Matrix_t(muMat) );
-   TMatrixT<Scalar_t> varMat(1, fVar_Training.size(), fVar_Training.data());
-   //VGeneralLayer<TMVA::DNN::TReference<Scalar_t> >::WriteMatrixToXML(layerxml, "Training-variance", varMat);
-   this->WriteMatrixToXML(layerxml, "Training-variance", Matrix_t(varMat) );
+   this->WriteMatrixToXML(layerxml, "Training-mu", fMu_Training);
+   this->WriteMatrixToXML(layerxml, "Training-variance", fVar_Training);
+
+   // TMatrixT<Scalar_t> muMat(1, fMu_Training.size(), fMu_Training.data());
+   // //VGeneralLayer<TMVA::DNN::TReference<Scalar_t> >::WriteMatrixToXML(layerxml, "Training-mu", muMat);
+   // this->WriteMatrixToXML(layerxml, "Training-mu", Matrix_t(muMat) );
+   // TMatrixT<Scalar_t> varMat(1, fVar_Training.size(), fVar_Training.data());
+   // //VGeneralLayer<TMVA::DNN::TReference<Scalar_t> >::WriteMatrixToXML(layerxml, "Training-variance", varMat);
+   // this->WriteMatrixToXML(layerxml, "Training-variance", Matrix_t(varMat) );
 
    // write weights (gamma and beta)
    this->WriteMatrixToXML(layerxml, "Gamma", this->GetWeightsAt(0));
@@ -484,15 +534,18 @@ void TBatchNormLayer<Architecture_t>::ReadWeightsFromXML(void *parent)
    gTools().ReadAttr(parent, "Epsilon", fEpsilon);
    // Read layer weights and biases from XML
 
-   Matrix_t muMat(1, fMu_Training.size());
-   this->ReadMatrixXML(parent, "Training-mu", muMat);
-   TMatrixT<Scalar_t> tmp = muMat;
-   std::copy(tmp.GetMatrixArray(), tmp.GetMatrixArray()+fMu_Training.size(), fMu_Training.begin() );
+   this->ReadMatrixXML(parent, "Training-mu", fMu_Training);
+   this->ReadMatrixXML(parent, "Training-variance", fVar_Training);
 
-   Matrix_t varMat(1, fVar_Training.size());
-   this->ReadMatrixXML(parent, "Training-variance", varMat);
-   TMatrixT<Scalar_t> tmp2 = varMat;
-   std::copy(tmp2.GetMatrixArray(), tmp2.GetMatrixArray()+fVar_Training.size(), fVar_Training.begin() );
+   // Matrix_t muMat(1, fMu_Training.size());
+   // this->ReadMatrixXML(parent, "Training-mu", muMat);
+   // TMatrixT<Scalar_t> tmp = muMat;
+   // std::copy(tmp.GetMatrixArray(), tmp.GetMatrixArray()+fMu_Training.size(), fMu_Training.begin() );
+
+   // Matrix_t varMat(1, fVar_Training.size());
+   // this->ReadMatrixXML(parent, "Training-variance", varMat);
+   // TMatrixT<Scalar_t> tmp2 = varMat;
+   // std::copy(tmp2.GetMatrixArray(), tmp2.GetMatrixArray()+fVar_Training.size(), fVar_Training.begin() );
 
    this->ReadMatrixXML(parent, "Gamma", this->GetWeightsAt(0));
    this->ReadMatrixXML(parent, "Beta", this->GetWeightsAt(1));
