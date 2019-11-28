@@ -131,7 +131,9 @@ public:
    /** Initialize CNN data/operator descriptors. Not used at the moment.*/
 
    static void InitializeBNormDescriptors(TDescriptors * & /*descriptors*/,
-                                          BNormLayer_t */*L = nullptr*/) {}
+                                          BNormLayer_t */*L = nullptr*/) {
+      Error("InitializeBNormDescriptrs", "Batch normalization on GPU is supported only with Cudnn");
+   }
 
    static void  InitializeConvDescriptors(TDescriptors *& /*descriptors*/, ConvLayer_t * /*L = nullptr*/) {}
 
