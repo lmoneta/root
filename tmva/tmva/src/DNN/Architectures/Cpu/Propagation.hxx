@@ -762,8 +762,9 @@ TCpuTensor<AFloat> TCpu<AFloat>::BatchNormLayerReshapeTensor(int axis, const TCp
       TCpuTensor<AFloat> xtmp(x.GetDeviceBuffer(), newShape, TCpuTensor<AFloat>::MemoryLayout::RowMajor);
       return xtmp;
    }
-   // default case (axis == -1)
-   return  x.Reshape({x.GetStrides().back(), x.GetShape().back()});
+   // dense layer case (axis == -1)
+   return  x.Reshape( { x.GetShape().front(), x.GetSize()/ x.GetShape().front()});
+   // what to do with time layer ?
 }
 
 //____________________________________________________________________________
@@ -813,7 +814,11 @@ void TCpu<AFloat>::BatchNormLayerForwardTraining(int axis, const TCpuTensor<AFlo
       for (int i = 0; i < n; i++) {
          Scalar_t xhat = ( input(i,k) - mean(0,k) ) * iVariance(0, k);
          output(i, k) = gamma(0, k) * xhat + beta(0, k);
+
+         // std::cout << "BNFWtraining " << k << "," << i << " xhat " << xhat << " gamma " << gamma(0, k) << " beta " << beta(0, k)
+         //           << std::endl;
       }
+
 
       // fVar(0,k) -= epsilon;
 
@@ -826,12 +831,14 @@ void TCpu<AFloat>::BatchNormLayerForwardTraining(int axis, const TCpuTensor<AFlo
          runningMeans(0,k) = decay * runningMeans(0,k) + (1. - decay) * mean(0,k);
          runningVars(0,k) = decay * runningVars(0,k) + (1.-decay) * variance(0,k) * (n) / (Scalar_t(n - 1) + epsilon);
       }
+      // std::cout << " training batch " << nTrainedBatches << " estimated mu : " << runningMeans(0, k)
+      // << " estimated var " << runningVars(0,k) << std::endl;
 
    } // end loop on k
    nTrainedBatches++;
 
    // fVar.Print();
-   // std::cout << " training batch " << fTrainedBatches << " mu var0" << fMu_Training[0] << std::endl;
+
 }
 
 //____________________________________________________________________________
@@ -900,10 +907,11 @@ void TCpu<AFloat>::BatchNormLayerBackward(int axis, const TCpuTensor<AFloat> &x,
    }
 
    // compute gradients with respect to input
-   double npSumDy = 0;
-   double npSumDyHMu = 0;
+
 
    for (int k = 0; k < d; k++) {
+      double npSumDy = 0;
+      double npSumDyHMu = 0;
       for (int i = 0; i < n; i++) {
          npSumDy += outputGrad(i, k);
          npSumDyHMu += outputGrad(i, k) * (input(i, k) - mean(0, k));
@@ -914,8 +922,6 @@ void TCpu<AFloat>::BatchNormLayerBackward(int axis, const TCpuTensor<AFloat> &x,
                     (n * outputGrad(i, k) - npSumDy -  xmu / (variance(0,k)+ epsilon) * npSumDyHMu);
       }
    }
-   inputGrad.Print("inputGrad");
-   PrintTensor(dx,"dx");
 }
 
 //____________________________________________________________________________

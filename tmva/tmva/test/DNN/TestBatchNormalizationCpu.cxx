@@ -26,6 +26,8 @@ int test()
 
     double error;
 
+    gRandom->SetSeed(111);
+    TCpu<double>::SetRandomSeed(gRandom->Integer(TMath::Limits<UInt_t>::Max()));
     //
     // Test backpropagation for linear net.
     //

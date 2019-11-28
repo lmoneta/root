@@ -198,7 +198,7 @@ public:
             ndims++;
          }
       }
-      assert(ndims == 2);
+      assert(ndims <= 2 && shape.size() > 1);  // to support shape cases {n,1}
       return TCpuMatrix<AFloat>(*(this->GetContainer()), GetHSize(), GetWSize());
    }
 
@@ -290,7 +290,7 @@ public:
       void Print(const char *name = "Tensor") const
       {
          PrintShape(name);
-      
+
          for (size_t i = 0; i < this->GetSize(); i++)
             std::cout << (this->GetData())[i] << "  ";
          std::cout << std::endl;

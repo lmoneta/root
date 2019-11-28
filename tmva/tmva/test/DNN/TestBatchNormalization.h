@@ -63,7 +63,7 @@ typename Architecture::Matrix_t &Y, typename Architecture::Matrix_t & weights, d
    // compare to result obtained from backpropagation.
    ROOT::Math::RichardsonDerivator deriv;
    for (size_t il = 0; il < net.GetLayers().size(); il++) {
-      int l = net.GetLayers().size() - il - 1; 
+      int l = net.GetLayers().size() - il - 1;
       // if (l < 1) continue;
       auto layer = net.GetLayerAt(l);
       for (size_t k = 0; k < layer->GetWeights().size(); k++) {
@@ -120,7 +120,7 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx_eps)
 -> typename Architecture::Scalar_t
 {
    // TODO pass as function params
-   size_t tbatchSize = 10, inputSize = 4, outputSize = 2;
+   size_t tbatchSize = 3, inputSize = 4, outputSize = 2;
 
    using Matrix_t = typename Architecture::Matrix_t;
    using Tensor_t = typename Architecture::Tensor_t;
@@ -158,41 +158,57 @@ auto testBackpropagationWeights(typename Architecture::Scalar_t dx_eps)
    // }
    //input.Print();
 
+
    fillMatrix(Y,0.0);
    fillMatrix(weights, 1.0);
 
    std::cout << "input \n";
+   Architecture::PrintTensor(X, "input network X ");
    //X[0].Print();
 
-   //auto & w2 = net.GetLayerAt(2)->GetWeightsAt(0);
+   std::cout << "weights layer 0" << std::endl;
+   using Scalar_t = typename Architecture::Scalar_t;
+   TMatrixT<Scalar_t> mw = net.GetLayerAt(0)->GetWeightsAt(0);
+   mw.Print();
+
+   // auto & w2 = net.GetLayerAt(2)->GetWeightsAt(0);
    net.GetLayerAt(0)->GetOutput().PrintShape();
    net.GetLayerAt(1)->GetOutput().PrintShape();
    net.GetLayerAt(2)->GetOutput().PrintShape();
 
    net.Forward(X, true);
 
-   std::cout << "output DL \n";
-   net.GetLayerAt(0)->GetOutputAt(0).Print();
+   std::cout << "output of layer before BNorm layer \n";
+   Tensor_t &inputBN = net.GetLayerAt(0)->GetOutput();
+   Architecture::PrintTensor(inputBN, "input BN layer");
+
    std::cout << "output BN \n";
 
    std::vector<double> data(tbatchSize);
+   std::cout << "Mean and std of BN inputs\n";
    for (size_t k = 0; k < outputSize; ++k) {
       for (size_t i = 0; i < tbatchSize; ++i) data[i] = net.GetLayerAt(0)->GetOutputAt(0)(i,k);
       std::cout << "output DL feature " << k << " mean " <<  TMath::Mean(data.begin(), data.end() ) << "\t";
       std::cout << "output DL std " <<  TMath::RMS(data.begin(), data.end() ) << std::endl;
    }
    std::cout << "output of BN \n";
-   net.GetLayerAt(1)->GetOutputAt(0).Print();
+   Architecture::PrintTensor(net.GetLayerAt(1)->GetOutput(), "output BN layer");
 
+   std::cout << "Mean and std of BN outputs\n";
    for (size_t k = 0; k < outputSize; ++k) {
       for (size_t i = 0; i < tbatchSize; ++i) data[i] = net.GetLayerAt(1)->GetOutputAt(0)(i,k);
       std::cout << "output BN feature " << k << " mean " <<  TMath::Mean(data.begin(), data.end() ) << "\t";
       std::cout << "output BN std " <<  TMath::RMS(data.begin(), data.end() ) << std::endl;
    }
 
+   std::cout << "\nDo backward pass.....\n";
 
    net.Backward(X, Y, weights);
 
+   // print dx of bnorm layer (activation gradients of previous one)
+   Architecture::PrintTensor(net.GetLayerAt(0)->GetActivationGradients(), "Computed BN dx");
+
+   std::cout << "\nTest gradients.....\n";
    double error = check_gradients(net, X, Y, weights, dx_eps);
    return error;
 }
@@ -239,7 +255,7 @@ auto testCNNBackpropagationWeights(typename Architecture::Scalar_t dx_eps) -> ty
    net.Print();
 
    // Random training data.
-   Tensor_t X(tbatchSize, inputD, inputH * inputW); // T x B x D
+   Tensor_t X = Architecture::CreateTensor(tbatchSize, inputD, inputH , inputW); // T x B x D
    Matrix_t Y(tbatchSize, 1), weights(tbatchSize, 1);
    net.Initialize();
    randomBatch(X);

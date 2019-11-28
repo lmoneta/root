@@ -118,18 +118,33 @@ void TCudnn<AFloat>::InitializeBNormDescriptors(TDescriptors * & descriptors, ty
    auto bnormDescriptors = new BNormDescriptors_t ();
 
    // reshaped tensors  of bnorm  layer - look if output tensor has right shape
-   const Tensor_t &outputTensor = L->GetOutput();
+   Tensor_t &outputTensor = L->GetOutput();
    Tensor_t &data = L->GetReshapedData();
    if (L->GetNormAxis() == -1 && L->GetBatchSize() == outputTensor.GetShape()[0] && L->GetDepth() == 1 && L->GetHeight() == 1 ) {
+      // case of dense layer before - need to reshape the data
       R__ASSERT(outputTensor.GetLayout() != GetTensorLayout());  // has to be output column major
       // case of convolutions layer before
       Tensor_t &data = L->GetReshapedData();
       // it is not important which buffer we use. Important is the shape and layout of tensor
       data = Tensor_t(outputTensor.GetDeviceBuffer(), {1, L->GetWidth(), 1, L->GetBatchSize()}, GetTensorLayout(), 0, 0);
-   } else {
-      // case of dense layer before
-      data = Tensor_t(outputTensor.GetDeviceBuffer(), {L->GetBatchSize() , L->GetDepth(), L->GetHeight(), L->GetWidth()},
-                              GetTensorLayout(), 0, 0);
+   } else if (L->GetNormAxis() == 1 ) {
+      // case of convolutional layer  before
+      outputTensor.PrintShape("output");
+      Tensor_t tmp( {L->GetBatchSize() , L->GetDepth(), L->GetHeight(), L->GetWidth()}, GetTensorLayout(), 0, 0);
+      tmp.PrintShape("tmp");
+      data = Tensor_t(outputTensor.GetDeviceBuffer(), {L->GetBatchSize() , L->GetDepth(), L->GetHeight(), L->GetWidth() }, GetTensorLayout(), 0, 0);
+
+
+      // reshape output tensor and activation gradient tensor of pool layer
+      outputTensor = Tensor_t(outputTensor.GetDeviceBuffer(),
+        {L->GetBatchSize(), L->GetDepth(), L->GetHeight(), L->GetWidth()},
+                              GetTensorLayout(), 0, 0 );
+
+      Tensor_t &activationGradients = L->GetActivationGradients();
+      activationGradients = Tensor_t(activationGradients.GetDeviceBuffer(),
+                                     outputTensor.GetShape(), GetTensorLayout(), 0, 0);
+      outputTensor.PrintShape("output2");
+
    }
 
    outputTensor.PrintShape("output bnorm");
@@ -325,7 +340,6 @@ void TCudnn<AFloat>::InitializeConvWorkspace(TWorkspace * & workspace,
                                              ConvLayer_t *L) {
    auto convWorkspace = new ConvWorkspace_t ();
    auto convDescriptors = static_cast<ConvDescriptors_t *>(descriptors);
-
 
    // fix the weight tensor shapes
    // by default the weights are columnmajor, set them to be row major . At this points
@@ -672,8 +686,8 @@ void TCudnn<AFloat>::BatchNormLayerForwardTraining(int axis, const Tensor_t &x,
    //if (axis == 1) bnMode = CUDNN_BATCHNORM_SPATIAL;
    cudnnBatchNormMode_t bnMode = CUDNN_BATCHNORM_SPATIAL;
 
-   x.PrintShape("x");
-   y.PrintShape("y");
+   //x.PrintShape("x");
+   //y.PrintShape("y");
 
    double exponentialAverageFactor = momentum;
    CUDNNCHECK(cudnnBatchNormalizationForwardTraining(x.GetCudnnHandle(), bnMode,
@@ -753,6 +767,7 @@ void TCudnn<AFloat>::ConvLayerForward(Tensor_t & outputTensor,
 //                                    const AFloat beta)
 {
    //((Tensor_t & )input).Reshape( {params.batchSize, params.inputDepth, params.inputHeight, params.inputWidth});
+
    assert( input.GetLayout() == GetTensorLayout());
 
    //size_t outputHeight =  DNN::CNN::TConvLayer<TCudnn<AFloat>>::calculateDimension(params.inputHeight, params.filterHeight, params.paddingHeight, params.strideRows);

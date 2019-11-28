@@ -744,6 +744,10 @@ TBatchNormLayer<Architecture_t> *TDeepNet<Architecture_t, Layer_t>::AddBatchNorm
       if (dynamic_cast<TConvLayer<Architecture_t> *>(lastLayer) != nullptr ||
           dynamic_cast<TMaxPoolLayer<Architecture_t> *>(lastLayer) != nullptr)
          axis = 1; // use axis = channel axis for convolutional layer
+      if (shape.size() > 3) {
+         for (size_t i = 3; i < shape.size(); ++i)
+            shape[2] *= shape[i];
+      }
       // if  (axis == 1) {
       //    shape[0] = batchSize;
       //    shape[1] = inputDepth;
