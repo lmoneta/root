@@ -290,10 +290,9 @@ public:
       void Print(const char *name = "Tensor") const
       {
          PrintShape(name);
-         auto &fData = this->GetData();
-         auto &fSize = this->GetSize();
-         for (size_t i = 0; i < fSize; i++)
-            std::cout << fData[i] << "  ";
+      
+         for (size_t i = 0; i < this->GetSize(); i++)
+            std::cout << (this->GetData())[i] << "  ";
          std::cout << std::endl;
       }
       void PrintShape(const char *name = "Tensor") const

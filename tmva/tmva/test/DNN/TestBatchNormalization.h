@@ -48,7 +48,7 @@ auto evaluate_net_weight(TDeepNet<Architecture> &net, typename Architecture::Ten
     net.GetLayerAt(l)->GetWeightsAt(k).operator()(i,j) = xvalue;
     Scalar_t res = net.Loss(X, Y, W,  true, false);  // set inTraining=true when computing Loss
     net.GetLayerAt(l)->GetWeightsAt(k).operator()(i,j) = prev_value;
-    std::cout << "compute loss for weight  " << xvalue << "  " << prev_value << " result " << res << std::endl;
+    //std::cout << "compute loss for weight  " << xvalue << "  " << prev_value << " result " << res << std::endl;
     return res;
 }
 
@@ -62,7 +62,8 @@ typename Architecture::Matrix_t &Y, typename Architecture::Matrix_t & weights, d
    // Compute derivatives for all weights using finite differences and
    // compare to result obtained from backpropagation.
    ROOT::Math::RichardsonDerivator deriv;
-   for (size_t l = 0; l < net.GetLayers().size(); l++) {
+   for (size_t il = 0; il < net.GetLayers().size(); il++) {
+      int l = net.GetLayers().size() - il - 1; 
       // if (l < 1) continue;
       auto layer = net.GetLayerAt(l);
       for (size_t k = 0; k < layer->GetWeights().size(); k++) {
@@ -70,34 +71,38 @@ typename Architecture::Matrix_t &Y, typename Architecture::Matrix_t & weights, d
          std::cout << "\rTesting weight gradients   for    layer " << l << std::endl;
          std::cout << std::flush;
          auto &dW = layer->GetWeightGradientsAt(k);
-         std::cout << "weight gradient for layer " << l << std::endl;
+         std::cout << "weight gradient for layer " << l << " component " << k << std::endl;
          dW.Print();
          auto &W = layer->GetWeightsAt(k);
          std::cout << "weights for layer " << l << std::endl;
          W.Print();
 
-         int i = 0;
-         for (size_t j = 0; j < layer->GetInputWidth(); j++) {
-            auto f = [&net, &X, &Y, &weights, l, k, i, j](Scalar_t x) {
-               return evaluate_net_weight(net, X, Y, weights, l, k, i, j, x);
-            };
-            ROOT::Math::Functor1D func(f);
-            double dy = deriv.Derivative1(func, W(i, j), dx_eps);
+         size_t nw1 = W.GetNrows();
+         size_t nw2 = W.GetNcols();
+         for (size_t i = 0; i < nw1; ++i) {
+            for (size_t j = 0; j < nw2; j++) {
+               auto f = [&net, &X, &Y, &weights, l, k, i, j](Scalar_t x) {
+                  return evaluate_net_weight(net, X, Y, weights, l, k, i, j, x);
+               };
+               ROOT::Math::Functor1D func(f);
+               double dy = deriv.Derivative1(func, W(i, j), dx_eps);
 
-            // Scalar_t dy = finiteDifference(f, dx) / (2.0 * dx);
-            Scalar_t dy_ref = dW(0, j);
+               // Scalar_t dy = finiteDifference(f, dx) / (2.0 * dx);
+               Scalar_t dy_ref = dW(i, j);
 
-            std::cout << "   --dy = " << dy << " dy_ref = " << dy_ref << std::endl;
-            // Compute the relative error if dy != 0.
-            Scalar_t error;
-            if (std::fabs(dy_ref) > 1e-10) {
-               error = std::fabs((dy - dy_ref) / dy_ref);
-            } else {
-               error = std::fabs(dy - dy_ref);
+               std::cout << "dW( " << i << " , " << j << " )  numeric = " << dy << " from BP = " << dy_ref << std::endl;
+               // Compute the relative error if dy != 0.
+               Scalar_t error;
+               if (std::fabs(dy_ref) > 1e-10) {
+                  error = std::fabs((dy - dy_ref) / dy_ref);
+               } else {
+                  error = std::fabs(dy - dy_ref);
+               }
+               maximum_error = std::max(error, maximum_error);
             }
-            maximum_error = std::max(error, maximum_error);
          }
       }
+      std::cout << "max error = " << maximum_error << std::endl;
    }
 
    std::cout << "\rTesting weight gradients:      ";
@@ -211,7 +216,9 @@ auto testCNNBackpropagationWeights(typename Architecture::Scalar_t dx_eps) -> ty
    Net_t net(tbatchSize, inputD, inputH, inputW, tbatchSize, inputD, inputH * inputW, ELossFunction::kMeanSquaredError,
              EInitialization::kGauss);
    // FCLayer_t* l1 = net.AddDenseLayer(outputSize, EActivationFunction::kIdentity);
-   net.AddConvLayer(3, 3, 3, 1, 1, 1, 1, EActivationFunction::kIdentity);
+   net.AddConvLayer(3, 3, 3, 1, 1, 1, 1, EActivationFunction::kRelu);
+
+   //net.AddConvLayer(3, 3, 3, 1, 1, 1, 1, EActivationFunction::kRelu);
 
    net.AddBatchNormLayer();
 
@@ -219,7 +226,7 @@ auto testCNNBackpropagationWeights(typename Architecture::Scalar_t dx_eps) -> ty
 
    net.AddReshapeLayer(3, 4, 4, true);
 
-   net.AddDenseLayer(4, EActivationFunction::kTanh);
+   net.AddDenseLayer(4, EActivationFunction::kSigmoid);
 
    net.AddBatchNormLayer();
 

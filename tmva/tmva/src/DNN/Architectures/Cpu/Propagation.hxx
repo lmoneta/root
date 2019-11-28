@@ -910,10 +910,12 @@ void TCpu<AFloat>::BatchNormLayerBackward(int axis, const TCpuTensor<AFloat> &x,
       }
       for (int i = 0; i < n; i++) {
          Scalar_t xmu = (input(i,k) - mean(0,k));
-         dx(i, k) = (1. / double(n) * gamma(0, k) * iVariance(0,k)) *
+         inputGrad(i, k) = (1. / double(n) * gamma(0, k) * iVariance(0,k)) *
                     (n * outputGrad(i, k) - npSumDy -  xmu / (variance(0,k)+ epsilon) * npSumDyHMu);
       }
    }
+   inputGrad.Print("inputGrad");
+   PrintTensor(dx,"dx");
 }
 
 //____________________________________________________________________________
