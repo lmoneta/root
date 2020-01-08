@@ -24,6 +24,7 @@
 #include "TMVA/DNN/BatchNormLayer.h"
 #include "TMVA/DNN/CNN/ConvLayer.h"
 #include "TMVA/DNN/CNN/MaxPoolLayer.h"
+#include "TMVA/DNN/RNN/RNNLayer.h"
 
 #include "cudnn.h"
 #include "Cuda/CudaBuffers.h"
@@ -78,6 +79,7 @@ public:
    using AlgorithmDataType_t     = cudnnDataType_t;
    using ReduceTensorDescriptor_t = cudnnReduceTensorDescriptor_t;
    using TensorDescriptor_t       = cudnnTensorDescriptor_t;
+   using RecurrentDescriptor_t    = cudnnRNNDescriptor_t;
 
    using EmptyDescriptor_t       = TCudnnEmptyDescriptor;        // Used if a descriptor is not needed in a class
 
@@ -90,6 +92,10 @@ public:
    using PoolingLayer_t          = CNN::TMaxPoolLayer<TCudnn<AFloat>>;
    using PoolingDescriptors_t    = CNN::TCNNDescriptors<PoolingLayer_t>;
    using PoolingWorkspace_t      = CNN::TCNNWorkspace<PoolingLayer_t>;
+
+   using RNNLayer_t              = RNN::TBasicRNNLayer<TCudnn<AFloat>>;
+   using RNNDescriptors_t        = RNN::TRNNDescriptors<RNNLayer_t>;
+   using RNNWorkspace_t          = RNN::TRNNWorkspace<RNNLayer_t>;
 
    // template <typename AFloat>
    // using ConvDescriptors_t = CNN::TCNNDescriptors<CNN::TConvLayer<TCudnn<AFloat>>>;
@@ -116,6 +122,8 @@ public:
       return Tensor_t( buffer, {n,c,h,w}, GetTensorLayout(), 0, 0);
    }
 
+   static bool IsCudnn() { return true; }
+
    // create a weight tensor/matrix vector   from another tensor/weight  vector using the given tensor shapes
    // this function is used by the optimizers to stgore intermidiate weights representations
    static void  CreateWeightTensors( std::vector<Matrix_t> & newWeights, const std::vector<Matrix_t> & weights) {
@@ -138,10 +146,13 @@ public:
    static void InitializePoolDescriptors(TDescriptors * & descriptors,
                                         PoolingLayer_t *L = nullptr);
 
+   static void InitializeRNNDescriptors(TDescriptors *&descriptors, RNNLayer_t *L = nullptr);
+
    static void InitializeActivationDescriptor(ActivationDescriptor_t & descriptors, EActivationFunction activFunc, double coef = 0.0);
 
    static void ReleaseConvDescriptors(TDescriptors    * descriptors );
    static void ReleasePoolDescriptors(TDescriptors * descriptors );
+   static void ReleaseRNNDescriptors(TDescriptors *descriptors);
    static void ReleaseBNormDescriptors(TDescriptors * descriptors );
    static void ReleaseDescriptor(EmptyDescriptor_t       & emptyDescr) {}        // Does nothing
    static void ReleaseDescriptor(ActivationDescriptor_t  & activationDescr);
@@ -160,9 +171,12 @@ public:
                                        TDescriptors * & descriptors,
                                        const DNN::CNN::TConvParams & params,
                                        PoolingLayer_t *L = nullptr);
+   static void InitializeRNNWorkspace(TWorkspace *&workspace, TDescriptors *&descriptors,
+                                             RNNLayer_t *L = nullptr);
 
-   static void FreeConvWorkspace(TWorkspace * workspace, ConvLayer_t *L = nullptr);
-   static void FreePoolDropoutWorkspace(TWorkspace * workspace, PoolingLayer_t *L = nullptr);
+   static void FreeConvWorkspace(TWorkspace * workspace);
+   static void FreePoolDropoutWorkspace(TWorkspace * workspace);
+   static void FreeRNNWorkspace(TWorkspace *workspace);
    //____________________________________________________________________________
    //
    // Propagation
@@ -585,6 +599,15 @@ public:
       return state_gradients_backward;
    }
 
+   // RNN functions
+   static void RNNForward(const Tensor_t &x, const Tensor_t &hx, const Tensor_t &cx, const Tensor_t &weights,
+                           Tensor_t &y, Tensor_t &hy, Tensor_t &cy, const RNNDescriptors_t &descr,
+                           RNNWorkspace_t &workspace, bool isTraining);
+
+   static void RNNBackward(const Tensor_t &x, const Tensor_t &hx, const Tensor_t &cx, const Tensor_t &y, const Tensor_t &dy,
+                    const Tensor_t &dhy, const Tensor_t &dcy, const Tensor_t &weights, Tensor_t &dx, Tensor_t &dhx,
+                    Tensor_t &dcx, Tensor_t &dw, const RNNDescriptors_t &desc, RNNWorkspace_t &workspace);
+
    ///@}
 
    //____________________________________________________________________________
@@ -597,7 +620,7 @@ public:
     * Additional arithmetic on CUDA matrices  used to implement the low-level
     * interface.
     */
-   
+
    /** In-place Hadamard (element-wise) product of matrices \p A and \p B
     *  with the result being written into \p A.
     */
@@ -615,7 +638,7 @@ public:
    //    Hadamard( tA, Tensor_t(B));
    // }
 
-   
+
    /** Compute the sum of all elements in \p A */
    static Scalar_t Sum(const Matrix_t &A, Scalar_t alpha = 1.0, Scalar_t beta = 0.0);
 
