@@ -57,6 +57,10 @@
 
 #include <vector>
 
+#ifdef R__HAS_TMVAGPU
+#define USE_GPU_INFERENCE
+#endif
+
 namespace TMVA {
 
 /*! All of the options that can be specified in the training string */
@@ -81,16 +85,18 @@ class MethodDL : public MethodBase {
 private:
    // Key-Value vector type, contining the values for the training options
    using KeyValueVector_t = std::vector<std::map<TString, TString>>;
-// #ifdef R__HAS_TMVAGPU
-//    using ArchitectureImpl_t = TMVA::DNN::TCudnn<Float_t>;
+
+#ifdef USE_GPU_INFERENCE
+//#ifdef R__HAS_TMVAGPU
+  using ArchitectureImpl_t = TMVA::DNN::TCudnn<Float_t>;
 //    //using ArchitectureImpl_t = TMVA::DNN::TCuda<Float_t>;
-// #else
+#else
 // do not use arch GPU for evaluation. It is too slow for batch size=1
    using ArchitectureImpl_t = TMVA::DNN::TCpu<Float_t>;
 // #else
 //    using ArchitectureImpl_t = TMVA::DNN::TReference<Float_t>;
 // #endif
-//#endif
+#endif
    using DeepNetImpl_t = TMVA::DNN::TDeepNet<ArchitectureImpl_t>;
    using MatrixImpl_t =  typename ArchitectureImpl_t::Matrix_t;
    using TensorImpl_t =  typename ArchitectureImpl_t::Tensor_t;
