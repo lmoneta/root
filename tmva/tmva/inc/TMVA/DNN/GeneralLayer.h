@@ -52,6 +52,7 @@ class VGeneralLayer {
    using Matrix_t = typename Architecture_t::Matrix_t;
    using Scalar_t = typename Architecture_t::Scalar_t;
 
+
 protected:
    size_t fBatchSize; ///< Batch size used for training and evaluation
 
@@ -137,6 +138,11 @@ public:
 
    /*! Copies the biases provided as an input. */
    void CopyBiases(const std::vector<Matrix_t> &otherBiases);
+
+   /*! Copy weight and biases from another equivalent layer but with different architecture
+       The function can be re-implemented by some particular layers */
+   template <typename Arch>
+   void CopyWeightsAndBiases(const VGeneralLayer<Arch> &layer);
 
    /*! Prints the info about the layer. */
    virtual void Print() const = 0;
@@ -458,6 +464,16 @@ auto VGeneralLayer<Architecture_t>::CopyBiases(const std::vector<Matrix_t> &othe
    }
 }
 
+//_________________________________________________________________________________________________
+template <typename Architecture_t>
+template <typename Arch>
+void VGeneralLayer<Architecture_t>::CopyWeightsAndBiases(const VGeneralLayer<Arch> &layer)
+{
+   //assert(!std::is_same<Arch, Architecture_t>::value);
+   // copy weights from a different arhcitecture- default generic implementation
+   Architecture_t::CopyDiffArch(this->GetWeights(), layer.GetWeights());
+   Architecture_t::CopyDiffArch(this->GetBiases(), layer.GetBiases());
+}
 
 //_________________________________________________________________________________________________
 template <typename Architecture_t>
@@ -518,6 +534,8 @@ auto VGeneralLayer<Architecture_t>::ReadMatrixXML(void * node, const char * name
    R__ASSERT((size_t) matrix.GetNrows() == rows);
    R__ASSERT((size_t) matrix.GetNcols() == cols);
 
+   TMatrixT<Scalar_t> tmatrix(rows, cols);
+
    const char * matrixString = gTools().xmlengine().GetNodeContent(matrixXML);
    std::stringstream matrixStringStream(matrixString);
 
@@ -526,15 +544,20 @@ auto VGeneralLayer<Architecture_t>::ReadMatrixXML(void * node, const char * name
       for (size_t j = 0; j < cols; j++)
       {
 #ifndef R__HAS_TMVAGPU
-         matrixStringStream >> matrix(i,j);
+         matrixStringStream >> tmatrix(i,j);
 #else
          Scalar_t value;
          matrixStringStream >> value;
-         matrix(i,j) = value;
+         tmatrix(i,j) = value;
 #endif
 
       }
    }
+
+   // copy from tmatrix to matrix
+   Matrix_t tmp( tmatrix); 
+   Architecture_t::Copy(matrix, tmp);
+
 }
 
 

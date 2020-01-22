@@ -936,6 +936,7 @@ void MethodDL::ParseRnnLayer(DNN::TDeepNet<Architecture_t, Layer_t> & deepNet,
    int inputSize = 0;
    int timeSteps = 0;
    bool rememberState = false;
+   bool returnSequence = false;
 
    // Split layer details
    TObjArray *subStrings = layerString.Tokenize(delim);
@@ -965,17 +966,22 @@ void MethodDL::ParseRnnLayer(DNN::TDeepNet<Architecture_t, Layer_t> & deepNet,
             TString strrememberState(token->GetString());
             rememberState = (bool) strrememberState.Atoi();
          } break;
+         case 5: // return full output sequence (1 or 0)
+         {
+            TString str(token->GetString());
+            returnSequence = (bool)str.Atoi();
+         } break;
       }
       ++idxToken;
    }
 
    // Add the recurrent layer, initialize the weights and biases and copy
    TBasicRNNLayer<Architecture_t> *basicRNNLayer = deepNet.AddBasicRNNLayer(stateSize, inputSize,
-                                                                        timeSteps, rememberState);
+                                                                        timeSteps, rememberState, returnSequence);
    basicRNNLayer->Initialize();
 
    // Add same layer to fNet
-   if (fBuildNet) fNet->AddBasicRNNLayer(stateSize, inputSize, timeSteps, rememberState);
+   if (fBuildNet) fNet->AddBasicRNNLayer(stateSize, inputSize, timeSteps, rememberState, returnSequence);
 
    //TBasicRNNLayer<Architecture_t> *copyRNNLayer = new TBasicRNNLayer<Architecture_t>(*basicRNNLayer);
 
@@ -1283,13 +1289,7 @@ void MethodDL::TrainDeepNet()
       if (trainingPhase > 1) {
          // copy initial weights from fNet to deepnet
          for (size_t i = 0; i < deepNet.GetDepth(); ++i) {
-            const auto & nLayer = fNet->GetLayerAt(i);
-            const auto & dLayer = deepNet.GetLayerAt(i);
-            // could use a traits for detecting equal architectures
-           // dLayer->CopyWeights(nLayer->GetWeights());
-           //  dLayer->CopyBiases(nLayer->GetBiases());
-            Architecture_t::CopyDiffArch(dLayer->GetWeights(), nLayer->GetWeights() );
-            Architecture_t::CopyDiffArch(dLayer->GetBiases(), nLayer->GetBiases() );
+            deepNet.GetLayerAt(i)->CopyWeightsAndBiases(*fNet->GetLayerAt(i));
          }
       }
 
@@ -1551,14 +1551,11 @@ void MethodDL::TrainDeepNet()
                Log() << std::setw(10) << optimizer->GetGlobalStep()
                      << " Minimum Test error found - save the configuration " << Endl;
                for (size_t i = 0; i < deepNet.GetDepth(); ++i) {
-                  const auto & nLayer = fNet->GetLayerAt(i);
-                  const auto & dLayer = deepNet.GetLayerAt(i);
-                  ArchitectureImpl_t::CopyDiffArch(nLayer->GetWeights(), dLayer->GetWeights() );
-                  ArchitectureImpl_t::CopyDiffArch(nLayer->GetBiases(), dLayer->GetBiases() );
-                  // std::cout << "Weights for layer " << i << std::endl;
-                  // for (size_t k = 0; k < dlayer->GetWeights().size(); ++k)
-                  //    dLayer->GetWeightsAt(k).Print();
-                  // debug tensors
+                  fNet->GetLayerAt(i)->CopyWeightsAndBiases(*deepNet.GetLayerAt(i));
+                  if (i == 0 && deepNet.GetLayerAt(0)->GetWeights().size() > 1) {
+                     Architecture_t::PrintTensor(deepNet.GetLayerAt(0)->GetWeightsAt(0), " input weights");
+                     Architecture_t::PrintTensor(deepNet.GetLayerAt(0)->GetWeightsAt(1), " state weights");
+                  }
                }
                // Architecture_t::PrintTensor(deepNet.GetLayerAt(1)->GetWeightsAt(0), " cudnn weights");
                // ArchitectureImpl_t::PrintTensor(fNet->GetLayerAt(1)->GetWeightsAt(0), " cpu weights");
@@ -1855,10 +1852,11 @@ std::vector<Double_t> MethodDL::PredictDeepNet(Long64_t firstEvt, Long64_t lastE
 
    // copy weights from the saved fNet to the built DeepNet
    for (size_t i = 0; i < deepNet.GetDepth(); ++i) {
-      const auto & nLayer = fNet->GetLayerAt(i);
-      const auto & dLayer = deepNet.GetLayerAt(i);
-      Architecture_t::CopyDiffArch(dLayer->GetWeights(), nLayer->GetWeights() );
-      Architecture_t::CopyDiffArch(dLayer->GetBiases(), nLayer->GetBiases() );
+      deepNet.GetLayerAt(i)->CopyWeightsAndBiases(*fNet->GetLayerAt(i));
+      if (i == 0 && deepNet.GetLayerAt(0)->GetWeights().size() > 1) {
+         Architecture_t::PrintTensor(deepNet.GetLayerAt(0)->GetWeightsAt(0), "Inference: input weights");
+         Architecture_t::PrintTensor(deepNet.GetLayerAt(0)->GetWeightsAt(1), "Inference: state weights");
+      }
    }
 
    size_t n1 = deepNet.GetBatchHeight();
@@ -2257,12 +2255,14 @@ void MethodDL::ReadWeightsFromXML(void * rootXML)
          // read RNN layer info
          size_t  stateSize,inputSize, timeSteps = 0;
          int rememberState= 0;
+         int returnSequence = 0;
          gTools().ReadAttr(layerXML, "StateSize", stateSize);
          gTools().ReadAttr(layerXML, "InputSize", inputSize);
          gTools().ReadAttr(layerXML, "TimeSteps", timeSteps);
          gTools().ReadAttr(layerXML, "RememberState", rememberState );
+         gTools().ReadAttr(layerXML, "ReturnSequence", returnSequence);
 
-         fNet->AddBasicRNNLayer(stateSize, inputSize, timeSteps, rememberState);
+         fNet->AddBasicRNNLayer(stateSize, inputSize, timeSteps, rememberState, returnSequence);
 
       }
        // BatchNorm Layer

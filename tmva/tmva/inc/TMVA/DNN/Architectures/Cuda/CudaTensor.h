@@ -87,7 +87,7 @@ private:
    };
 
    static std::vector<cudnnHandle_t>     fCudnnHandle;      ///< Holds the cuddn library context (one for every CUDA stream)
-   
+
    static cudnnDataType_t                fDataType;         ///< Cudnn datatype used for the tensor
    /** For each GPU device keep the CUDA streams in which tensors are used.
      * Instances belonging to the same stream on the same deviceshare a
@@ -150,6 +150,10 @@ public:
      {}
 
    TCudaTensor(const TCudaMatrix<AFloat> & m, size_t dim = 2);
+
+   TCudaTensor(const TMatrixT<AFloat> & m, size_t dim = 2) :
+      TCudaTensor( TCudaMatrix<AFloat>(m), dim)
+   {}
 
    TCudaTensor(TCudaDeviceBuffer<AFloat> buffer, size_t n, size_t m) :
          TCudaTensor( buffer, {n,m}, MemoryLayout::ColumnMajor ,0,0) {}
@@ -281,11 +285,12 @@ public:
 
    // Matrix conversion for tensors of shape 2
    TCudaMatrix<AFloat> GetMatrix() const  {
-      if (fNDim == 2 || (fNDim == 3 && GetFirstSize() == 1))
+      // remember TCudaMatrix is always column-major
+      if ( GetLayout() == MemoryLayout::ColumnMajor &&
+           (fNDim == 2 || (fNDim == 3 && GetFirstSize() == 1) ) )
          return TCudaMatrix<AFloat>(fElementBuffer, GetHSize(), GetWSize());
 
 
-      // remember TCudaMatrix is always column-major
       //case of N,M,1,1,..
       bool caseNM11 = true;
       for (size_t i = 2; i < fNDim; ++i)  caseNM11 &= fShape[i] == 1;
@@ -324,12 +329,12 @@ public:
    }
 
    TCudaTensor<AFloat> Reshape(const Shape_t & newShape) const {
-      TCudaTensor<AFloat> tmp(*this);
+      TCudaTensor<AFloat> tmp(this->GetDeviceBuffer(), newShape, this->GetLayout(), fDevice, fStreamIndx);
       // have a new descriptor for reshaped tensor !!!
-      tmp.fTensorDescriptor.reset( new TensorDescriptor() );
-      // t.b.d. need to check if we delete teh cudnn object
-      CUDNNCHECK(cudnnCreateTensorDescriptor(&(tmp.fTensorDescriptor->fCudnnDesc)));
-      tmp.ReshapeInPlace(newShape);
+      // tmp.fTensorDescriptor.reset( new TensorDescriptor() );
+      // // t.b.d. need to check if we delete the cudnn object
+      // CUDNNCHECK(cudnnCreateTensorDescriptor(&(tmp.fTensorDescriptor->fCudnnDesc)));
+      // tmp.ReshapeInPlace(newShape);
       return tmp;
    }
 
@@ -397,9 +402,6 @@ public:
 
       return TCudaDeviceReference<AFloat>(elementPointer);
    }
-
-
-
 
 private:
 
