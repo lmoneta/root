@@ -70,6 +70,11 @@ target_link_libraries(testRecurrentBackpropagationCudnn ${Libraries} ${DNN_CUDA_
 ROOT_ADD_TEST(TMVA-DNN-RNN-BackpropagationCudnn COMMAND testRecurrentBackpropagationCudnn)
 endif()
 
+# Full Test GPU
+CUDA_ADD_EXECUTABLE(testFullRNNCudnn TestFullRNNCudnn.cxx)
+target_link_libraries(testFullRNNCudnn ${Libraries} ${DNN_CUDA_LIBRARIES})
+ROOT_ADD_TEST(TMVA-DNN-RNN-Full-Cudnn COMMAND testFullRNNCudnn)
+
 endif()
 
 #--- CPU tests. ----------------------------
@@ -85,7 +90,7 @@ if ((BLAS_FOUND OR mathmore) AND imt AND tmva-cpu)
 
 # RNN - Full Test Reference
 ROOT_EXECUTABLE(testFullRNNCpu TestFullRNNCpu.cxx LIBRARIES ${Libraries})
-ROOT_ADD_TEST(TMVA-DNN-RNN-FullRNN-Cpu COMMAND testFullRNNCpu)
+ROOT_ADD_TEST(TMVA-DNN-RNN-Full-Cpu COMMAND testFullRNNCpu)
 
 
 endif ()
