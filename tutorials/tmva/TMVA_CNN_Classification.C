@@ -36,9 +36,9 @@ void MakeImagesTree(int n, int nh, int nw ) {
    const int ntot = nh*nw;
    const TString fileOutName = TString::Format("images_data_%dx%d.root",nh,nw);
 
-   const int nRndmEvts = 10000; // number of events we use to fill each image
+   const int nRndmEvts = 5000; // number of events we use to fill each image
    double delta_sigma = 0.1;  // 5% difference in the sigma
-   double pixelNoise = 3;
+   double pixelNoise = 5;
 
    double sX1 = 3;
    double sY1 = 3;
@@ -175,15 +175,15 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
 
    **/
 
-   int imgSize = 32 * 32;
-   TString inputFileName = "images_data_32x32.root";
+   int imgSize = 10 * 10;
+   TString inputFileName = "images_data_10x10.root";
    //TString inputFileName = "/home/moneta/data/sample_images_32x32.gsoc.root";
 
    bool fileExist = !gSystem->AccessPathName(inputFileName);
 
    // if file does not exists create it
    if (!fileExist) {
-      MakeImagesTree(5000, 32, 32);
+      MakeImagesTree(5000, 10, 10);
    }
 
    // TString inputFileName = "tmva_class_example.root";
@@ -282,9 +282,9 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
 
    if (useTMVADNN) {
 
-      TString inputLayoutString = "InputLayout=1|1|1024";
-      TString batchLayoutString = "BatchLayout=1|100|1024";
-      TString layoutString("Layout=DENSE|256|RELU,BNORM,DENSE|256|RELU,BNORM,DENSE|256|RELU,DENSE|256|TANH,DENSE|1|LINEAR");
+      TString inputLayoutString = "InputLayout=1|1|100";
+      TString batchLayoutString = "BatchLayout=1|100|100";
+      TString layoutString("Layout=DENSE|100|RELU,BNORM,DENSE|100|RELU,BNORM,DENSE|100|RELU,DENSE|100|TANH,DENSE|1|LINEAR");
 
       // Training strategies
       // one can catenate several training strategies
@@ -352,13 +352,13 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
 
    if (useTMVACNN) {
 
-      TString inputLayoutString("InputLayout=1|32|32");
+      TString inputLayoutString("InputLayout=1|10|10");
 
       // Batch Layout
-      TString batchLayoutString("BatchLayout=200|1|1024");
+      TString batchLayoutString("BatchLayout=200|1|100");
 
       TString layoutString("Layout=CONV|10|3|3|1|1|1|1|RELU,BNORM,CONV|10|3|3|1|1|1|1|RELU,MAXPOOL|2|2|1|1,"
-                           "RESHAPE|FLAT,DENSE|256|RELU,DENSE|1|LINEAR");
+                           "RESHAPE|FLAT,DENSE|100|RELU,DENSE|1|LINEAR");
 
       // Training strategies.
       TString training0("LearningRate=2e-3,Momentum=0.9,Repetitions=1,"
@@ -403,55 +403,45 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
 
    if (useKerasCNN) {
 
-      // check first of Keras model file exists
-      if (gSystem->AccessPathName("model_cnn.h5")) {
-         // run script creating the model
-         if (!gSystem->AccessPathName("make_cnn_model.py")) {
-            Info("TMVA_CNN_Classification", "Run existing Python script make_cnn_model.py to make keras cnn model");
-            gSystem->Exec("python make_cnn_model.py");
-         }
-         else {
-            Info("TMVA_CNN_Classification", "Building convolutional keras model");
-            // create python script which can be executed
-            // crceate 2 conv2d layer + maxpool + dense
-            TMacro m;
-            m.AddLine("import keras");
-            m.AddLine("from keras.models import Sequential");
-            m.AddLine("from keras.optimizers import Adam");
-            m.AddLine("from keras.layers import Input, Dense, Dropout, Flatten, Conv2D, MaxPooling2D, Reshape, BatchNormalization");
-            m.AddLine("");
-            m.AddLine("model = keras.models.Sequential() ");
-            m.AddLine("model.add(Reshape((32, 32, 1), input_shape = (1024, )))");
-            m.AddLine("model.add(Conv2D(10, kernel_size = (3, 3), kernel_initializer = 'glorot_normal',activation = "
-                      "'relu', padding = 'same'))");
-            m.AddLine("model.add(BatchNormalization())");
-            m.AddLine("model.add(Conv2D(10, kernel_size = (3, 3), kernel_initializer = 'glorot_normal',activation = "
-                      "'relu', padding = 'same'))");
-            //m.AddLine("model.add(BatchNormalization())");
-            m.AddLine("model.add(MaxPooling2D(pool_size = (2, 2), strides = (1,1))) ");  // max pool with stride=2
-            m.AddLine("model.add(Flatten())");
-            m.AddLine("model.add(Dense(256, activation = 'relu')) ");
-            m.AddLine("model.add(Dense(2, activation = 'sigmoid')) ");
-            m.AddLine("model.compile(loss = 'binary_crossentropy', optimizer = Adam(lr = 0.002), metrics = ['accuracy'])");
-            m.AddLine("model.save('model_cnn.h5')");
-            m.AddLine("model.summary()");
+      Info("TMVA_CNN_Classification", "Building convolutional keras model");
+      // create python script which can be executed
+      // crceate 2 conv2d layer + maxpool + dense
+      TMacro m;
+      m.AddLine("import keras");
+      m.AddLine("from keras.models import Sequential");
+      m.AddLine("from keras.optimizers import Adam");
+      m.AddLine(
+         "from keras.layers import Input, Dense, Dropout, Flatten, Conv2D, MaxPooling2D, Reshape, BatchNormalization");
+      m.AddLine("");
+      m.AddLine("model = keras.models.Sequential() ");
+      m.AddLine("model.add(Reshape((10, 10, 1), input_shape = (100, )))");
+      m.AddLine("model.add(Conv2D(10, kernel_size = (3, 3), kernel_initializer = 'glorot_normal',activation = "
+                "'relu', padding = 'same'))");
+      m.AddLine("model.add(BatchNormalization())");
+      m.AddLine("model.add(Conv2D(10, kernel_size = (3, 3), kernel_initializer = 'glorot_normal',activation = "
+                "'relu', padding = 'same'))");
+      // m.AddLine("model.add(BatchNormalization())");
+      m.AddLine("model.add(MaxPooling2D(pool_size = (2, 2), strides = (1,1))) "); // max pool with stride=2
+      m.AddLine("model.add(Flatten())");
+      m.AddLine("model.add(Dense(256, activation = 'relu')) ");
+      m.AddLine("model.add(Dense(2, activation = 'sigmoid')) ");
+      m.AddLine("model.compile(loss = 'binary_crossentropy', optimizer = Adam(lr = 0.002), metrics = ['accuracy'])");
+      m.AddLine("model.save('model_cnn.h5')");
+      m.AddLine("model.summary()");
 
-            m.SaveSource("make_cnn_model.py");
-            // execute
-            gSystem->Exec("python make_cnn_model.py");
-            if (gSystem->AccessPathName("model_cnn.h5")) {
-               Error("TMVA_CNN_Classification", "Error creating Keras model file - exit");
-               return;
-            }
-         }
+      m.SaveSource("make_cnn_model.py");
+      // execute
+      gSystem->Exec("python make_cnn_model.py");
+
+      if (gSystem->AccessPathName("model_cnn.h5")) {
+         Error("TMVA_CNN_Classification", "Error creating Keras model file - exit");
+         return;
       }
-      else {
-         Info("TMVA_CNN_Classification", "use existing model file model_cnn.h5");
-      }
+
       factory.BookMethod(
          loader, TMVA::Types::kPyKeras, "PyKeras",
          "H:!V:VarTransform=None:FilenameModel=model_cnn.h5:"
-         "FilenameTrainedModel=trained_model_cnn.h5:NumEpochs=20:BatchSize=128:"
+         "FilenameTrainedModel=trained_model_cnn.h5:NumEpochs=20:BatchSize=100:"
          "GpuOptions=allow_growth=True");  // needed for RTX NVidia card and to avoid TF allocates all GPU memory
    }
 
