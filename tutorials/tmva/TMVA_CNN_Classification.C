@@ -36,7 +36,7 @@ void MakeImagesTree(int n, int nh, int nw ) {
    const int ntot = nh*nw;
    const TString fileOutName = TString::Format("images_data_%dx%d.root",nh,nw);
 
-   const int nRndmEvts = 5000; // number of events we use to fill each image
+   const int nRndmEvts = 10000; // number of events we use to fill each image
    double delta_sigma = 0.1;  // 5% difference in the sigma
    double pixelNoise = 5;
 
@@ -175,15 +175,15 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
 
    **/
 
-   int imgSize = 10 * 10;
-   TString inputFileName = "images_data_10x10.root";
+   int imgSize = 16 * 16;
+   TString inputFileName = "images_data_16x16.root";
    //TString inputFileName = "/home/moneta/data/sample_images_32x32.gsoc.root";
 
    bool fileExist = !gSystem->AccessPathName(inputFileName);
 
    // if file does not exists create it
    if (!fileExist) {
-      MakeImagesTree(5000, 10, 10);
+      MakeImagesTree(5000, 16, 16);
    }
 
    // TString inputFileName = "tmva_class_example.root";
@@ -282,14 +282,14 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
 
    if (useTMVADNN) {
 
-      TString inputLayoutString = "InputLayout=1|1|100";
-      TString batchLayoutString = "BatchLayout=1|100|100";
-      TString layoutString("Layout=DENSE|100|RELU,BNORM,DENSE|100|RELU,BNORM,DENSE|100|RELU,DENSE|100|TANH,DENSE|1|LINEAR");
+      TString inputLayoutString = "InputLayout=1|1|256";
+      TString batchLayoutString = "BatchLayout=1|100|256";
+      TString layoutString("Layout=DENSE|100|RELU,BNORM,DENSE|100|RELU,BNORM,DENSE|100|RELU,BNORM,DENSE|100|RELU,DENSE|1|LINEAR");
 
       // Training strategies
       // one can catenate several training strategies
       TString training1("LearningRate=1e-3,Momentum=0.9,Repetitions=1,"
-                        "ConvergenceSteps=10,BatchSize=100,TestRepetitions=1,"
+                        "ConvergenceSteps=5,BatchSize=100,TestRepetitions=1,"
                         "MaxEpochs=20,WeightDecay=1e-4,Regularization=None,"
                         "Optimizer=ADAM,DropConfig=0.0+0.0+0.0+0.");
 
@@ -352,17 +352,17 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
 
    if (useTMVACNN) {
 
-      TString inputLayoutString("InputLayout=1|10|10");
+      TString inputLayoutString("InputLayout=1|16|16");
 
       // Batch Layout
-      TString batchLayoutString("BatchLayout=200|1|100");
+      TString batchLayoutString("BatchLayout=100|1|256");
 
       TString layoutString("Layout=CONV|10|3|3|1|1|1|1|RELU,BNORM,CONV|10|3|3|1|1|1|1|RELU,MAXPOOL|2|2|1|1,"
                            "RESHAPE|FLAT,DENSE|100|RELU,DENSE|1|LINEAR");
 
       // Training strategies.
-      TString training0("LearningRate=2e-3,Momentum=0.9,Repetitions=1,"
-                        "ConvergenceSteps=10,BatchSize=200,TestRepetitions=1,"
+      TString training0("LearningRate=1e-3,Momentum=0.9,Repetitions=1,"
+                        "ConvergenceSteps=5,BatchSize=100,TestRepetitions=1,"
                         "MaxEpochs=20,WeightDecay=1e-4,Regularization=None,"
                         "Optimizer=ADAM,DropConfig=0.0+0.0+0.0+0.0");
 
@@ -414,7 +414,7 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
          "from keras.layers import Input, Dense, Dropout, Flatten, Conv2D, MaxPooling2D, Reshape, BatchNormalization");
       m.AddLine("");
       m.AddLine("model = keras.models.Sequential() ");
-      m.AddLine("model.add(Reshape((10, 10, 1), input_shape = (100, )))");
+      m.AddLine("model.add(Reshape((16, 16, 1), input_shape = (256, )))");
       m.AddLine("model.add(Conv2D(10, kernel_size = (3, 3), kernel_initializer = 'glorot_normal',activation = "
                 "'relu', padding = 'same'))");
       m.AddLine("model.add(BatchNormalization())");
@@ -425,7 +425,7 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
       m.AddLine("model.add(Flatten())");
       m.AddLine("model.add(Dense(256, activation = 'relu')) ");
       m.AddLine("model.add(Dense(2, activation = 'sigmoid')) ");
-      m.AddLine("model.compile(loss = 'binary_crossentropy', optimizer = Adam(lr = 0.002), metrics = ['accuracy'])");
+      m.AddLine("model.compile(loss = 'binary_crossentropy', optimizer = Adam(lr = 0.001), metrics = ['accuracy'])");
       m.AddLine("model.save('model_cnn.h5')");
       m.AddLine("model.summary()");
 
