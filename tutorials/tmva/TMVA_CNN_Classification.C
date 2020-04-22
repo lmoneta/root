@@ -5,22 +5,6 @@
     This is an example of using a CNN in TMVA. We do classification using a toy image data set
    that is generated when running the example macro
 
-
-    ## Declare Factory
-
-    Create the Factory class. Later you can choose the methods
-    whose performance you'd like to investigate.
-
-    The factory is the major TMVA object you have to interact with. Here is the list of parameters you need to pass
-
-    - The first argument is the base of the name of all the output
-    weightfiles in the directory weight/ that will be created with the
-    method parameters
-
-    - The second argument is the output file for the training results
-
-    - The third argument is a string option defining some general configuration for the TMVA session. For example all TMVA output can be suppressed by removing the "!" (not) in front of the "Silent" argument in the option string
-
 **/
 
 
@@ -75,9 +59,9 @@ void MakeImagesTree(int n, int nh, int nw ) {
    f1->SetParameters(1,5,sX1,5,sY1);
    f2->SetParameters(1,5,sX2,5,sY2 );
    gRandom->SetSeed(0);
-   std::cout << "filling tree " << std::endl;
+   std::cout << "Filling ROOT tree " << std::endl;
    for (int i = 0; i < n; ++i) {
-      if (i % 100 == 0) std::cout << "filling event ... " << i << std::endl;
+      if (i % 100 == 0) std::cout << "Generating image event ... " << i << std::endl;
       h1->Reset();
       h2->Reset();
       //generate random means in range [3,7] to be not too much on the border
@@ -143,12 +127,27 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
    if (writeOutputFile)
       outputFile = TFile::Open("TMVA_CNN_ClassificationOutput.root", "RECREATE");
 
-   ///
-   /// # Create TMVA Factory
-   ///
-   ///  when creating the factory note we disable any pre-transformation of the input variables
-   ///  and we avoid computing correlations between input variables
-   ///
+   /***
+       ## Create TMVA Factory
+
+    Create the Factory class. Later you can choose the methods
+    whose performance you'd like to investigate.
+
+    The factory is the major TMVA object you have to interact with. Here is the list of parameters you need to pass
+
+    - The first argument is the base of the name of all the output
+    weightfiles in the directory weight/ that will be created with the
+    method parameters
+
+    - The second argument is the output file for the training results
+
+    - The third argument is a string option defining some general configuration for the TMVA session.
+      For example all TMVA output can be suppressed by removing the "!" (not) in front of the "Silent" argument in the
+   option string
+
+    - note that we disable any pre-transformation of the input variables and we avoid computing correlations between input variables
+   ***/
+
    TMVA::Factory factory("TMVA_CNN_Classification", outputFile,
                          "!V:ROC:!Silent:Color:!DrawProgressBar:AnalysisType=Classification:Transformations=None:!Correlations");
 
@@ -241,9 +240,6 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
 
    loader->PrepareTrainingAndTestTree(mycuts, mycutb, prepareOptions);
 
-   // loader->PrepareTrainingAndTestTree(mycuts, mycutb,
-   //                                   "nTrain_Signal=5000:nTrain_Background=5000:nTest_Signal=5000:nTest_Background=5000:SplitMode=Random:NormMode=NumEvents:!V"
-   //                                   );
 
    /***
 
@@ -261,7 +257,7 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
    /****
         # Booking Methods
 
-        Here we book the TMVA methods. We book a Likelihood based on KDE, a Fischer discriminant and a BDT
+        Here we book the TMVA methods. We book a Boosted Decision Tree method (BDT)
 
    **/
 
@@ -287,16 +283,17 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
       TString layoutString("Layout=DENSE|100|RELU,BNORM,DENSE|100|RELU,BNORM,DENSE|100|RELU,BNORM,DENSE|100|RELU,DENSE|1|LINEAR");
 
       // Training strategies
-      // one can catenate several training strategies
-      TString training1("LearningRate=1e-3,Momentum=0.9,Repetitions=1,"
+      // one can catenate several training strings with different parameters (e.g. learning rates or regularizations parameters)
+      // The training string must be concatenates with the `|` delimiter
+      TString trainingString1("LearningRate=1e-3,Momentum=0.9,Repetitions=1,"
                         "ConvergenceSteps=5,BatchSize=100,TestRepetitions=1,"
                         "MaxEpochs=20,WeightDecay=1e-4,Regularization=None,"
                         "Optimizer=ADAM,DropConfig=0.0+0.0+0.0+0.");
 
       TString trainingStrategyString("TrainingStrategy=");
-      trainingStrategyString += training1; // + "|" + training2 + "|" + training3;
+      trainingStrategyString += trainingString1; // + "|" + trainingString2 + ....
 
-      // General Options.
+      // Build now the full DNN Option string
 
       TString dnnOptions("!H:V:ErrorStrategy=CROSSENTROPY:VarTransform=None:"
                          "WeightInitialization=XAVIER");
@@ -361,15 +358,15 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
                            "RESHAPE|FLAT,DENSE|100|RELU,DENSE|1|LINEAR");
 
       // Training strategies.
-      TString training0("LearningRate=1e-3,Momentum=0.9,Repetitions=1,"
+      TString trainingString1("LearningRate=1e-3,Momentum=0.9,Repetitions=1,"
                         "ConvergenceSteps=5,BatchSize=100,TestRepetitions=1,"
                         "MaxEpochs=20,WeightDecay=1e-4,Regularization=None,"
                         "Optimizer=ADAM,DropConfig=0.0+0.0+0.0+0.0");
 
       TString trainingStrategyString("TrainingStrategy=");
-      trainingStrategyString += training0; // + "|" + training1 + "|" + training2;   }
+      trainingStrategyString += trainingString1; // + "|" + trainingString2 + "|" + trainingString3; for concatenating more training strings
 
-      // General Options.
+      // Build full CNN Options.
       TString cnnOptions("!H:V:ErrorStrategy=CROSSENTROPY:VarTransform=None:"
                          "WeightInitialization=XAVIER");
 
@@ -421,7 +418,7 @@ void TMVA_CNN_Classification( std::vector<bool> opt = {1,1,1,1})
       m.AddLine("model.add(Conv2D(10, kernel_size = (3, 3), kernel_initializer = 'glorot_normal',activation = "
                 "'relu', padding = 'same'))");
       // m.AddLine("model.add(BatchNormalization())");
-      m.AddLine("model.add(MaxPooling2D(pool_size = (2, 2), strides = (1,1))) "); // max pool with stride=2
+      m.AddLine("model.add(MaxPooling2D(pool_size = (2, 2), strides = (1,1))) ");
       m.AddLine("model.add(Flatten())");
       m.AddLine("model.add(Dense(256, activation = 'relu')) ");
       m.AddLine("model.add(Dense(2, activation = 'sigmoid')) ");
