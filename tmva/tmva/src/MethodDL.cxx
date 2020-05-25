@@ -50,6 +50,13 @@
 
 #include <chrono>
 
+#ifdef R__HAS_TMVAGPU
+#include "TMVA/DNN/Architectures/Cuda.h"
+#ifdef R__HAS_CUDNN
+#include "TMVA/DNN/Architectures/TCudnn.h"
+#endif // cudnn
+#endif // tmva_gpu
+
 REGISTER_METHOD(DL)
 ClassImp(TMVA::MethodDL);
 

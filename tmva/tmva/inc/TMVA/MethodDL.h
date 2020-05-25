@@ -43,25 +43,27 @@
 
 #include "TMVA/DNN/Architectures/Reference.h"
 
-//#ifdef R__HAS_TMVACPU
+// CPU arch is always needed
 #include "TMVA/DNN/Architectures/Cpu.h"
-//#endif
+
 
 #ifdef R__HAS_TMVAGPU
+// in case we use GPU for inference we need to include CUDA
+//#define USE_GPU_INFERENCE
+
+#ifdef USE_GPU_INFERENCE
 #include "TMVA/DNN/Architectures/Cuda.h"
 #ifdef R__HAS_CUDNN
 #include "TMVA/DNN/Architectures/TCudnn.h"
-#endif
-#endif
+#endif   // cudnn
+#endif   // use_gpu_inference
+#endif   // tmvagpu
 
 #include "TMVA/DNN/Functions.h"
 #include "TMVA/DNN/DeepNet.h"
 
 #include <vector>
 
-#ifdef R__HAS_TMVAGPU
-//#define USE_GPU_INFERENCE
-#endif
 
 namespace TMVA {
 
@@ -88,16 +90,17 @@ private:
    // Key-Value vector type, contining the values for the training options
    using KeyValueVector_t = std::vector<std::map<TString, TString>>;
 
-// #ifdef R__HAS_TMVAGPU
-// #ifdef R__HAS_CUDNN
-//    using ArchitectureImpl_t = TMVA::DNN::TCudnn<Float_t>;
-// #else
-//   using ArchitectureImpl_t = TMVA::DNN::TCuda<Float_t>;
-// #endif
-// #else
-// do not use arch GPU for evaluation. It is too slow for batch size=1
+/// define here the architecture to use for single event inference (in GetMVAValue() )
+///  note that this a different architecture used in training or when calling GetMvaValues()
+#ifdef USE_GPU_INFERENCE
+#ifdef R__HAS_CUDNN
+    using ArchitectureImpl_t = TMVA::DNN::TCudnn<Float_t>;
+#else
+   using ArchitectureImpl_t = TMVA::DNN::TCuda<Float_t>;
+#endif
+#else   // default case : do not use arch GPU for single event evaluation. It is also too slow for batch size=1
    using ArchitectureImpl_t = TMVA::DNN::TCpu<Float_t>;
-// #endif
+#endif
 
    using DeepNetImpl_t = TMVA::DNN::TDeepNet<ArchitectureImpl_t>;
    using MatrixImpl_t =  typename ArchitectureImpl_t::Matrix_t;
