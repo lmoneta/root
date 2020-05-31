@@ -33,3 +33,4 @@ CMakeLists.txt.user
 # Other Stuff
 tags
 *.d
+_build/
