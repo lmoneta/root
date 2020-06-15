@@ -37,33 +37,11 @@ public:
    virtual T DoEvalPar(const T *data, const Double_t *p) const
    {
 
+      // use the trick to get notification of setting parameters and
+      // then computing integrals
       if (data == nullptr) {
          ((Func<T> *) this)->SetParameters(p);
          return TMath::QuietNaN();
-      }
-      // use the trick to get notification of computing integrals
-      // by passing a null ptr for the data
-      // if (data == nullptr) {
-      //    (SetParameters(p);
-      //    
-      // }
-      
-      for (unsigned i = 0; i < params.size(); i++)   {
-         if (p[i] != params[i] ) {
-            {
-                 R__LOCKGUARD(gROOTMutex);
-                 std::cout << "different parameters found " << i << "  " << p[i] << "  " << params[i] << std::endl;
-
-                                                                                                         R__ASSERT(0);
-//                 std::copy(p, p+paramSize, params.begin() );
-      //           // different parameters
-      //           // compute the integral and update the cached param vector
-      //           // this needs to be locked because is a non-const part
-      //           ComputeIntegrals(p);
-      //       }
-             break;
-            }
-         }
       }
 
       auto f1 = params[0] * exp(-(*data + (-p[2])) * (*data + (-p[2])) / (2.*p[3] * p[3]));
@@ -78,20 +56,20 @@ public:
    }
 
       virtual ROOT::Math::IBaseFunctionMultiDimTempl<T> *Clone() const {
-         return new Func<T>(*this); 
+         return new Func<T>(*this);
       }
       virtual unsigned int NDim() const { return 1; }
       virtual unsigned int NPar() const {
          return paramSize;
       }
       virtual const double * Parameters() const {
-         return params.data(); 
+         return params.data();
       }
       virtual void SetParameters(const double * p) {
          std::copy(p, p+paramSize, params.begin() );
          ComputeIntegrals(p);
       }
-   
+
 
 private:
 
@@ -131,7 +109,7 @@ public:
       wfVec = new Func<ROOT::Double_v>();
 #endif
 
-      
+
       dataSB = new ROOT::Fit::UnBinData(nPoints);
 
       fSeq->SetParameters(p);
@@ -161,7 +139,7 @@ public:
       fitter.Config().ParSettings(4).SetLowerLimit(0);
       fitter.Config().ParSettings(5).SetLowerLimit(0);
       // save the parameter settings for the other fits
-      paramSettings = fitter.Config().ParamsSettings();  
+      paramSettings = fitter.Config().ParamsSettings();
       start = std::chrono::system_clock::now();
       bool ret = fitter.Fit(*dataSB);
       end =  std::chrono::system_clock::now();
@@ -175,7 +153,7 @@ public:
       std::cout << "\n///////////////////////////////MT TEST////////////////////////////" << std::endl << std::endl;
       wfSeq->SetParameters(p);
       fitter.SetFunction(*wfSeq, false);
-      fitter.Config().ParamsSettings() = paramSettings; 
+      fitter.Config().ParamsSettings() = paramSettings;
       start = std::chrono::system_clock::now();
       bool ret = fitter.Fit(*dataSB, 0, ROOT::Fit::ExecutionPolicy::kMultithread);
       end =  std::chrono::system_clock::now();
@@ -189,7 +167,7 @@ public:
       std::cout << "\n///////////////////////////////MP TEST////////////////////////////\n\n";
       wfSeq->SetParameters(p);
       fitter.SetFunction(*wfSeq, false);
-      fitter.Config().ParamsSettings() = paramSettings; 
+      fitter.Config().ParamsSettings() = paramSettings;
       start = std::chrono::system_clock::now();
       bool ret = fitter.Fit(*dataSB, 0, ROOT::Fit::ExecutionPolicy::kMultiprocess);
       end =  std::chrono::system_clock::now();
@@ -204,7 +182,7 @@ public:
       std::cout << "\n////////////////////////////VECTOR TEST////////////////////////////" << std::endl << std::endl;
       wfVec->SetParameters(p);
       fitter.SetFunction(*wfVec);
-      fitter.Config().ParamsSettings() = paramSettings; 
+      fitter.Config().ParamsSettings() = paramSettings;
       start = std::chrono::system_clock::now();
       bool ret = fitter.Fit(*dataSB);
       end =  std::chrono::system_clock::now();
@@ -218,7 +196,7 @@ public:
       std::cout << "\n///////////////////////////////MT+VEC TEST////////////////////////////\n\n";
       wfVec->SetParameters(p);
       fitter.SetFunction(*wfVec);
-      fitter.Config().ParamsSettings() = paramSettings; 
+      fitter.Config().ParamsSettings() = paramSettings;
       start = std::chrono::system_clock::now();
       bool ret = fitter.Fit(*dataSB, 0, ROOT::Fit::ExecutionPolicy::kMultithread);
       end =  std::chrono::system_clock::now();
@@ -232,7 +210,7 @@ public:
       std::cout << "\n///////////////////////////////MP+VEC TEST////////////////////////////\n\n";
       wfVec->SetParameters(p);
       fitter.SetFunction(*wfVec);
-      fitter.Config().ParamsSettings() = paramSettings; 
+      fitter.Config().ParamsSettings() = paramSettings;
       start = std::chrono::system_clock::now();
       bool ret = fitter.Fit(*dataSB, 0, ROOT::Fit::ExecutionPolicy::kMultiprocess);
       end =  std::chrono::system_clock::now();
@@ -257,7 +235,7 @@ private:
    std::chrono::duration<double> duration;
    ROOT::Fit::Fitter fitter;
    ROOT::Fit::UnBinData *dataSB;
-   std::vector<ROOT::Fit::ParameterSettings> paramSettings; 
+   std::vector<ROOT::Fit::ParameterSettings> paramSettings;
    bool filledData = false;
    double p[paramSize] = {0.1, 1000., 130., 2., 3.5, 1.5};
 };
