@@ -183,6 +183,9 @@ called for each data event.
 #include "Math/CholeskyDecomp.h"
 #include "RooDerivative.h"
 
+#include "Math/Functor.h"
+#include "Math/RichardsonDerivator.h"
+
 #include <iostream>
 #include <string>
 
@@ -1347,6 +1350,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t doWarn   = pc.getInt("doWarn") ;
   Int_t doSumW2  = pc.getInt("doSumW2") ;
   Int_t doAsymptotic = pc.getInt("doAsymptoticError");
+  Int_t extended = pc.getInt("ext");
+  RooArgSet * extContraint = (RooArgSet*) pc.getObject("extCons");
   const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
 #ifdef __ROOFIT_NOROOMINIMIZER
   const char* minType =0 ;
@@ -1510,6 +1515,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 	}
 
 	//Loop over data
+  double sumw = 0; 
+  double sumw2 = 0; 
 	for (int j=0; j<data.numEntries(); j++) {
 	   //Sets obs to current data point, this is where the pdf will be evaluated
 	   *obs = *data.get(j);
@@ -1525,18 +1532,112 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 	      diffs.at(k) = diff;
 	   }
 	   //Fill numerator matrix
+     // this is the central term of eq. 18 in the paper
+     // w(i)^2 * d( log(PDF)/dpar(k)) * d( log(PDF)/dpar(l)) =
+     // w(i)^2 * d( (PDF)/dpar(k)) * d( (PDF)/dpar(l))/ (PDF*PDF) =
 	   Double_t prob = getVal(obs);
 	   for (int k=0; k<floated.getSize(); k++) {
 	      for (int l=0; l<floated.getSize(); l++) {
 	         num(k,l) += data.weight()*data.weight()*diffs.at(k)*diffs.at(l)/(prob*prob);
 	      }
 	   }
+     sumw += data.weight();
+     sumw2 += data.weight()*data.weight();
 	}
-	num.Similarity(matV);
+  // add contribution of extended term to the AsymptoticError 
+  // we need to add the derivative of the Poisson term.
+  // the poisson term is a scaled Poisson weighted by a W = Sum(w(i)^2)/Sum(w(i))
+  // with an effective nexp = expected_events/W
+  // see commments in RooNllVar::EvaluatePartition
+  if (extended) {
+      // define function for computing derivative since we
+      // miss RooABsPdf::expectedEvents returning a RooABsReal
+      std::cout << "Add correction asymptotic for extended fits" << std::endl;
+      RooRealVar *param = nullptr;
+      auto expectedFunc = [&](double p) {
+         assert(param);
+         param->setVal(p);
+         return this->expectedEvents(data.get());
+      };
+      ROOT::Math::Functor1D wf(expectedFunc);
+      ROOT::Math::RichardsonDerivator derivator;
+      std::vector<Double_t> diffs(floated.getSize(), 0.0);
+      for (int k = 0; k < floated.getSize(); k++) {
+         param = static_cast<RooRealVar *>(floatingparams->find(floated[k]));
+         assert(param);
+         double parValue = param->getVal();
+         double h = std::max(1.E-4 * param->getError(), 4 * std::numeric_limits<double>::epsilon());
+         if ((parValue - h) > param->getMin() && (parValue + h) < param->getMax())
+            diffs[k] = derivator.Derivative1(wf, parValue, h);
+         else if ((parValue + h) < param->getMax())
+            diffs[k] = derivator.DerivativeForward(wf, parValue, h);
+         else
+            diffs[k] = derivator.DerivativeBackward(wf, parValue, h);
+
+         std::cout << "Derivative of ext term for par " << k << " : " << diffs[k] << std::endl;
+      }
+      // identify the normalization parameters which have a non-zero derivative of the expected term
+      std::vector<int> normParams;
+      for (unsigned int k = 0; k < diffs.size(); k++) {
+         if (diffs[k] != 0.)
+            normParams.push_back(k);
+      }
+      // check if derivatives of norms parameters are all zero
+      // in that case remove param from the list
+      auto itpar = normParams.begin();
+      while (itpar != normParams.end()) {
+         int k = *itpar;
+         bool isOnlyNorm = (num(k, k) == 0.0);
+         for (int l = k + 1; l < floated.getSize(); l++)
+            isOnlyNorm &= (num(k, l) == 0.0);
+         if (!isOnlyNorm)
+            normParams.erase(itpar);
+         else
+            ++itpar;
+      }
+     
+      // compute sum of weights and sum of weight square
+      double wtot = sumw2 / sumw;
+      // derivative of extended term with respect to expected events
+      double expEvts = expectedEvents(data.get());
+      double derivExtendTerm = (1. - sumw / expEvts )/wtot;
+      std::cout << " wtot = " << wtot << "  sumw2 " << sumw2 << " " << sumw << std::endl;
+      std::cout << "derivExttended term = " << derivExtendTerm << std::endl;
+      double tmp = wtot * wtot * derivExtendTerm * derivExtendTerm;
+      for (int k = 0; k < floated.getSize(); k++) {
+         auto itpar = std::find(normParams.begin(), normParams.end(), k);
+         if (itpar != normParams.end()) {
+            for (int l = 0; l < floated.getSize(); l++) {
+               auto itpar2 = std::find(normParams.begin(), normParams.end(), l);
+               if (itpar2 != normParams.end())
+                  num(k, l) += tmp * diffs[k] * diffs[l];
+            }
+         }
+      }
+      // now add contribution of normalization parameters. Need to compute 2-nd derivatives
+      if (normParams.size() > 0) {
+         std::cout << "Normalization parameters are " << normParams.size() << std::endl;
+         // term containing second derivatives of  d2(exptEvts)d(parameters) is zero
+         // because it is multiplied by  d(expectedTerm)/d(expectedEvts) = 0 at the minimum
+
+         double deriv2ExtendTerm = (sumw / (wtot * expEvts * expEvts));
+         for (unsigned int k = 0; k < normParams.size(); ++k) {
+           std::cout << " examine norm parameter " << normParams[k] << std::endl;
+            for (unsigned int l = 0; l < normParams.size(); ++l) {
+               // no need of += since we are sure num(k,l) = 0 for those parameters
+               assert(num(normParams[k], normParams[l]) == 0.);
+               num(normParams[k], normParams[l]) = wtot * wtot * deriv2ExtendTerm * diffs[normParams[k]] * diffs[normParams[l]];
+            }
+            std::cout << "norm param contribution " << num(normParams[k],normParams[k]) << " matV " << matV(normParams[k],normParams[k]) << std::endl;
+         }
+      }
+  }
+
+  num.Similarity(matV);
 
 	//Propagate corrected errors to parameters objects
 	m.applyCovarianceMatrix(num);
-      }
+   }
 
       if (doSumW2==1 && m.getNPar()>0) {
 	// Make list of RooNLLVar components of FCN
