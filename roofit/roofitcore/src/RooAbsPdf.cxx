@@ -1351,7 +1351,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t doSumW2  = pc.getInt("doSumW2") ;
   Int_t doAsymptotic = pc.getInt("doAsymptoticError");
   Int_t extended = pc.getInt("ext");
-  RooArgSet * extContraint = (RooArgSet*) pc.getObject("extCons");
+  const RooArgSet* extConstraints = static_cast<RooArgSet*>(pc.getObject("extCons"));
   const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
 #ifdef __ROOFIT_NOROOMINIMIZER
   const char* minType =0 ;
@@ -1551,8 +1551,9 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   // see commments in RooNllVar::EvaluatePartition
   if (extended) {
       // define function for computing derivative since we
-      // miss RooABsPdf::expectedEvents returning a RooABsReal
-      std::cout << "Add correction asymptotic for extended fits" << std::endl;
+      // don't have RooABsPdf::expectedEvents returning a RooABsReal
+      coutI(Fitting) << "RooAbsPdf::fitTo(" << GetName()
+                              << ") Add asymptotic correction for extended term " << std::endl;
       RooRealVar *param = nullptr;
       auto expectedFunc = [&](double p) {
          assert(param);
@@ -1574,7 +1575,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
          else
             diffs[k] = derivator.DerivativeBackward(wf, parValue, h);
 
-         std::cout << "Derivative of ext term for par " << k << " : " << diffs[k] << std::endl;
+         //std::cout << "Derivative of ext term for par " << k << " : " << diffs[k] << std::endl;
       }
       // identify the normalization parameters which have a non-zero derivative of the expected term
       std::vector<int> normParams;
@@ -1582,62 +1583,128 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
          if (diffs[k] != 0.)
             normParams.push_back(k);
       }
-      // check if derivatives of norms parameters are all zero
-      // in that case remove param from the list
-      auto itpar = normParams.begin();
-      while (itpar != normParams.end()) {
-         int k = *itpar;
-         bool isOnlyNorm = (num(k, k) == 0.0);
-         for (int l = k + 1; l < floated.getSize(); l++)
-            isOnlyNorm &= (num(k, l) == 0.0);
-         if (!isOnlyNorm)
-            normParams.erase(itpar);
-         else
-            ++itpar;
-      }
      
       // compute sum of weights and sum of weight square
       double wtot = sumw2 / sumw;
       // derivative of extended term with respect to expected events
       double expEvts = expectedEvents(data.get());
+      // compute extended term contribution using second derivatives 
+      double deriv2ExtendTerm = (sumw / (wtot * expEvts * expEvts));
+      double contrib2Deriv = wtot* wtot * deriv2ExtendTerm; 
+      // contribution using first derivatives 
       double derivExtendTerm = (1. - sumw / expEvts )/wtot;
-      std::cout << " wtot = " << wtot << "  sumw2 " << sumw2 << " " << sumw << std::endl;
-      std::cout << "derivExttended term = " << derivExtendTerm << std::endl;
-      double tmp = wtot * wtot * derivExtendTerm * derivExtendTerm;
-      for (int k = 0; k < floated.getSize(); k++) {
-         auto itpar = std::find(normParams.begin(), normParams.end(), k);
-         if (itpar != normParams.end()) {
-            for (int l = 0; l < floated.getSize(); l++) {
-               auto itpar2 = std::find(normParams.begin(), normParams.end(), l);
-               if (itpar2 != normParams.end())
-                  num(k, l) += tmp * diffs[k] * diffs[l];
+      double contribFirstDeriv = wtot * wtot * derivExtendTerm * derivExtendTerm;
+      //std::cout << "derivExttended term = " << derivExtendTerm << " w^2*d^2 " << tmp << " with second deriv " << tmp2 << std::endl;
+      for (unsigned int ipar = 0; ipar < normParams.size(); ipar++) {
+         int k = normParams[ipar];
+         for (unsigned int jpar = 0; jpar < normParams.size(); jpar++) {
+            int l = normParams[jpar];
+            double term = contrib2Deriv * diffs[k] * diffs[l];
+            // case constraint term is not dominting
+            if (abs(num(k, l) / (term)) > 1.E-4) {
+               num(k,l) += contribFirstDeriv * diffs[k] * diffs[l];
+               // std::cout << " use data term - ratio is " << abs(num(k, l) / (term)) << std::endl;
+            } else {
+               coutI(Fitting) << "RooAbsPdf::fitTo(" << GetName()
+                              << ") Extended term dominates ( ratio = " << abs(num(k, l) / term)
+                              << " ) is very small - for ( " << k << " , " << l << " }. Use correction with second derivatives " << std::endl;
             }
+            num(k, l) += term;
          }
       }
-      // now add contribution of normalization parameters. Need to compute 2-nd derivatives
-      if (normParams.size() > 0) {
-         std::cout << "Normalization parameters are " << normParams.size() << std::endl;
-         // term containing second derivatives of  d2(exptEvts)d(parameters) is zero
-         // because it is multiplied by  d(expectedTerm)/d(expectedEvts) = 0 at the minimum
+  }
+  // case of contraint term
+  // external or internal 
+  // in that case nll is a RooAddition and has name containing "_with_constr"
+  // bool haveConstraints = (nll->IsA() == RooAddition::Class() && TString(nll->GetName().Contains("_with_constr")));
+  // RooAddition * addNLL = static_cast<RooAddition *>(nll);
+  // RooConstraintSum * constrSum = dynamic_cast<RooConstraintSum>(addNLL->list().at(1));
+  // assert(constrSum);
+  // compute derivative with respect to the constraint term
+  if (extConstraints && extConstraints->getSize() > 0) {
 
-         double deriv2ExtendTerm = (sumw / (wtot * expEvts * expEvts));
-         for (unsigned int k = 0; k < normParams.size(); ++k) {
-           std::cout << " examine norm parameter " << normParams[k] << std::endl;
-            for (unsigned int l = 0; l < normParams.size(); ++l) {
-               // no need of += since we are sure num(k,l) = 0 for those parameters
-               assert(num(normParams[k], normParams[l]) == 0.);
-               num(normParams[k], normParams[l]) = wtot * wtot * deriv2ExtendTerm * diffs[normParams[k]] * diffs[normParams[l]];
-            }
-            std::cout << "norm param contribution " << num(normParams[k],normParams[k]) << " matV " << matV(normParams[k],normParams[k]) << std::endl;
-         }
+     // examine all constraint terms
+     std::vector<int> constrParamInd;
+     RooArgSet constrParams;
+     for (int k = 0; k < floated.getSize(); k++) {
+        // loop on constraint terms
+        for (const auto comp : *extConstraints) {
+           if (comp->dependsOn(floated[k])) {
+              if (!constrParams.find(floated[k].GetName())) {
+                 constrParams.add(floated[k]);
+                 constrParamInd.push_back(k);
+              }
+           }
+        }
+     }
+
+     std::vector<std::vector<double>> diffConstr(extConstraints->getSize());
+     int iterm = 0;
+     RooRealVar *param = nullptr;
+     RooAbsReal * cfunc = nullptr; 
+     auto constrainedFunc = [&](double xp) {
+           assert(param);
+           param->setVal(xp);
+           // constraint normalize on his parameters
+           return cfunc->getVal(constrParams);
+      };
+      
+      ROOT::Math::RichardsonDerivator derivator;
+
+      for (const auto comp : *extConstraints) {
+
+        cfunc = static_cast<RooAbsReal*> (comp);
+        if (cfunc == nullptr) continue; 
+
+        coutI(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") Add asymptotic correction for constraint term "
+                       << comp->GetName() << std::endl;
+
+        
+      
+        // compute derivatives
+        
+        diffConstr[iterm] = std::vector<double>(constrParamInd.size());
+        for (int i = 0; i < constrParams.getSize(); i++) {
+           int k = constrParamInd[i];
+           double deriv = 0;
+           if (comp->dependsOn(floated[k])) {        
+              param = static_cast<RooRealVar *>(floatingparams->find(floated[k]));
+              assert(param);
+              double parValue = param->getVal();
+              double h = std::max(1.E-4 * param->getError(), 4 * std::numeric_limits<double>::epsilon());
+              
+              ROOT::Math::Functor1D wf(constrainedFunc);
+
+              if ((parValue - h) > param->getMin() && (parValue + h) < param->getMax())
+                 deriv = derivator.Derivative1(wf, parValue, h);
+              else if ((parValue + h) < param->getMax())
+                 deriv = derivator.DerivativeForward(wf, parValue, h);
+              else
+                 deriv = derivator.DerivativeBackward(wf, parValue, h);
+           } else
+              deriv = 0;
+           diffConstr[iterm][i] = deriv;
+        }
+        iterm++;
       }
+     // assume constrained params do not dominate too strong likelihood, otherwise
+     // need to use their second derivatives
+     for (unsigned int i = 0; i < constrParamInd.size(); i++) {
+        for (unsigned int j = 0; i < constrParamInd.size(); j++) {
+           for (unsigned int iterm = 0; iterm < diffConstr.size(); iterm++) {
+              int k = constrParamInd[i];
+              int l = constrParamInd[j];
+              num(k, l) += diffConstr[iterm][i] * diffConstr[iterm][j];
+           }
+        }
+     }
   }
 
   num.Similarity(matV);
 
-	//Propagate corrected errors to parameters objects
-	m.applyCovarianceMatrix(num);
-   }
+  // Propagate corrected errors to parameters objects
+  m.applyCovarianceMatrix(num);
+  }
 
       if (doSumW2==1 && m.getNPar()>0) {
 	// Make list of RooNLLVar components of FCN
