@@ -980,6 +980,8 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
 
 
   RooArgSet* cPars = pc.getSet("cPars") ;
+
+  std::cout << "Getting set cpars in createNLL " << pc.getSet("cPars") << std::endl;
   RooArgSet* glObs = pc.getSet("glObs") ;
   if (pc.hasProcessed("GlobalObservablesTag")) {
     if (glObs) delete glObs ;
@@ -1011,6 +1013,8 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
     doStripDisconnected=kTRUE ;
   }
   const RooArgSet* extCons = pc.getSet("extCons") ;
+
+  std::cout << "in create NLL " << extCons << std::endl;
 
   // Process automatic extended option
   if (ext==2) {
@@ -1291,7 +1295,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   RooLinkedList fitCmdList(cmdList) ;
   RooLinkedList nllCmdList = pc.filterCmdList(fitCmdList,"ProjectedObservables,Extended,Range,"
       "RangeWithName,SumCoefRange,NumCPU,SplitRange,Constrained,Constrain,ExternalConstraints,"
-      "CloneData,GlobalObservables,GlobalObservablesTag,OffsetLikelihood,BatchMode");
+      "CloneData,GlobalObservables,GlobalObservablesTag,OffsetLikelihood,BatchMode", false);
 
   pc.defineDouble("prefit", "Prefit",0,0);
   pc.defineString("fitOpt","FitOptions",0,"") ;
@@ -1333,6 +1337,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
     return 0 ;
   }
 
+
   // Decode command line arguments
   Double_t prefit = pc.getDouble("prefit");
   const char* fitOpt = pc.getString("fitOpt",0,kTRUE) ;
@@ -1351,7 +1356,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t doSumW2  = pc.getInt("doSumW2") ;
   Int_t doAsymptotic = pc.getInt("doAsymptoticError");
   Int_t extended = pc.getInt("ext");
-  const RooArgSet* extConstraints = static_cast<RooArgSet*>(pc.getObject("extCons"));
+  const RooArgSet *extConstraints = static_cast<RooArgSet *>(pc.getSet("extCons"));
   const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
 #ifdef __ROOFIT_NOROOMINIMIZER
   const char* minType =0 ;
@@ -1515,8 +1520,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 	}
 
 	//Loop over data
-  double sumw = 0; 
-  double sumw2 = 0; 
+  double sumw = 0;
+  double sumw2 = 0;
 	for (int j=0; j<data.numEntries(); j++) {
 	   //Sets obs to current data point, this is where the pdf will be evaluated
 	   *obs = *data.get(j);
@@ -1544,7 +1549,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
      sumw += data.weight();
      sumw2 += data.weight()*data.weight();
 	}
-  // add contribution of extended term to the AsymptoticError 
+  // add contribution of extended term to the AsymptoticError
   // we need to add the derivative of the Poisson term.
   // the poisson term is a scaled Poisson weighted by a W = Sum(w(i)^2)/Sum(w(i))
   // with an effective nexp = expected_events/W
@@ -1583,15 +1588,15 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
          if (diffs[k] != 0.)
             normParams.push_back(k);
       }
-     
+
       // compute sum of weights and sum of weight square
       double wtot = sumw2 / sumw;
       // derivative of extended term with respect to expected events
       double expEvts = expectedEvents(data.get());
-      // compute extended term contribution using second derivatives 
+      // compute extended term contribution using second derivatives
       double deriv2ExtendTerm = (sumw / (wtot * expEvts * expEvts));
-      double contrib2Deriv = wtot* wtot * deriv2ExtendTerm; 
-      // contribution using first derivatives 
+      double contrib2Deriv = wtot* wtot * deriv2ExtendTerm;
+      // contribution using first derivatives
       double derivExtendTerm = (1. - sumw / expEvts )/wtot;
       double contribFirstDeriv = wtot * wtot * derivExtendTerm * derivExtendTerm;
       //std::cout << "derivExttended term = " << derivExtendTerm << " w^2*d^2 " << tmp << " with second deriv " << tmp2 << std::endl;
@@ -1614,15 +1619,16 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
       }
   }
   // case of contraint term
-  // external or internal 
+  // external or internal
   // in that case nll is a RooAddition and has name containing "_with_constr"
   // bool haveConstraints = (nll->IsA() == RooAddition::Class() && TString(nll->GetName().Contains("_with_constr")));
   // RooAddition * addNLL = static_cast<RooAddition *>(nll);
   // RooConstraintSum * constrSum = dynamic_cast<RooConstraintSum>(addNLL->list().at(1));
   // assert(constrSum);
   // compute derivative with respect to the constraint term
+  if (extConstraints)
+     extConstraints->Print("v");
   if (extConstraints && extConstraints->getSize() > 0) {
-
      // examine all constraint terms
      std::vector<int> constrParamInd;
      RooArgSet constrParams;
@@ -1641,38 +1647,38 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
      std::vector<std::vector<double>> diffConstr(extConstraints->getSize());
      int iterm = 0;
      RooRealVar *param = nullptr;
-     RooAbsReal * cfunc = nullptr; 
+     RooAbsReal * cfunc = nullptr;
      auto constrainedFunc = [&](double xp) {
            assert(param);
            param->setVal(xp);
            // constraint normalize on his parameters
            return cfunc->getVal(constrParams);
       };
-      
+
       ROOT::Math::RichardsonDerivator derivator;
 
       for (const auto comp : *extConstraints) {
 
         cfunc = static_cast<RooAbsReal*> (comp);
-        if (cfunc == nullptr) continue; 
+        if (cfunc == nullptr) continue;
 
         coutI(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") Add asymptotic correction for constraint term "
                        << comp->GetName() << std::endl;
 
-        
-      
+
+
         // compute derivatives
-        
+
         diffConstr[iterm] = std::vector<double>(constrParamInd.size());
         for (int i = 0; i < constrParams.getSize(); i++) {
            int k = constrParamInd[i];
            double deriv = 0;
-           if (comp->dependsOn(floated[k])) {        
+           if (comp->dependsOn(floated[k])) {
               param = static_cast<RooRealVar *>(floatingparams->find(floated[k]));
               assert(param);
               double parValue = param->getVal();
               double h = std::max(1.E-4 * param->getError(), 4 * std::numeric_limits<double>::epsilon());
-              
+
               ROOT::Math::Functor1D wf(constrainedFunc);
 
               if ((parValue - h) > param->getMin() && (parValue + h) < param->getMax())
@@ -1690,11 +1696,11 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
      // assume constrained params do not dominate too strong likelihood, otherwise
      // need to use their second derivatives
      for (unsigned int i = 0; i < constrParamInd.size(); i++) {
-        for (unsigned int j = 0; i < constrParamInd.size(); j++) {
-           for (unsigned int iterm = 0; iterm < diffConstr.size(); iterm++) {
+        for (unsigned int j = 0; j < constrParamInd.size(); j++) {
+           for (unsigned int ic = 0; ic < diffConstr.size(); ic++) {
               int k = constrParamInd[i];
               int l = constrParamInd[j];
-              num(k, l) += diffConstr[iterm][i] * diffConstr[iterm][j];
+              num(k, l) += diffConstr[ic][i] * diffConstr[ic][j];
            }
         }
      }
