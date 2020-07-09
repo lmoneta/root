@@ -261,8 +261,8 @@ Double_t RooNLLVar::evaluatePartition(std::size_t firstEvent, std::size_t lastEv
   double result(0), carry(0), sumWeight(0);
 
   RooAbsPdf* pdfClone = (RooAbsPdf*) _funcClone ;
-  std::cout << "evaluate partition for pdf " << std::endl;
-  pdfClone->Print("t");
+  //std::cout << "evaluate partition for pdf " << std::endl;
+  //pdfClone->Print("t");
 
   // cout << "RooNLLVar::evaluatePartition(" << GetName() << ") projDeps = " << (_projDeps?*_projDeps:RooArgSet()) << endl ;
 

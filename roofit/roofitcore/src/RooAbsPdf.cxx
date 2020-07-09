@@ -1321,6 +1321,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineObject("minosSet","Minos",0,0) ;
   pc.defineSet("cPars","Constrain",0,0) ;
   pc.defineSet("extCons","ExternalConstraints",0,0) ;
+  pc.defineSet("glObs","GlobalObservables",0,0) ;
   pc.defineMutex("FitOptions","Verbose") ;
   pc.defineMutex("FitOptions","Save") ;
   pc.defineMutex("FitOptions","Timer") ;
@@ -1357,6 +1358,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t doAsymptotic = pc.getInt("doAsymptoticError");
   Int_t extended = pc.getInt("ext");
   const RooArgSet *extConstraints = static_cast<RooArgSet *>(pc.getSet("extCons"));
+  RooArgSet *globObs = static_cast<RooArgSet *>(pc.getSet("glObs"));
   const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
 #ifdef __ROOFIT_NOROOMINIMIZER
   const char* minType =0 ;
@@ -1605,16 +1607,19 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
          for (unsigned int jpar = 0; jpar < normParams.size(); jpar++) {
             int l = normParams[jpar];
             double term = contrib2Deriv * diffs[k] * diffs[l];
-            // case constraint term is not dominting
-            if (abs(num(k, l) / (term)) > 1.E-4) {
+            double term1 = contribFirstDeriv * diffs[k] * diffs[l];
+            //std::cout << "contrib1 and 2 " << term1 << "  " << term << " previous " << num(k,l) << std::endl;
+             // case constraint term is not dominating
+            if (abs(num(k, l) / (term)) > 1.) {
                num(k,l) += contribFirstDeriv * diffs[k] * diffs[l];
                // std::cout << " use data term - ratio is " << abs(num(k, l) / (term)) << std::endl;
             } else {
                coutI(Fitting) << "RooAbsPdf::fitTo(" << GetName()
                               << ") Extended term dominates ( ratio = " << abs(num(k, l) / term)
                               << " ) is very small - for ( " << k << " , " << l << " }. Use correction with second derivatives " << std::endl;
-            }
             num(k, l) += term;
+            }
+            
          }
       }
   }
@@ -1645,14 +1650,16 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
      }
 
      std::vector<std::vector<double>> diffConstr(extConstraints->getSize());
+     std::vector<std::vector<double>> diff2Constr(extConstraints->getSize());
      int iterm = 0;
      RooRealVar *param = nullptr;
+     RooArgSet * normSet = nullptr;
      RooAbsReal * cfunc = nullptr;
      auto constrainedFunc = [&](double xp) {
            assert(param);
            param->setVal(xp);
            // constraint normalize on his parameters
-           return cfunc->getVal(constrParams);
+           return cfunc->getVal(*normSet);
       };
 
       ROOT::Math::RichardsonDerivator derivator;
@@ -1670,6 +1677,9 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
         // compute derivatives
 
         diffConstr[iterm] = std::vector<double>(constrParamInd.size());
+        diff2Constr[iterm] = std::vector<double>(constrParamInd.size());
+        if (globObs) normSet = globObs;
+        else normSet = &constrParams;
         for (int i = 0; i < constrParams.getSize(); i++) {
            int k = constrParamInd[i];
            double deriv = 0;
@@ -1687,9 +1697,12 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
                  deriv = derivator.DerivativeForward(wf, parValue, h);
               else
                  deriv = derivator.DerivativeBackward(wf, parValue, h);
+              diff2Constr[iterm][i] = derivator.Derivative2(wf, parValue, h);
            } else
               deriv = 0;
-           diffConstr[iterm][i] = deriv;
+           double pdfvalue = cfunc->getVal(*normSet);
+           diffConstr[iterm][i] = (pdfvalue  > 0) ? deriv/pdfvalue : 0.0;  
+           diff2Constr[iterm][i] = (pdfvalue  > 0) ?  diff2Constr[iterm][i]/pdfvalue : 0.0;
         }
         iterm++;
       }
@@ -1697,11 +1710,20 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
      // need to use their second derivatives
      for (unsigned int i = 0; i < constrParamInd.size(); i++) {
         for (unsigned int j = 0; j < constrParamInd.size(); j++) {
-           for (unsigned int ic = 0; ic < diffConstr.size(); ic++) {
+          double term1 = 0; 
+          double term2 = 0; 
+          for (unsigned int ic = 0; ic < diffConstr.size(); ic++) {
               int k = constrParamInd[i];
               int l = constrParamInd[j];
-              num(k, l) += diffConstr[ic][i] * diffConstr[ic][j];
+              if (k == 1 && l == 1) std::cout << "constraint contribution to mean " 
+              << diffConstr[ic][i]* diffConstr[ic][j] << " previous " << num(k,l) 
+              << " second derivatives " << diff2Constr[ic][i] << std::endl;
+              term1 += diffConstr[ic][i] * diffConstr[ic][j])
+              term2 -= diff2Constr[ic][i];
+              //num(k, l) += diffConstr[ic][i] * diffConstr[ic][j];
+              //num(k, l) += diffConstr[ic][i] * diffConstr[ic][j];
            }
+           num(k, l) += std::max(term1, term2);
         }
      }
   }
