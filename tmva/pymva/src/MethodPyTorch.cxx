@@ -238,3 +238,20 @@ void MethodPyTorch::SetupTorchModel(bool loadTrainedModel) {
    // Mark the model as setup
    fModelIsSetup = true;
 }
+
+void MethodPyTorch::Init() {
+
+   TMVA::Internal::PyGILRAII raii;
+
+   if (!PyIsInitialized()) {
+      Log() << kFATAL << "Python is not initialized" << Endl;
+   }
+   _import_array(); // required to use numpy arrays
+
+   // Import torch
+   PyRunString("import sys; sys.argv = ['']", "Set sys.argv failed");
+   PyRunString("import torch", "Import torch failed");
+
+   // Set flag that model is not setup
+   fModelIsSetup = false;
+}
