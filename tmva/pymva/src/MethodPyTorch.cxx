@@ -456,3 +456,16 @@ void MethodPyTorch::Train() {
    delete[] valDataWeights;
 }
 
+
+void MethodPyTorch::GetHelpMessage() const {
+   Log() << Endl;
+   Log() << "PyTorch is a scientific computing package supporting"​ << Endl;
+   Log() << "automatic differentiation. This method wraps the training"​ << Endl;
+   Log() << "and predictions steps of the PyTorch Python package for"​ << Endl;
+   Log() << "TMVA, so that dataloading, preprocessing and evaluation" << Endl;
+   Log() << "can be done within the TMVA system. To use this PyTorch" << Endl;
+   Log() << "interface, you need to generatea model with PyTorch first." << Endl;
+   Log() << "Then, this model can be loaded and trained in TMVA." << Endl;
+   
+   Log() << Endl;
+}
