@@ -53,6 +53,8 @@ been used by the Tevatron experiments.
 #include "RooMsgService.h"
 #include "RooGlobalFunc.h"
 
+#include <iomanip>
+
 
 Bool_t RooStats::RatioOfProfiledLikelihoodsTestStat::fgAlwaysReuseNll = kTRUE ;
 
@@ -122,6 +124,8 @@ nullParamsOfInterest = *saveNullPOI;
 delete saveAll;
 delete allVars;
 */
-
+   if (fPrintLevel > 0)
+      std::cout << "Eval=uate Ratio of likelihood - nulNLL " << std::setprecision(15) << nullNLL 
+      << " altNLL " << altNLL << " ratio " << nullNLL-altNLL << std::endl; 
    return nullNLL -altNLL;
 }

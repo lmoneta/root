@@ -169,8 +169,10 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
    // 32-36 TEST HTC SIGNIFICANCE
    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kAsymptotic));
    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kSimpleLR));
+   verbose = 4; 
    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kRatioLR));
    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kProfileLROneSidedDiscovery));
+   verbose = 0; 
    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid, kProfileLROneSidedDiscovery));
 
    // 37-43 TEST HTI PRODUCT POISSON : Observed value range is [0,30] for x=s+b and [0,80] for y=2*s*1.2^beta

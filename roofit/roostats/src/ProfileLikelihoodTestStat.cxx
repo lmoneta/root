@@ -40,6 +40,8 @@ either use:
 
 #include "RooStats/RooStatsUtils.h"
 
+#include <iomanip>
+
 using namespace std;
 
 Bool_t RooStats::ProfileLikelihoodTestStat::fgAlwaysReuseNll = kTRUE ;
@@ -262,9 +264,10 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
        if (fPrintLevel > 0) {
           std::cout << "EvaluateProfileLikelihood - ";
           if (type <= 1)
-             std::cout << "mu hat = " << fit_favored_mu  <<  ", uncond ML = " << uncondML;
+             std::cout << "mu hat = " << fit_favored_mu  <<  ", uncond ML = " << 
+             std::setprecision(15) << uncondML;
           if (type != 1)
-             std::cout << ", cond ML = " << condML;
+             std::cout << ", cond ML = " << std::setprecision(15) << condML;
           if (type == 0)
              std::cout << " pll = " << pll;
           std::cout << " time (create/fit1/2) " << createTime << " , " << fitTime1 << " , " << fitTime2

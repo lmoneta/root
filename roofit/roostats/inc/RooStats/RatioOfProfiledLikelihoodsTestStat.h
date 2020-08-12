@@ -99,6 +99,7 @@ namespace RooStats {
       void SetPrintLevel(Int_t printLevel){
          fNullProfile.SetPrintLevel(printLevel);
          fAltProfile.SetPrintLevel(printLevel);
+         fPrintLevel = printLevel;
       }
 
       // set the conditional observables which will be used when creating the NLL
@@ -143,6 +144,8 @@ namespace RooStats {
 
       bool fDetailedOutputEnabled;
       RooArgSet* fDetailedOutput;
+
+      Int_t fPrintLevel = 0; ///! print level
 
 
    protected:

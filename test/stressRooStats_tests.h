@@ -44,7 +44,7 @@ static const char * const kETestStatTypeString[] = { "Simple-Likelihood-Ratio", 
 //    "Profile Likelihood Signed", "Max Likelihood Estimate", "Number Of Observed Events" };
 static HypoTestCalculatorGeneric * buildHypoTestCalculator(const ECalculatorType calculatorType, RooAbsData &data,
    const ModelConfig &nullModel, const ModelConfig &altModel, const UInt_t toysNull, const UInt_t toysAlt);
-static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel);
+static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel, int verbose = 0);
 
 
 
@@ -1320,8 +1320,10 @@ public:
 
       // ToyMCSampler configuration
       ToyMCSampler *tmcs = (ToyMCSampler *)calc->GetTestStatSampler();
-      tmcs->SetTestStatistic(buildTestStatistic(fTestStatType, *bModel, *sbModel));
+      tmcs->SetTestStatistic(buildTestStatistic(fTestStatType, *bModel, *sbModel, _verb));
       tmcs->SetUseMultiGen(kTRUE); // speedup
+      // use a fixed seed 
+      //RooRandom::randomGenerator()->SetSeed(111);
 
       // Register result (test significance)
       HypoTestResult *htr = calc->GetHypoTest();
@@ -1938,7 +1940,7 @@ static HypoTestCalculatorGeneric * buildHypoTestCalculator(const ECalculatorType
    return calc;
 }
 
-static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const ModelConfig &nullModel, const ModelConfig &altModel)
+static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const ModelConfig &nullModel, const ModelConfig &altModel, int verbose)
 {
 
    TestStatistic *testStat = NULL;
@@ -1959,6 +1961,8 @@ static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const
          new RatioOfProfiledLikelihoodsTestStat(*nullModel.GetPdf(), *altModel.GetPdf(), altModel.GetSnapshot());
       roplts->SetSubtractMLE(kFALSE);
       roplts->SetAlwaysReuseNLL(kTRUE);
+      roplts->SetPrintLevel(verbose-1); 
+      if (verbose>2) roplts->EnableDetailedOutput(true);
       testStat = roplts;
    } else if (testStatType == kMLE) {
       MaxLikelihoodEstimateTestStat *mlets =
@@ -1973,6 +1977,7 @@ static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const
       else if (testStatType == kProfileLROneSidedDiscovery) plts->SetOneSidedDiscovery(kTRUE);
       else if (testStatType == kProfileLRSigned) plts->SetSigned(kTRUE);
       plts->SetAlwaysReuseNLL(kTRUE);
+      plts->SetPrintLevel(verbose-1); 
       testStat = plts;
    }
 
