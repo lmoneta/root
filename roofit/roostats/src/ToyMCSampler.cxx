@@ -424,7 +424,27 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
       // set variables to requested parameter point
       *allVars = *saveAll; // important for example for SimpleLikelihoodRatioTestStat
 
-      RooAbsData* toydata = GenerateToyData(*paramPoint, weight);
+      auto seed = RooRandom::randomGenerator()->GetSeed();
+      std::cout << "generate toy data for toy % " << i << " seed " << seed << std::endl;
+      if (i == 441 && seed == 1959128796)
+         gDebug = 5;
+
+      RooAbsData *toydata = GenerateToyData(*paramPoint, weight);
+
+      if (i == 441 && seed == 1959128796) {
+         // special toy data
+         gDebug = 0;
+
+         RooWorkspace w("wtoy441");
+         w.import(*fPdf);
+         w.import(*toydata);
+         TString fname = "toy_";
+         fname += TString(fSamplingDistName.c_str());
+         fname += TString(".root");
+         std::cout << "write toy 441 to file " << fname << std::endl;
+         w.writeToFile(fname);
+      }
+
       if (i == 0 && !fPdf->canBeExtended() && dynamic_cast<RooSimultaneous*>(fPdf)) {
         const RooArgSet* toySet = toydata->get();
         if (std::none_of(toySet->begin(), toySet->end(), [](const RooAbsArg* arg){
