@@ -271,6 +271,7 @@ void MethodPyTorch::SetupPyTorchModel(bool loadTrainedModel) {
    fModelIsSetup = true;
 }
 
+
 void MethodPyTorch::Init() {
 
    TMVA::Internal::PyGILRAII raii;
@@ -497,6 +498,7 @@ void MethodPyTorch::Train() {
    delete[] valDataY;
    delete[] valDataWeights;
 }
+
 
 void MethodPyTorch::TestClassification() {
     MethodBase::TestClassification();
