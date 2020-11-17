@@ -134,6 +134,8 @@ void update(void)
    pmax=pmin+12;
    pi=&x.vec[ir];
    pj=&x.vec[jr];
+
+   printf("******  perform update %d %d %d %d\n",ir,jr,pr,is);
       
    for (k=0;k<kmax;k++) 
    {
@@ -242,6 +244,8 @@ void rlxs_init(int level,int seed)
 void ranlxs(float r[],int n)
 {
    int k;
+
+   printf("---ranlxs  get random number  %d %d %d %d\n",ir,jr,pr,is); 
 
    if (init==0)
       rlxs_init(0,1);

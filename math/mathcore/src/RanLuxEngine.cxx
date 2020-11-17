@@ -22,6 +22,7 @@
 #include "RanluxS.h"
 #include "RanluxD.h"
 
+#include <iostream>
 
 namespace ROOT {
 namespace Math {
@@ -34,6 +35,10 @@ namespace Math {
    void RanLuxSEngine::Init(int level, int seed) {
 //      rlxs_init(level,seed);
 
+      uint32_t maxval = 2147483648; // 2^31
+      seed = seed % maxval;
+      std::cout << "init with seed " << seed << std::endl;
+      if (seed == 0) seed =1 ; 
       if (fRlxs) delete fRlxs;
       fRlxs = new RanluxS(); 
       fRlxs->rlxs_init(level,seed);
@@ -48,7 +53,15 @@ namespace Math {
    }
 
    void RanLuxSEngine::SetState(const std::vector<uint32_t> & state) {
-      fRlxs->rlxs_reset((int*) state.data() );
+      // state contains extra bits (e.g. carry bits , size etc..)
+      std::vector<int> actState( RanluxS::rlxs_size() );
+      fRlxs->rlxs_get(actState.data() );
+      // copy state in elements from 1 to 96
+      for (int i = 0; i < 96; ++i)
+         actState[i+1] = state[i] % (1 << 24);
+
+      for (int i = 97; i < 100; ++i) actState[i] = 0; 
+      fRlxs->rlxs_reset(actState.data() );
    }
 
    // void RanLuxSEngine::GetState(std::vector<uint32_t> & state) {
@@ -56,11 +69,13 @@ namespace Math {
    // }
 
    void RanLuxSEngine::GetState(std::vector<uint32_t> & state) {
-      fRlxs->rlxs_get((int*) state.data() );
+      std::vector<int> actState( RanluxS::rlxs_size() );
+      fRlxs->rlxs_get(actState.data() );
+      std::copy(actState.begin()+1, actState.begin()+97, state.begin() ); 
    }
 
    int RanLuxSEngine::Size() {
-      return RanluxS::rlxs_size(); 
+      return 96; 
    }
 
    ///////Double engine
@@ -71,8 +86,13 @@ namespace Math {
 
      /// init the generator
    void RanLuxDEngine::Init(int level, int seed) {
+      uint32_t maxval = 2147483648; // 2^31
+      seed = seed % maxval;
+      //std::cout << "init with seed " << seed << std::endl;
+      if (seed == 0) seed =1 ; 
+
       if (fRlxd) delete fRlxd;
-      fRlxd = new RanluxD(); 
+      fRlxd = new RanluxD();
       fRlxd->rlxd_init(level,seed);
       //rlxd_init(level,seed);
    }
@@ -85,18 +105,28 @@ namespace Math {
    }
 
    void RanLuxDEngine::SetState(const std::vector<uint32_t> & state) {
-      assert( (int) state.size() == Size() );
-      fRlxd->rlxd_reset((int*) state.data() );
+      // state contains extra bits (e.g. carry bits , size etc..)
+      std::vector<int> actState( RanluxD::rlxd_size() );
+       fRlxd->rlxd_get(actState.data() );
+      // copy state in elements from 1 to 96
+      for (int i = 0; i < 96; ++i)
+         actState[i+1] = state[i] % (1 << 24);
+      
+      //assert( (int) state.size() == Size() );
+      fRlxd->rlxd_reset( actState.data() );
    }
 
    void RanLuxDEngine::GetState(std::vector<uint32_t> & state) {
-      size_t size = Size(); 
-      if (state.size() != size) state.resize(size); 
-      fRlxd->rlxd_get((int*) state.data() );
+      std::vector<int> actState( RanluxD::rlxd_size() );
+      fRlxd->rlxd_get(actState.data() );
+      std::copy(actState.begin()+1, actState.begin()+97, state.begin() ); 
+      // size_t size = Size(); 
+      // if (state.size() != size) state.resize(size); 
+      // fRlxd->rlxd_get((int*) state.data() );
    }
 
    int RanLuxDEngine::Size() {
-      return  RanluxD::rlxd_size(); 
+      return  96; //RanluxD::rlxd_size(); 
    }
       
   

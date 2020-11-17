@@ -70,7 +70,7 @@ namespace ROOT {
        
          /// minimum integer taht can be generated
          static unsigned int MinInt() { return 0; }
-         /// maximum integer taht can be generated
+         /// maximum integer that can be generated
          static unsigned int MaxInt() { return 0xffffff; }  //  2^24 -1
 
          static int Size();
@@ -93,7 +93,7 @@ namespace ROOT {
       private:
 
          double Rndm_impl();
-         uint32_t IntRndm_impl() {return (int) Rndm_impl()*MaxInt(); }
+         uint32_t IntRndm_impl() {return (uint32_t) ( Rndm_impl()*MaxInt() ); }
 
          int fLevel;
          float fX[1];
@@ -139,7 +139,7 @@ namespace ROOT {
        
          /// minimum integer taht can be generated
          static unsigned int MinInt() { return 0; }
-         /// maximum integer taht can be generated
+         /// maximum integer that can be generated
          static uint64_t MaxInt() { return 0xffffffffffff; }  //  2^24 -1
 
          static int Size();

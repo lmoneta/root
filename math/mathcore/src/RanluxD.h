@@ -48,7 +48,7 @@
 
 #include "ranlxd.h"
 
-#define SSE
+//#define SSE
 
 #if (defined SSE)
 
