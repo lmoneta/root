@@ -116,6 +116,9 @@ void FeldmanCousins::CreateTestStatSampler() const{
   fTestStatSampler->SetParametersForTestStat(*fModel.GetParametersOfInterest() );
   if(fModel.GetObservables())
     fTestStatSampler->SetObservables(*fModel.GetObservables());
+  if(fModel.GetGlobalObservables())
+    fTestStatSampler->SetGlobalObservables(*fModel.GetGlobalObservables());
+
   fTestStatSampler->SetPdf(*fModel.GetPdf());
 
   if(!fAdaptiveSampling){
