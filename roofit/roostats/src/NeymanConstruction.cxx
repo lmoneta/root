@@ -128,6 +128,7 @@ PointSetInterval* NeymanConstruction::GetInterval() const {
                    "points in interval",
                   *(fPointsToTest->get(0)) );
 
+
   // loop over points to test
   for(Int_t i=0; i<fPointsToTest->numEntries(); ++i){
      // get a parameter point from the list of points to test.
@@ -283,11 +284,11 @@ PointSetInterval* NeymanConstruction::GetInterval() const {
     if(fSaveBeltToFile){
       //write to file
       samplingDist->Write();
-      string tmpName = "hist_";
-      tmpName+=samplingDist->GetName();
-      TH1F* h = new TH1F(tmpName.c_str(),"",500,0.,5.);
+      TString tmpName = TString::Format("hist_TSdist_%d",i);
+      //tmpName+=samplingDist->GetName();
+      TH1F* h = new TH1F(tmpName,"",500,0.,5.);
       for(int ii=0; ii<samplingDist->GetSize(); ++ii){
-   h->Fill(samplingDist->GetSamplingDistribution().at(ii) );
+         h->Fill(samplingDist->GetSamplingDistribution().at(ii) );
       }
       h->Write();
       delete h;

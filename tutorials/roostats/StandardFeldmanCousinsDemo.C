@@ -46,6 +46,10 @@
 using namespace RooFit;
 using namespace RooStats;
 
+int npoints = 10;
+std::vector<double> poiEdges = {0,0};
+double toysFactor = 1;
+
 void StandardFeldmanCousinsDemo(const char *infile = "", const char *workspaceName = "combined",
                                 const char *modelConfigName = "ModelConfig", const char *dataName = "obsData")
 {
@@ -101,6 +105,12 @@ void StandardFeldmanCousinsDemo(const char *infile = "", const char *workspaceNa
    // get the modelConfig out of the file
    RooAbsData *data = w->data(dataName);
 
+   RooRealVar *firstPOI = (RooRealVar *)mc->GetParametersOfInterest()->first();
+   if (poiEdges[0] < poiEdges[1]) {
+      firstPOI->setMin(poiEdges[0]);
+      firstPOI->setMax(poiEdges[1]);
+   }
+
    // make sure ingredients are found
    if (!data || !mc) {
       w->Print();
@@ -115,10 +125,11 @@ void StandardFeldmanCousinsDemo(const char *infile = "", const char *workspaceNa
    // in the model config
    FeldmanCousins fc(*data, *mc);
    fc.SetConfidenceLevel(0.95); // 95% interval
-   // fc.AdditionalNToysFactor(0.1); // to speed up the result
-   fc.UseAdaptiveSampling(true); // speed it up a bit
-   fc.SetNBins(10);              // set how many points per parameter of interest to scan
+   fc.AdditionalNToysFactor(toysFactor); // to speed up the result
+   fc.UseAdaptiveSampling(false); // speed it up a bit
+   fc.SetNBins(npoints);              // set how many points per parameter of interest to scan
    fc.CreateConfBelt(true);      // save the information in the belt for plotting
+   fc.SaveBeltToFile(true);
 
    // Since this tool needs to throw toy MC the PDF needs to be
    // extended or the tool needs to know how many entries in a dataset
@@ -144,7 +155,7 @@ void StandardFeldmanCousinsDemo(const char *infile = "", const char *workspaceNa
    ConfidenceBelt *belt = fc.GetConfidenceBelt();
 
    // print out the interval on the first Parameter of Interest
-   RooRealVar *firstPOI = (RooRealVar *)mc->GetParametersOfInterest()->first();
+
    cout << "\n95% interval on " << firstPOI->GetName() << " is : [" << interval->LowerLimit(*firstPOI) << ", "
         << interval->UpperLimit(*firstPOI) << "] " << endl;
 
@@ -170,5 +181,5 @@ void StandardFeldmanCousinsDemo(const char *infile = "", const char *workspaceNa
       histOfThresholds->Fill(poiVal, arMax);
    }
    histOfThresholds->SetMinimum(0);
-   histOfThresholds->Draw();
+   histOfThresholds->Draw("HIST");
 }
