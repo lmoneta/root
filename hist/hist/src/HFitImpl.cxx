@@ -305,7 +305,8 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
    fitConfig.SetMinimizerOptions(minOption);
 
    // specific  print level options
-   if (fitOption.Verbose) fitConfig.MinimizerOptions().SetPrintLevel(3);
+   if (fitOption.Verbose) fitConfig.MinimizerOptions().SetPrintLevel(2);
+   if (fitOption.Verbose == 2) fitConfig.MinimizerOptions().SetPrintLevel(3);
    if (fitOption.Quiet)    fitConfig.MinimizerOptions().SetPrintLevel(0);
 
    // specific minimizer options depending on minimizer
@@ -408,7 +409,8 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
          }
          else {
             // print using FitResult class
-            if (fitOption.Verbose) fitResult.PrintCovMatrix(std::cout);
+            if ((fitOption.Verbose && f1->GetNpar() < 20) || fitOption.Verbose == 2)
+               fitResult.PrintCovMatrix(std::cout);
             fitResult.Print(std::cout);
          }
       }
@@ -756,6 +758,7 @@ void ROOT::Fit::FitOptionsMake(EFitObjectType type, const char *option, Foption_
    if (opt.Contains("U")) fitOption.User    = 1;
    if (opt.Contains("Q")) fitOption.Quiet   = 1;
    if (opt.Contains("V")) {fitOption.Verbose = 1; fitOption.Quiet   = 0;}
+   if (opt.Contains("VV")) {fitOption.Verbose = 2; fitOption.Quiet   = 0;}
    if (opt.Contains("L")) fitOption.Like    = 1;
    if (opt.Contains("X")) fitOption.Chi2    = 1;
    if (opt.Contains("P")) fitOption.PChi2    = 1;
@@ -889,7 +892,8 @@ TFitResultPtr ROOT::Fit::UnBinFit(ROOT::Fit::UnBinData * data, TF1 * fitfunc, Fo
 
    fitConfig.SetMinimizerOptions(minOption);
 
-   if (fitOption.Verbose)   fitConfig.MinimizerOptions().SetPrintLevel(3);
+   if (fitOption.Verbose)   fitConfig.MinimizerOptions().SetPrintLevel(2);
+   if (fitOption.Verbose==2)   fitConfig.MinimizerOptions().SetPrintLevel(3);
    if (fitOption.Quiet)     fitConfig.MinimizerOptions().SetPrintLevel(0);
 
    // more
@@ -948,7 +952,7 @@ TFitResultPtr ROOT::Fit::UnBinFit(ROOT::Fit::UnBinData * data, TF1 * fitfunc, Fo
 
    }
    // print results
-   if (fitOption.Verbose) fitResult.PrintCovMatrix(std::cout);
+   if ((fitOption.Verbose && fitfunc->GetNpar() < 20) || fitOption.Verbose == 2) fitResult.PrintCovMatrix(std::cout);
    else if (!fitOption.Quiet) fitResult.Print(std::cout);
 
    if (fitOption.StoreResult)
