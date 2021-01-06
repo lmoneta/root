@@ -309,14 +309,14 @@ TEST_F(TestGlobalObservables, ResetDataToWrongData)
    RooAbsPdf::MinimizerConfig minimizerCfg;
    minimizerCfg.doSave = true;
    minimizerCfg.printLevel = -1;
-   auto res2 = model.minimizeNLL(*nll, dataWithMeanSigmaGlobs(), minimizerCfg);
+   auto res2 = model.minimizeNLL(*nll, nullptr, dataWithMeanSigmaGlobs(), minimizerCfg);
    EXPECT_TRUE(res1->isIdentical(*res2)) << "fitting an model with internal "
                                             "constraints in a RooPrdPdf gave a different result when global "
                                             "observables were stored in the dataset";
 
    nll->setData(*wrongData);
    resetParameters();
-   auto res3 = model.minimizeNLL(*nll, *wrongData, minimizerCfg);
+   auto res3 = model.minimizeNLL(*nll, nullptr, *wrongData, minimizerCfg);
 
    // If resetting the dataset used for the nll worked correctly also for
    // global observables, the fit will now give the wrong result.
@@ -351,14 +351,14 @@ TEST_F(TestGlobalObservables, ResetDataToCorrectData)
    RooAbsPdf::MinimizerConfig minimizerCfg;
    minimizerCfg.doSave = true;
    minimizerCfg.printLevel = -1;
-   auto res2 = model.minimizeNLL(*nll, *wrongData, minimizerCfg);
+   auto res2 = model.minimizeNLL(*nll, nullptr, *wrongData, minimizerCfg);
    EXPECT_TRUE(isNotIdentical(*res1, *res2)) << "fitting an model with internal "
                                                 "constraints in a RooPrdPdf ignored the global "
                                                 "observables stored in the dataset";
 
    nll->setData(dataWithMeanSigmaGlobs());
    resetParameters();
-   auto res3 = model.minimizeNLL(*nll, dataWithMeanSigmaGlobs(), minimizerCfg);
+   auto res3 = model.minimizeNLL(*nll, nullptr, dataWithMeanSigmaGlobs(), minimizerCfg);
    EXPECT_TRUE(res1->isIdentical(*res3)) << "resetting the dataset "
                                             "underlying a RooNLLVar didn't change the global observable value, but it "
                                             "should have";
@@ -419,12 +419,12 @@ TEST_F(TestGlobalObservables, ResetDataButSourceFromModel)
    RooAbsPdf::MinimizerConfig minimizerCfg;
    minimizerCfg.doSave = true;
    minimizerCfg.printLevel = -1;
-   auto res2 = model.minimizeNLL(*nll, dataWithMeanSigmaGlobs(), minimizerCfg);
+   auto res2 = model.minimizeNLL(*nll, nullptr, dataWithMeanSigmaGlobs(), minimizerCfg);
    EXPECT_TRUE(res1->isIdentical(*res2));
 
    nll->setData(*wrongData);
    resetParameters();
-   auto res3 = model.minimizeNLL(*nll, *wrongData, minimizerCfg);
+   auto res3 = model.minimizeNLL(*nll, nullptr, *wrongData, minimizerCfg);
 
    // this time it should still be identical because even though we reset to
    // the wrong data, we set the global observables source to "model"
