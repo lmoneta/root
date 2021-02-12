@@ -814,7 +814,7 @@ Int_t RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset, c
 // 	cout<<"FK: rangeIdentical Single = "<<(rangeIdentical ? 'T':'F')<<endl;
 	// coverity[CONSTANT_EXPRESSION_RESULT]
    // LM : avoid making integral ratio if range is the same. Why was not included ??? (same at line 857)
-	if (!rangeIdentical ) {
+	if (!rangeIdentical) {
 // 	  cout << "PREPARING RATIO HERE (SINGLE TERM)" << endl ;
 	  RooAbsReal* ratio = makeCondPdfRatioCorr(*(RooAbsReal*)term->first(), termNSet, termImpSet, normRange(), RooNameReg::str(_refRangeName));
 	  ostringstream str; termImpSet.printValue(str);
@@ -1129,7 +1129,7 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
   RooArgSet specIntDeps ;
   string specIntRange ;
 
-//   cout << "THIS IS REARRANGEPRODUCT" << endl ;
+  cout << "THIS IS REARRANGEPRODUCT" << endl ;
 
   RooFIter iterp = cache._partList.fwdIterator() ;
   RooFIter iter1 = cache._numList.fwdIterator() ;
@@ -1139,9 +1139,9 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
     num = (RooAbsReal*) iter1.next() ;
     den = (RooAbsReal*) iter2.next() ;
 
-//     cout << "now processing part " << part->GetName() << " of type " << part->getStringAttribute("PROD_TERM_TYPE") << endl ;
-//     cout << "corresponding numerator = " << num->GetName() << endl ;
-//     cout << "corresponding denominator = " << den->GetName() << endl ;
+     cout << "now processing part " << part->GetName() << " of type " << part->getStringAttribute("PROD_TERM_TYPE") << endl ;
+     cout << "corresponding numerator = " << num->GetName() << endl ;
+     cout << "corresponding denominator = " << den->GetName() << endl ;
 
 
     RooFormulaVar* ratio(0) ;
@@ -1168,8 +1168,8 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 	  RooCustomizer cust(*func,"blah") ;
 	  cust.replaceArg(*ratio,RooFit::RooConst(1)) ;
 	  RooAbsArg* funcCust = cust.build() ;
-// 	  cout << "customized function = " << endl ;
-// 	  funcCust->printComponentTree() ;
+ 	  cout << "customized function = " << endl ;
+ 	  funcCust->printComponentTree() ;
 	  nomList.add(*funcCust) ;
 	} else {
 	  nomList.add(*func) ;
@@ -1185,7 +1185,7 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 	func = (RooAbsReal*) &((RooRealIntegral*)(func))->integrand();
       }
       if (func->InheritsFrom(RooProduct::Class())) {
-// 	cout << "product term found: " ; func->Print() ;
+ 	cout << "product term found: " ; func->Print() ;
 	RooArgSet comps(((RooProduct*)(func))->components()) ;
 	RooFIter iter = comps.fwdIterator() ;
 	RooAbsArg* arg ;
@@ -1199,8 +1199,8 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
       }
 
       if (ratio) {
-// 	cout << "Found ratio term in numerator: " << ratio->GetName() << endl ;
-// 	cout << "Adding only original term to numerator: " << origNumTerm << endl ;
+	cout << "Found ratio term in numerator: " << ratio->GetName() << endl ;
+ 	cout << "Adding only original term to numerator: " << origNumTerm << endl ;
 	nomList.add(origNumTerm) ;
       } else {
 	nomList.add(*num) ;
@@ -1211,38 +1211,38 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
     for (list<string>::iterator iter = rangeComps.begin() ; iter != rangeComps.end() ; ++iter) {
       // If denominator is an integral, make a clone with the integration range adjusted to
       // the selected component of the normalization integral
-//       cout << "NOW PROCESSING DENOMINATOR " << den->IsA()->GetName() << "::" << den->GetName() << endl ;
+       cout << "NOW PROCESSING DENOMINATOR " << den->IsA()->GetName() << "::" << den->GetName() << endl ;
 
       if (string("SPECINT")==part->getStringAttribute("PROD_TERM_TYPE")) {
 
-// 	cout << "create integral: SPECINT case" << endl ;
+	cout << "create integral: SPECINT case" << endl ;
 	RooRealIntegral* orig = (RooRealIntegral*) num;
 	RooFormulaVar* specRatio = (RooFormulaVar*) &orig->integrand() ;
 	specIntDeps.add(orig->intVars()) ;
 	if (orig->intRange()) {
 	  specIntRange = orig->intRange() ;
 	}
-	//RooProduct* numtmp = (RooProduct*) specRatio->getParameter(0) ;
+	RooProduct* numtmp = (RooProduct*) specRatio->getParameter(0) ;
 	RooProduct* dentmp = (RooProduct*) specRatio->getParameter(1) ;
 
-// 	cout << "numtmp = " << numtmp->IsA()->GetName() << "::" << numtmp->GetName() << endl ;
-// 	cout << "dentmp = " << dentmp->IsA()->GetName() << "::" << dentmp->GetName() << endl ;
+	cout << "numtmp = " << numtmp->IsA()->GetName() << "::" << numtmp->GetName() << endl ;
+ 	cout << "dentmp = " << dentmp->IsA()->GetName() << "::" << dentmp->GetName() << endl ;
 
-// 	cout << "denominator components are " << dentmp->components() << endl ;
+ 	cout << "denominator components are " << dentmp->components() << endl ;
 	RooArgSet comps(dentmp->components()) ;
 	RooFIter piter = comps.fwdIterator() ;
 	RooAbsReal* parg ;
 	while((parg=(RooAbsReal*)piter.next())) {
-// 	  cout << "now processing denominator component " << parg->IsA()->GetName() << "::" << parg->GetName() << endl ;
+ 	  cout << "now processing denominator component " << parg->IsA()->GetName() << "::" << parg->GetName() << endl ;
 
 	  if (ratio && parg->dependsOn(*ratio)) {
-// 	    cout << "depends in value of ratio" << endl ;
+	    cout << "depends in value of ratio" << endl ;
 
 	    // Make specialize ratio instance
 	    RooAbsReal* specializedRatio = specializeRatio(*(RooFormulaVar*)ratio,iter->c_str()) ;
 
-// 	    cout << "specRatio = " << endl ;
-// 	    specializedRatio->printComponentTree() ;
+ 	    cout << "specRatio = " << endl ;
+ 	    specializedRatio->printComponentTree() ;
 
 	    // Replace generic ratio with specialized ratio
 	    RooAbsArg *partCust(0) ;
@@ -1263,8 +1263,8 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 	    }
 
 	    // Print customized denominator
-// 	    cout << "customized function = " << endl ;
-// 	    partCust->printComponentTree() ;
+ 	    cout << "customized function = " << endl ;
+ 	    partCust->printComponentTree() ;
 
 	    RooAbsReal* specializedPartCust = specializeIntegral(*(RooAbsReal*)partCust,iter->c_str()) ;
 
@@ -1275,14 +1275,14 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 	    denListList[*iter].add(*specIntFinal) ;
 	  } else {
 
-// 	    cout << "does NOT depend on value of ratio" << endl ;
-// 	    parg->Print("t") ;
+ 	    cout << "does NOT depend on value of ratio" << endl ;
+ 	    parg->Print("t") ;
 
 	    denListList[*iter].add(*specializeIntegral(*parg,iter->c_str())) ;
 
 	  }
 	}
-// 	cout << "end iteration over denominator components" << endl ;
+ 	cout << "end iteration over denominator components" << endl ;
       } else {
 
 	if (ratio) {
@@ -1290,7 +1290,7 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 	  RooAbsReal* specRatio = specializeRatio(*(RooFormulaVar*)ratio,iter->c_str()) ;
 
 	  // If integral is 'Int r(y)*g(y) dy ' then divide a posteriori by r(y)
-// 	  cout << "have ratio, orig den = " << den->GetName() << endl ;
+ 	  cout << "have ratio, orig den = " << den->GetName() << endl ;
 
 	  RooArgSet tmp(origNumTerm) ;
 	  tmp.add(*specRatio) ;
@@ -1332,9 +1332,9 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
   RooAbsReal* numerator = new RooProduct(name.c_str(),name.c_str(),nomList) ;
 
   RooArgSet products ;
-//   cout << "nomList = " << nomList << endl ;
+   cout << "nomList = " << nomList << endl ;
   for (map<string,RooArgSet>::iterator iter = denListList.begin() ; iter != denListList.end() ; ++iter) {
-//     cout << "denList[" << iter->first << "] = " << iter->second << endl ;
+     cout << "denList[" << iter->first << "] = " << iter->second << endl ;
     name = Form("%s_denominator_comp_%s",GetName(),iter->first.c_str()) ;
     // WVE FIX THIS (2)
     RooProduct* prod_comp = new RooProduct(name.c_str(),name.c_str(),iter->second) ;
@@ -1358,14 +1358,14 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
   }
 
 
-//   cout << "numerator" << endl ;
-//   numerator->printComponentTree("",0,5) ;
-//   cout << "denominator" << endl ;
-//   norm->printComponentTree("",0,5) ;
+   cout << "numerator" << endl ;
+   numerator->printComponentTree("",0,5) ;
+   cout << "denominator" << endl ;
+   norm->printComponentTree("",0,5) ;
 
 
   // WVE DEBUG
-  //RooMsgService::instance().debugWorkspace()->import(RooArgSet(*numerator,*norm)) ;
+  RooMsgService::instance().debugWorkspace()->import(RooArgSet(*numerator,*norm)) ;
 
   cache._rearrangedNum.reset(numerator);
   cache._rearrangedDen.reset(norm);
@@ -1523,15 +1523,15 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
 							const RooArgSet* term,const RooArgSet& termNSet, const RooArgSet& termISet,
 							Bool_t& isOwned, Bool_t forceWrap) const
 {
-//    cout << "   FOLKERT::RooProdPdf(" << GetName() <<") processProductTerm nset = " << (nset?*nset:RooArgSet()) << endl
-//          << "   _normRange = " << _normRange << endl
-//          << "   iset = " << (iset?*iset:RooArgSet()) << endl
-//          << "   isetRangeName = " << (isetRangeName?isetRangeName:"<null>") << endl
-//          << "   term = " << (term?*term:RooArgSet()) << endl
-//          << "   termNSet = " << termNSet << endl
-//          << "   termISet = " << termISet << endl
-//          << "   isOwned = " << isOwned << endl
-//          << "   forceWrap = " << forceWrap << endl ;
+      cout << "   FOLKERT::RooProdPdf(" << GetName() <<") processProductTerm nset = " << (nset?*nset:RooArgSet()) << endl
+            << "   _normRange = " << _normRange << endl
+            << "   iset = " << (iset?*iset:RooArgSet()) << endl
+            << "   isetRangeName = " << (isetRangeName?isetRangeName:"<null>") << endl
+            << "   term = " << (term?*term:RooArgSet()) << endl
+            << "   termNSet = " << termNSet << endl
+            << "   termISet = " << termISet << endl
+            << "   isOwned = " << isOwned << endl
+            << "   forceWrap = " << forceWrap << endl ;
 
   vector<RooAbsReal*> ret(3) ; ret[0] = 0 ; ret[1] = 0 ; ret[2] = 0 ;
 
@@ -1541,7 +1541,7 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
   if (termNSet.getSize()>0 && termNSet.getSize()==termISet.getSize() && isetRangeName==0) {
 
 
-    //cout << "processProductTerm(" << GetName() << ") case I " << endl ;
+      cout << "processProductTerm(" << GetName() << ") case I " << endl ;
 
     // Term factorizes
     return ret ;
@@ -1551,7 +1551,7 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
   // ------------------------------------------------------------------------------
   if (nset && termNSet.getSize()==0) {
 
-    //cout << "processProductTerm(" << GetName() << ") case II " << endl ;
+      cout << "processProductTerm(" << GetName() << ") case II " << endl ;
 
     // Drop terms that are not asked to be normalized
     return ret ;
@@ -1571,7 +1571,7 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
 
       isOwned=kTRUE ;
 
-      //cout << "processProductTerm(" << GetName() << ") case IIIa func = " << partInt->GetName() << endl ;
+        cout << "processProductTerm(" << GetName() << ") case IIIa func = " << partInt->GetName() << endl ;
 
       ret[0] = partInt ;
 
@@ -1593,7 +1593,7 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
       partInt->setStringAttribute("PROD_TERM_TYPE","IIIb") ;
       //partInt->setOperMode(operMode()) ;
 
-      //cout << "processProductTerm(" << GetName() << ") case IIIb func = " << partInt->GetName() << endl ;
+        cout << "processProductTerm(" << GetName() << ") case IIIb func = " << partInt->GetName() << endl ;
 
       isOwned=kTRUE ;
       ret[0] = partInt ;
@@ -1620,9 +1620,9 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
     partInt->setExpensiveObjectCache(expensiveObjectCache()) ;
 
     partInt->setStringAttribute("PROD_TERM_TYPE","IVa") ;
-    //partInt->setOperMode(operMode()) ;
+    partInt->setOperMode(operMode()) ;
 
-    //cout << "processProductTerm(" << GetName() << ") case IVa func = " << partInt->GetName() << endl ;
+      cout << "processProductTerm(" << GetName() << ") case IVa func = " << partInt->GetName() << endl ;
 
     isOwned=kTRUE ;
     ret[0] = partInt ;
@@ -1670,7 +1670,7 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
       partInt->setStringAttribute("PROD_TERM_TYPE","IVb") ;
       isOwned=kTRUE ;
 
-      //cout << "processProductTerm(" << GetName() << ") case IVb func = " << partInt->GetName() << endl ;
+        cout << "processProductTerm(" << GetName() << ") case IVb func = " << partInt->GetName() << endl ;
 
       ret[0] = partInt ;
 
@@ -1683,7 +1683,7 @@ std::vector<RooAbsReal*> RooProdPdf::processProductTerm(const RooArgSet* nset, c
     } else {
       isOwned=kFALSE ;
 
-      //cout << "processProductTerm(" << GetName() << ") case IVb func = " << pdf->GetName() << endl ;
+        cout << "processProductTerm(" << GetName() << ") case IVb func = " << pdf->GetName() << endl ;
 
 
       pdf->setStringAttribute("PROD_TERM_TYPE","IVb") ;
