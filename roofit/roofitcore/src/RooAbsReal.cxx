@@ -1684,7 +1684,7 @@ void RooAbsReal::plotOnCompSelect(RooArgSet* selNodes) const
 /// <tr><td> `Components(const RooArgSet& compSet)` <td> As above, but pass a RooArgSet of the components themselves.
 ///
 /// <tr><th><th> Plotting control
-/// <tr><td> `DrawOption(const char* opt)`     <td> Select ROOT draw option for resulting TGraph object. Currently supported options are "F" (fill), "L" (line), and "P" (points). 
+/// <tr><td> `DrawOption(const char* opt)`     <td> Select ROOT draw option for resulting TGraph object. Currently supported options are "F" (fill), "L" (line), and "P" (points).
 ///           \note Option "P" will cause RooFit to plot (and treat) this pdf as if it were data! This is intended for plotting "corrected data"-type pdfs such as "data-minus-background" or unfolded datasets.
 ///
 /// <tr><td> `LineStyle(Int_t style)`          <td> Select line style by ROOT line style code, default is solid
@@ -1781,7 +1781,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   pc.defineString("curveNameSuffix","CurveNameSuffix",0,"") ;
   pc.defineString("sliceCatState","SliceCat",0,"",kTRUE) ;
   pc.defineDouble("scaleFactor","Normalization",0,1.0) ;
-  pc.defineInt("scaleType","Normalization",0,Relative) ; 
+  pc.defineInt("scaleType","Normalization",0,Relative) ;
   pc.defineObject("sliceSet","SliceVars",0) ;
   pc.defineObject("sliceCatList","SliceCat",0,0,kTRUE) ;
   pc.defineObject("projSet","Project",0) ;
@@ -2328,7 +2328,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
       // Append any suffixes imported from RooAbsPdf::plotOn
       curveName.Append(o.curveNameSuffix) ;
     }
-    
+
     TString opt(o.drawOptions);
     if(opt.Contains("P")){
       RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;

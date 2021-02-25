@@ -1601,7 +1601,8 @@ void RooAbsArg::optimizeCacheMode(const RooArgSet& observables)
   RooArgSet opt ;
   optimizeCacheMode(observables,opt,proc) ;
 
-  coutI(Optimization) << "RooAbsArg::optimizeCacheMode(" << GetName() << ") nodes " << opt << " depend on observables, "
+  //coutI(Optimization)
+  cout  << "\n\nRooAbsArg::optimizeCacheMode(" << GetName() << ") nodes " << opt << " depend on observables, "
 			<< "changing cache operation mode from change tracking to unconditional evaluation" << endl ;
 }
 
@@ -1623,10 +1624,17 @@ void RooAbsArg::optimizeCacheMode(const RooArgSet& observables, RooArgSet& optim
 
 
   // Terminate call if this node was already processed (tree structure may be cyclical)
-  if (processedNodes.findArg(this)) {
-    return ;
-  } else {
-    processedNodes.Add(this) ;
+  // should not look by name but by object pointer
+  //if (processedNodes.findArg(this)) {
+   if (processedNodes.FindObject(this))
+  {
+     cout << "skipping node " << this << " " << GetName() << " is already in process list " << std::endl;
+     return;
+  }
+  else
+  {
+     cout << "adding node " << this << " " << GetName() << " to process list " << std::endl;
+     processedNodes.Add(this);
   }
 
   // Set cache mode operator to 'AlwaysDirty' if we depend on any of the given observables
@@ -1769,6 +1777,9 @@ void RooAbsArg::setOperMode(OperMode mode, Bool_t recurseADirty)
   // Prevent recursion loops
   if (mode==_operMode) return ;
 
+  if (TString(GetName()).Contains("x1_bw_conv") || TString(GetName()).Contains("x1_bw_CONV")) {
+     std::cout << "\n****** " << GetName() << " setting operation mode " << mode << " from " << _operMode << std::endl;
+  }
   _operMode = mode ;
   _fast = ((mode==AClean) || dynamic_cast<RooRealVar*>(this)!=0 || dynamic_cast<RooConstVar*>(this)!=0 ) ;
   for (Int_t i=0 ;i<numCaches() ; i++) {
@@ -2416,4 +2427,3 @@ std::string printValue(RooAbsArg *raa)
    return s.str();
 }
 } // namespace cling
-

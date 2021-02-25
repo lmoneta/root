@@ -577,6 +577,10 @@ std::tuple<double, double, double> RooNLLVar::computeScalar(std::size_t stepSize
 
     const double term = -eventWeight * pdfClone->getLogVal(_normSet);
 
+    std::cout << "\n\n******  evaluate pdf ***************** " << pdfClone->getVal() << " / " << pdfClone->getVal(_normSet) << std::endl;
+    pdfClone->Print("T");
+    std::cout << "\n\n******\n\n";
+
     kahanWeight.Add(eventWeight);
     kahanProb.Add(term);
     packedNaN.accumulate(term);

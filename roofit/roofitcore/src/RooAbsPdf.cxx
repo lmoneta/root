@@ -305,12 +305,18 @@ Double_t RooAbsPdf::getValV(const RooArgSet* nset) const
     // Evaluate denominator
     const double normVal = _norm->getVal();
 
-    if (normVal < 0. || (normVal == 0. && rawVal != 0)) {
-      //Unreasonable normalisations. A zero integral can be tolerated if the function vanishes, though.
-      const std::string msg = "p.d.f normalization integral is zero or negative: " + std::to_string(normVal);
-      logEvalError(msg.c_str());
-      clearValueAndShapeDirty();
-      return _value = RooNaNPacker::packFloatIntoNaN(-normVal + (rawVal < 0. ? -rawVal : 0.));
+    TString name = GetName();
+    if (name.Contains("x1_bw_CONV")) {
+       std::cout << GetName() << " raw " << rawVal << " norm " << normVal << std::endl;
+    }
+
+          if (normVal < 0. || (normVal == 0. && rawVal != 0))
+    {
+       // Unreasonable normalisations. A zero integral can be tolerated if the function vanishes, though.
+       const std::string msg = "p.d.f normalization integral is zero or negative: " + std::to_string(normVal);
+       logEvalError(msg.c_str());
+       clearValueAndShapeDirty();
+       return _value = RooNaNPacker::packFloatIntoNaN(-normVal + (rawVal < 0. ? -rawVal : 0.));
     }
 
     if (rawVal < 0.) {
