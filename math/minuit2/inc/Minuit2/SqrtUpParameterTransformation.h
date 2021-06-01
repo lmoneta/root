@@ -1,9 +1,10 @@
 // @(#)root/minuit2:$Id$
-// Authors: M. Winkler, F. James, L. Moneta, A. Zsenei   2003-2005
+// Authors: M. Winkler, F. James, L. Moneta, A. Zsenei, E.G.P. Bos   2003-2017
 
 /**********************************************************************
  *                                                                    *
  * Copyright (c) 2005 LCG ROOT Math team,  CERN/PH-SFT                *
+ * Copyright (c) 2017 Patrick Bos, Netherlands eScience Center        *
  *                                                                    *
  **********************************************************************/
 
@@ -19,7 +20,7 @@ namespace ROOT {
 
 namespace Minuit2 {
 
-class MnMachinePrecision;
+    class MnMachinePrecision;
 
 /**
  * Transformation from external to internal Parameter based on  sqrt(1 + x**2)
@@ -27,25 +28,30 @@ class MnMachinePrecision;
  * This transformation applies for the case of single side Upper Parameter limits
  */
 
-class SqrtUpParameterTransformation /* : public ParameterTransformation */ {
+    class SqrtUpParameterTransformation /* : public ParameterTransformation */ {
 
-public:
-   // create with user defined precision
-   SqrtUpParameterTransformation() {}
+    public:
 
-   ~SqrtUpParameterTransformation() {}
+      // create with user defined precision
+      SqrtUpParameterTransformation() {}
 
-   // transformation from internal to external
-   double Int2ext(double Value, double Upper) const;
+      ~SqrtUpParameterTransformation() {}
 
-   // transformation from external to internal
-   double Ext2int(double Value, double Upper, const MnMachinePrecision &) const;
+      // transformation from internal to external
+      long double Int2ext(long double Value, long double Upper) const;
 
-   // derivative of transformation from internal to external
-   double DInt2Ext(double Value, double Upper) const;
+      // transformation from external to internal
+      long double Ext2int(long double Value, long double Upper, const MnMachinePrecision&) const;
 
-private:
-};
+      // derivative of transformation from internal to external
+      long double DInt2Ext(long double Value, long double Upper) const;
+
+      long double D2Int2Ext(long double Value, long double Upper) const;
+      long double GStepInt2Ext(long double Value, long double Upper) const;
+
+    private:
+
+    };
 
 } // namespace Minuit2
 
