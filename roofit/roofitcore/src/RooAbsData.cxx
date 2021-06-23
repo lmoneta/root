@@ -2445,6 +2445,7 @@ void RooAbsData::setGlobalObservables(RooArgSet const& globalObservables) {
     if(auto lval = dynamic_cast<RooAbsRealLValue*>(arg)) lval->setConstant(true);
     if(auto lval = dynamic_cast<RooAbsCategoryLValue*>(arg)) lval->setConstant(true);
   }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Return sum of squared weights of this data.
