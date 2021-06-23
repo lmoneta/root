@@ -1750,6 +1750,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
       throw std::invalid_argument(errMsg);
     }
     const bool takeGlobalObservablesFromData = globalObservablesSource == "data";
+
     constraintsTerm = RooConstraintSum::createConstraintTerm(
             "NewNLLVar_constr", // name
             *this, // pdf
@@ -1761,10 +1762,11 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
             takeGlobalObservablesFromData // From GlobalObservablesSource RooCmdArg
     );
 
+    const bool isExtended = interpretExtendedCmdArg(*this, pc.getInt("ext")) ;
+
     if (data.isWeighted())
     {
       std::string weightVarName = data.getWeightVarName();
-      if (weightVarName=="") weightVarName = "_weight";
       
       // make a clone of the weight variable (or an initial instance, if it doesn't exist)
       // the clone will hold the weight value (or values as a batch) and will participate
@@ -1772,8 +1774,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
       weightVar.reset( new RooRealVar(weightVarName.c_str(), "Weight(s) of events", data.weight()) );
     }
 
-    nll = new RooNLLVarNew("NewNLLVar", "NewNLLVar", *this, weightVar.get(), constraintsTerm.get());
-    //nll->addOwnedComponents(RooArgSet(*constraintsTerm.release())) ;
+    nll = new RooNLLVarNew("NewNLLVar", "NewNLLVar", *this,
+                           *data.get(), weightVar.get(), constraintsTerm.get(), isExtended);
 
     driver.reset(new RooFitDriver( data, static_cast<RooNLLVarNew&>(*nll), pc.getInt("BatchMode") ));
   }
