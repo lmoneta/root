@@ -415,7 +415,7 @@ RooNLLVar::ComputeResult RooNLLVar::computeBatched(std::size_t stepSize, std::si
 
 // static function, also used from TestStatistics::RooUnbinnedL
 RooNLLVar::ComputeResult RooNLLVar::computeBatchedFunc(const RooAbsPdf *pdfClone, RooAbsData *dataClone,
-                                                       std::unique_ptr<RooBatchCompute::RunContext> &evalData,
+                                                       std::unique_ptr<rbc::RunContext> &evalData,
                                                        RooArgSet *normSet, bool weightSq, std::size_t stepSize,
                                                        std::size_t firstEvent, std::size_t lastEvent)
 {
@@ -429,7 +429,7 @@ RooNLLVar::ComputeResult RooNLLVar::computeBatchedFunc(const RooAbsPdf *pdfClone
   // Holding on to this struct in between function calls will make sure that the memory
   // is only allocated once.
   if (!evalData) {
-    evalData.reset(new RooBatchCompute::RunContext);
+    evalData.reset(new rbc::RunContext);
   }
   evalData->clear();
   dataClone->getBatches(*evalData, firstEvent, nEvents);

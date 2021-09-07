@@ -23,7 +23,7 @@
 #include <utility>
 
 class RooRealSumPdf ;
-namespace RooBatchCompute {
+namespace rbc {
 struct RunContext;
 }
 
@@ -64,7 +64,7 @@ public:
   using ComputeResult = std::pair<ROOT::Math::KahanSum<double>, double>;
 
   static RooNLLVar::ComputeResult computeBatchedFunc(const RooAbsPdf *pdfClone, RooAbsData *dataClone,
-                                                     std::unique_ptr<RooBatchCompute::RunContext> &evalData,
+                                                     std::unique_ptr<rbc::RunContext> &evalData,
                                                  RooArgSet *normSet, bool weightSq, std::size_t stepSize,
                                                  std::size_t firstEvent, std::size_t lastEvent);
   static RooNLLVar::ComputeResult computeScalarFunc(const RooAbsPdf *pdfClone, RooAbsData *dataClone, RooArgSet *normSet,
@@ -90,7 +90,7 @@ private:
 
   mutable std::vector<Double_t> _binw ; //!
   mutable RooRealSumPdf* _binnedPdf{nullptr}; //!
-  mutable std::unique_ptr<RooBatchCompute::RunContext> _evalData; //! Struct to store function evaluation workspaces.
+  mutable std::unique_ptr<rbc::RunContext> _evalData; //! Struct to store function evaluation workspaces.
    
   ClassDef(RooNLLVar,3) // Function representing (extended) -log(L) of p.d.f and dataset
 };

@@ -428,7 +428,7 @@ std::pair<double, double> computeAB_zetaZero(double beta, double asigma, double 
   return {A, B};
 }
 
-using RooBatchCompute::BracketAdapter;
+using rbc::BracketAdapter;
 //////////////////////////////////////////////////////////////////////////////////////////
 /// A specialised compute function where x is an observable, and all parameters are used as
 /// parameters. Since many things can be calculated outside of the loop, it is faster.
@@ -488,8 +488,8 @@ void compute(RooSpan<double> output, RooSpan<const double> x,
 
 }
 
-RooSpan<double> RooHypatia2::evaluateSpan(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet) const {
-  using namespace RooBatchCompute;
+RooSpan<double> RooHypatia2::evaluateSpan(rbc::RunContext& evalData, const RooArgSet* normSet) const {
+  using namespace rbc;
 
   auto x = _x->getValues(evalData, normSet);
   auto lambda = _lambda->getValues(evalData, normSet);
