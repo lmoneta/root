@@ -1764,6 +1764,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
             takeGlobalObservablesFromData // From GlobalObservablesSource RooCmdArg
     );
 
+    auto batchMode = static_cast<rbc::BatchMode>(pc.getInt("BatchMode"));
     const bool isExtended = interpretExtendedCmdArg(*this, pc.getInt("ext")) ;
 
     if (data.isWeighted())
@@ -1779,7 +1780,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
     nll = new RooNLLVarNew("NewNLLVar", "NewNLLVar", *this,
                            *data.get(), weightVar.get(), constraintsTerm.get(), isExtended);
 
-    driver.reset(new RooFitDriver( data, static_cast<RooNLLVarNew&>(*nll), pc.getInt("BatchMode") ));
+    driver.reset(new RooFitDriver( data, static_cast<RooNLLVarNew&>(*nll), batchMode ));
   }
 
   MinimizerConfig cfg;
