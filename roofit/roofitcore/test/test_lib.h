@@ -126,7 +126,7 @@ generate_ND_gaussian_pdf_nll(RooWorkspace &w, unsigned int n, unsigned long N_ev
   // --- Generate a toyMC sample from composite PDF ---
   RooDataSet *data = sum->generate(obs_set, N_events);
 
-  std::unique_ptr<RooAbsReal> nll {sum->createNLL(*data, RooFit::BatchMode(batch_mode))};
+  std::unique_ptr<RooAbsReal> nll {sum->createNLL(*data, RooFit::BatchMode(rbc::Cpu))};
 
   // set values randomly so that they actually need to do some fitting
   for (unsigned ix = 0; ix < n; ++ix) {
