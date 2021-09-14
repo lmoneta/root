@@ -35,7 +35,9 @@ class RooLinkedList ;
 class RooMinimizer ;
 class RooNumGenConfig ;
 class RooRealIntegral ;
+namespace ROOT { namespace Experimental {
 class RooFitDriver ;
+}}
 namespace rbc {
 struct RunContext;
 }
@@ -184,7 +186,7 @@ public:
       std::string minType = "Minuit";
       std::string minAlg = "minuit";
   };
-  std::unique_ptr<RooFitResult> minimizeNLL(RooAbsReal & nll, RooFitDriver * driver, RooAbsData const& data, MinimizerConfig const& cfg);
+  std::unique_ptr<RooFitResult> minimizeNLL(RooAbsReal & nll, ROOT::Experimental::RooFitDriver * driver, RooAbsData const& data, MinimizerConfig const& cfg);
 
   virtual RooAbsReal* createNLL(RooAbsData& data, const RooLinkedList& cmdList) ;
   virtual RooAbsReal* createNLL(RooAbsData& data, const RooCmdArg& arg1=RooCmdArg::none(),  const RooCmdArg& arg2=RooCmdArg::none(),  

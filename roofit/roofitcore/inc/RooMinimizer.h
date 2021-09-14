@@ -53,7 +53,9 @@ class LikelihoodSerial;
 class LikelihoodGradientSerial;
 }
 } // namespace RooFit
+namespace ROOT { namespace Experimental {
 class RooFitDriver;
+}}
 
 class RooMinimizer : public TObject {
 public:
@@ -62,7 +64,7 @@ public:
   explicit RooMinimizer(RooAbsReal &function, FcnMode fcnMode = FcnMode::classic)
     : RooMinimizer(function, fcnMode, nullptr)
   {}
-  explicit RooMinimizer(RooAbsReal &function, FcnMode fcnMode, RooFitDriver* driver);
+  explicit RooMinimizer(RooAbsReal &function, FcnMode fcnMode, ROOT::Experimental::RooFitDriver* driver);
   static std::unique_ptr<RooMinimizer> create(RooAbsReal &function, FcnMode fcnMode = FcnMode::classic);
   template <typename LikelihoodWrapperT = RooFit::TestStatistics::LikelihoodSerial,
             typename LikelihoodGradientWrapperT = RooFit::TestStatistics::LikelihoodGradientSerial>

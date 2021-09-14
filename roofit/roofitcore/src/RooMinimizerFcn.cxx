@@ -38,7 +38,7 @@
 
 using namespace std;
 
-RooMinimizerFcn::RooMinimizerFcn(RooAbsReal *funct, RooMinimizer* context, RooFitDriver * driver,
+RooMinimizerFcn::RooMinimizerFcn(RooAbsReal *funct, RooMinimizer* context, ROOT::Experimental::RooFitDriver * driver,
 			   bool verbose) :
   RooAbsMinimizerFcn(*(!driver ? funct->getParameters(RooArgSet()) : &driver->parameters()), context, verbose), _funct(funct), _driver{driver}
 {}

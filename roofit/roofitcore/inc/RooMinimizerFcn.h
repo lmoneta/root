@@ -35,11 +35,14 @@ using TMatrixDSym = TMatrixTSym<double>;
 
 // forward declaration
 class RooMinimizer;
+namespace ROOT { namespace Experimental {
+class RooFitDriver;
+}}
 
 class RooMinimizerFcn : public RooAbsMinimizerFcn, public ROOT::Math::IBaseFunctionMultiDim {
 
 public:
-   RooMinimizerFcn(RooAbsReal *funct, RooMinimizer *context, RooFitDriver * driver, bool verbose = false);
+   RooMinimizerFcn(RooAbsReal *funct, RooMinimizer *context, ROOT::Experimental::RooFitDriver * driver, bool verbose = false);
    RooMinimizerFcn(const RooMinimizerFcn &other);
    virtual ~RooMinimizerFcn();
 
@@ -57,7 +60,7 @@ private:
    double DoEval(const double *x) const override;
 
    RooAbsReal *_funct;
-   RooFitDriver * _driver = nullptr;
+   ROOT::Experimental::RooFitDriver * _driver = nullptr;
 };
 
 #endif

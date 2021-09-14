@@ -105,7 +105,7 @@ void RooMinimizer::cleanup()
 /// for HESSE and MINOS error analysis is taken from the defaultErrorLevel()
 /// value of the input function.
 
-RooMinimizer::RooMinimizer(RooAbsReal &function, FcnMode fcnMode, RooFitDriver* driver) : _fcnMode(fcnMode)
+RooMinimizer::RooMinimizer(RooAbsReal &function, FcnMode fcnMode, ROOT::Experimental::RooFitDriver* driver) : _fcnMode(fcnMode)
 {
    RooSentinel::activate();
 

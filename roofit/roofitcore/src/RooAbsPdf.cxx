@@ -1525,7 +1525,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooCmdArg& arg1, const Ro
 ///            the RooMinimizer. These are a subset of the options that you can
 ///            also pass to RooAbsPdf::fitTo via the RooFit command arguments.
 std::unique_ptr<RooFitResult> RooAbsPdf::minimizeNLL(RooAbsReal & nll,
-        RooFitDriver * driver,
+        ROOT::Experimental::RooFitDriver * driver,
         RooAbsData const& data, MinimizerConfig const& cfg) {
 
   // Determine if the dataset has weights
