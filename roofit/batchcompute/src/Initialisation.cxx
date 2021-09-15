@@ -39,7 +39,8 @@ void loadComputeLibrary()
   const std::string userChoice = gEnv->GetValue("RooFit.BatchCompute","auto");
 #ifdef R__RF_ARCHITECTURE_SPECIFIC_LIBS
   #ifdef R__HAS_CUDA
-    if (gSystem->Load("libcudart")>=0) load("libRooBatchCompute_CUDA");
+    TString libcudart{"libcudart"};
+    if (gSystem->FindDynamicLibrary(libcudart, true)) load("libRooBatchCompute_CUDA");
     if (rbc::dispatchCUDA) rbc::dispatchCUDA->init();
     if (!rbc::dispatchCUDA)
       Info( (std::string(__func__)+"(), "+__FILE__+":"+std::to_string(__LINE__)).c_str(), 
