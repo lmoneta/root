@@ -113,9 +113,10 @@ namespace SOFIE{
    }
 
    void RModel::AddOperator(std::unique_ptr<ROperator> op, int order_execution){
+      if (!op) return;
       if (order_execution >= 0) {
          fOperators.insert(fOperators.begin() + order_execution, std::move(op));
-      }else{
+      } else {
          fOperators.push_back(std::move(op));
       }
    }

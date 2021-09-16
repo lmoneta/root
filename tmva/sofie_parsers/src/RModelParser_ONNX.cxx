@@ -14,10 +14,55 @@ std::unique_ptr<ROperator> make_ROperator(size_t idx, const onnx::GraphProto& gr
    const auto& nodeproto = graphproto.node(idx);
    auto find = mapOptypeOperator.find(nodeproto.op_type());
    if (find == mapOptypeOperator.end()){
-      throw std::runtime_error("TMVA::SOFIE - Operator type " + nodeproto.op_type() + " is not yet supported");
-   }else{
+      //throw std::runtime_error("TMVA::SOFIE - Operator type " + nodeproto.op_type() + " is not yet supported");
+      std::cout << "TMVA::SOFIE - Operator type " + nodeproto.op_type() + " is not yet supported" << std::endl;
+      return nullptr;
+   } else {
       return (find->second)(nodeproto, graphproto, tensor_type);
    }
+}
+
+std::unique_ptr<ROperator> make_ROperator_Reshape(const onnx::NodeProto& nodeproto, const onnx::GraphProto& /*graphproto */, std::unordered_map<std::string, ETensorType>& tensor_type){
+   // make Reshape operator
+   ETensorType input_type;
+
+   auto input_name = nodeproto.input(0);
+   auto shape_name = nodeproto.input(1);
+   auto it = tensor_type.find(input_name);
+   if (it != tensor_type.end()) {
+      input_type = it->second;
+   } else {
+      throw std::runtime_error("TMVA::SOFIE ONNX Parser Reshape op has input tensor" + input_name +
+                               " but its type is not yet registered");
+   }
+
+   std::unique_ptr<ROperator> op;
+   std::vector<int_t> attr_perm;
+
+   if (nodeproto.attribute_size() == 1) {
+      attr_perm.assign(nodeproto.attribute(0).ints().begin(), nodeproto.attribute(0).ints().end());
+   }
+
+   switch (input_type) {
+   case ETensorType::FLOAT:
+      if (!attr_perm.empty()) {
+         op.reset(new ROperator_Reshape<float>(attr_perm, input_name, shape_name, nodeproto.output(0) ) );
+      } else {
+         op.reset(new ROperator_Reshape<float>(input_name, shape_name, nodeproto.output(0)));
+      }
+      break;
+   default:
+      throw std::runtime_error("TMVA::SOFIE - Unsupported - Operator Reshape does not yet support input type " +
+                               std::to_string(static_cast<int>(input_type)));
+   }
+
+   ETensorType output_type = (op->TypeInference({input_type}))[0];
+   auto it2 = tensor_type.find(nodeproto.output(0));
+   if (it2 == tensor_type.end()) {
+      tensor_type[nodeproto.output(0)] = output_type;
+   }
+
+   return op;
 }
 
 std::unique_ptr<ROperator> make_ROperator_Transpose(const onnx::NodeProto& nodeproto, const onnx::GraphProto& /*graphproto*/, std::unordered_map<std::string, ETensorType>& tensor_type){
@@ -573,24 +618,36 @@ RModel RModelParser_ONNX::Parse(std::string filename){
       }
 
       std::string input_name = graph.initializer(i).name();
-
-      switch(static_cast<ETensorType>(graph.initializer(i).data_type())){
-         case ETensorType::FLOAT : {
-            //void* data = malloc (fLength * sizeof(float));
-            std::shared_ptr<void> data(malloc(fLength * sizeof(float)), free);
-
-            if (tensorproto->raw_data().empty() == false){
-               auto raw_data_ptr = reinterpret_cast<float*>(const_cast<char*>(tensorproto->raw_data().c_str()));
-               std::memcpy(data.get(), raw_data_ptr, fLength * sizeof(float));
-            }else{
-               tensorproto->mutable_float_data()->ExtractSubrange(0, tensorproto->float_data_size(), static_cast<float*>(data.get()));
-            }
-
-            rmodel.AddInitializedTensor(input_name, ETensorType::FLOAT, fShape, data);
-            break;
-         }
-         default: throw std::runtime_error("Data type in weight tensor " + graph.initializer(i).name() + " not supported!\n");
+      std::cout << "parsing tensor " << graph.initializer(i).name() << " type " << graph.initializer(i).data_type()
+                <<  "length " << fLength << " shape ";
+      for (size_t j = 0; j < fShape.size(); j++){
+         std::cout << fShape[j] << "  ";
       }
+      std::cout << std::endl;
+
+      switch (static_cast<ETensorType>(graph.initializer(i).data_type())) {
+      case ETensorType::FLOAT: {
+         // void* data = malloc (fLength * sizeof(float));
+         std::shared_ptr<void> data(malloc(fLength * sizeof(float)), free);
+
+         if (tensorproto->raw_data().empty() == false) {
+            auto raw_data_ptr = reinterpret_cast<float *>(const_cast<char *>(tensorproto->raw_data().c_str()));
+            std::memcpy(data.get(), raw_data_ptr, fLength * sizeof(float));
+         } else {
+            tensorproto->mutable_float_data()->ExtractSubrange(0, tensorproto->float_data_size(),
+                                                               static_cast<float *>(data.get()));
+         }
+
+         rmodel.AddInitializedTensor(input_name, ETensorType::FLOAT, fShape, data);
+         break;
+         }
+         default: 
+            //throw std::runtime_error("Data type in weight tensor " + graph.initializer(i).name() + " not supported!\n");
+            std::cout << "Error: Data type in weight tensor " + graph.initializer(i).name() + " not supported!\n"
+                      << std::endl;
+            
+            continue;
+         }
    }
 
 
