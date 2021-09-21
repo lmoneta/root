@@ -171,12 +171,12 @@ public:
             if (fShapeB.size() < 1)
                throw std::runtime_error("TMVA SOFIE Conv op: Bias Tensor has empty shape");
             // we assume bias tensor dimension is equal to number of filters that is first dimension in 
-            // the output tensor
-            if (fShapeB[0] != fShapeY[0])
+            // the output tensor or last one
+            if (fShapeB[0] == fShapeY[0] )
+               fShapeB.resize(fShapeY.size(), 1.);
+            else if (fShapeB[0] != fShapeY.back()) // the  case bias = output.back() will work with broadcasting
                throw std::runtime_error("TMVA SOFIE Conv op: Bias Tensor has wrong shape: " +
-                                           ConvertShapeToString(fShapeB));
-            fShapeB.resize(fShapeY.size(), 1.);
-
+                                           ConvertShapeToString(fShapeB) + " and output shape is " + ConvertShapeToString(fShapeY));
             if (fType == "float") {
                std::shared_ptr<void> new_data_ptr(UTILITY::Unidirectional_broadcast<float>(
                   static_cast<float*>(original_data.get()), fShapeB, fShapeY), std::default_delete<float[]>());
