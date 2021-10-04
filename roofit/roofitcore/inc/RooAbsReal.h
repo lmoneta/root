@@ -23,7 +23,7 @@
 #include "RooArgList.h"
 #include "RooGlobalFunc.h"
 #include "RooSpan.h"
-#include <map>
+#include "rbc.h"
 
 class RooArgList ;
 class RooDataSet ;
@@ -42,10 +42,6 @@ class RooFitResult ;
 class RooAbsMoment ;
 class RooDerivative ;
 class RooVectorDataStore ;
-namespace RooBatchCompute{
-class BatchInterfaceAccessor;
-struct RunContext;
-}
 struct TreeReadBuffer; /// A space to attach TBranches
 
 class TH1;
@@ -53,9 +49,10 @@ class TH1F;
 class TH2F;
 class TH3F;
 
-#include <list>
-#include <string>
 #include <iostream>
+#include <list>
+#include <map>
+#include <string>
 #include <sstream>
 
 class RooAbsReal : public RooAbsArg {
@@ -134,7 +131,7 @@ public:
   }
 #endif
   /// by this change, please consult the release notes for ROOT 6.24 for guidance on how to make this transition.
-  virtual RooSpan<const double> getValues(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet = nullptr) const;
+  virtual RooSpan<const double> getValues(rbc::RunContext& evalData, const RooArgSet* normSet = nullptr) const;
 
   Double_t getPropagatedError(const RooFitResult &fr, const RooArgSet &nset = RooArgSet()) const;
 
@@ -391,6 +388,9 @@ protected:
   const RooAbsReal* createPlotProjection(const RooArgSet& depVars, const RooArgSet& projVars, RooArgSet*& cloneSet) const ;
   const RooAbsReal *createPlotProjection(const RooArgSet &dependentVars, const RooArgSet *projectedVars,
 				         RooArgSet *&cloneSet, const char* rangeName=0, const RooArgSet* condObs=0) const;
+  virtual void computeBatch(rbc::RbcInterface* dispatch, double* output, size_t size, rbc::DataMap& dataMap) const;
+  virtual bool canComputeBatchWithCuda() const { return false; }
+
  protected:
 
   RooFitResult* chi2FitDriver(RooAbsReal& fcn, RooLinkedList& cmdList) ;
@@ -445,14 +445,15 @@ protected:
   }
 #endif
 
-  virtual RooSpan<double> evaluateSpan(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet) const;
+  virtual RooSpan<double> evaluateSpan(rbc::RunContext& evalData, const RooArgSet* normSet) const;
+
 
   //---------- Interface to access batch data ---------------------------
   //
   friend class BatchInterfaceAccessor;
   
  private:
-  void checkBatchComputation(const RooBatchCompute::RunContext& evalData, std::size_t evtNo, const RooArgSet* normSet = nullptr, double relAccuracy = 1.E-13) const;
+  void checkBatchComputation(const rbc::RunContext& evalData, std::size_t evtNo, const RooArgSet* normSet = nullptr, double relAccuracy = 1.E-13) const;
 
   /// Debug version of getVal(), which is slow and does error checking.
   Double_t _DEBUG_getVal(const RooArgSet* normalisationSet) const;
@@ -585,7 +586,7 @@ protected:
 /// Helper class to access a batch-related part of RooAbsReal's interface, which should not leak to the outside world.
 class BatchInterfaceAccessor {
   public:
-    static void checkBatchComputation(const RooAbsReal& theReal, const RooBatchCompute::RunContext& evalData, std::size_t evtNo,
+    static void checkBatchComputation(const RooAbsReal& theReal, const rbc::RunContext& evalData, std::size_t evtNo,
         const RooArgSet* normSet = nullptr, double relAccuracy = 1.E-13) {
       theReal.checkBatchComputation(evalData, evtNo, normSet, relAccuracy);
     }

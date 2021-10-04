@@ -1,3 +1,4 @@
+
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitCore                                                       *
@@ -170,9 +171,12 @@ called for each data event.
 #include "RooWorkspace.h"
 #include "RooNaNPacker.h"
 #include "RooHelpers.h"
-#include "RooBatchCompute.h"
 #include "RooFormulaVar.h"
 #include "RooDerivative.h"
+#include "RooFitDriver.h"
+#include "RooNLLVarNew.h"
+#include "RunContext.h"
+#include "RooVDTHeaders.h"
 
 #include "ROOT/StringUtils.hxx"
 #include "TClass.h"
@@ -188,6 +192,23 @@ called for each data event.
 #include <string>
 #include <cmath>
 #include <stdexcept>
+
+namespace {
+
+bool interpretExtendedCmdArg(RooAbsPdf const& pdf, int extendedCmdArg) {
+  // Process automatic extended option
+  if (extendedCmdArg == 2) {
+    bool ext = pdf.extendMode() == RooAbsPdf::CanBeExtended || pdf.extendMode() == RooAbsPdf::MustBeExtended;
+    if (ext) {
+      oocoutI(&pdf, Minimization)
+          << "p.d.f. provides expected number of events, including extended term in likelihood." << std::endl;
+    }
+    return ext;
+  }
+  return extendedCmdArg;
+}
+
+} // namespace
 
 using namespace std;
 
@@ -352,7 +373,7 @@ Double_t RooAbsPdf::getValV(const RooArgSet* nset) const
 /// to the full batch.
 /// \return RooSpan with probabilities. The memory of this span is owned by `evalData`.
 /// \see RooAbsReal::getValues().
-RooSpan<const double> RooAbsPdf::getValues(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet) const {
+RooSpan<const double> RooAbsPdf::getValues(rbc::RunContext& evalData, const RooArgSet* normSet) const {
   auto item = evalData.spans.find(this);
   if (item != evalData.spans.end()) {
     return item->second;
@@ -738,7 +759,7 @@ void RooAbsPdf::logBatchComputationErrors(RooSpan<const double>& outputs, std::s
 /// \param[in] evalData Struct with data that should be used for evaluation.
 /// \param[in] normSet Optional normalisation set to be used during computations.
 /// \return    Returns a batch of doubles that contains the log probabilities.
-RooSpan<const double> RooAbsPdf::getLogProbabilities(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet) const
+RooSpan<const double> RooAbsPdf::getLogProbabilities(rbc::RunContext& evalData, const RooArgSet* normSet) const
 {
   auto pdfValues = getValues(evalData, normSet);
 
@@ -750,7 +771,7 @@ RooSpan<const double> RooAbsPdf::getLogProbabilities(RooBatchCompute::RunContext
 
     for (std::size_t i = 0; i < pdfValues.size(); ++i) {
       const double prob = pdfValues[i];
-      double theLog = RooBatchCompute::fast_log(prob);
+      double theLog = rbc::fast_log(prob);
 
       if (prob <= 0.) {
         // Pass magnitude of undershoot to minimiser:
@@ -767,7 +788,7 @@ RooSpan<const double> RooAbsPdf::getLogProbabilities(RooBatchCompute::RunContext
 
   for (std::size_t i = 0; i < pdfValues.size(); ++i) { //CHECK_VECTORISE
     const double prob = pdfValues[i];
-    output[i] = RooBatchCompute::fast_log(prob);;
+    output[i] = rbc::fast_log(prob);;
   }
 
   return output;
@@ -781,7 +802,7 @@ RooSpan<const double> RooAbsPdf::getLogProbabilities(RooBatchCompute::RunContext
 /// it is extendable by overloading `canBeExtended()`, and must
 /// implement the `expectedEvents()` function.
 
-Double_t RooAbsPdf::extendedTerm(Double_t observed, const RooArgSet* nset) const
+double RooAbsPdf::extendedTerm(double observed, const RooArgSet* nset) const
 {
   // check if this PDF supports extended maximum likelihood fits
   if(!canBeExtended()) {
@@ -844,6 +865,33 @@ Double_t RooAbsPdf::extendedTerm(Double_t observed, const RooArgSet* nset) const
   return extra;
 }
 
+
+double RooAbsPdf::extendedTerm(RooAbsData const& data, bool weightSquared) const {
+  double sumW = data.sumEntries();
+  double term = extendedTerm(sumW, data.get());
+  if (weightSquared) {
+
+    // Adjust calculation of extended term with W^2 weighting: adjust poisson such that
+    // estimate of Nexpected stays at the same value, but has a different variance, rescale
+    // both the observed and expected count of the Poisson with a factor sum[w] / sum[w^2] which is
+    // the effective weight of the Poisson term.
+    // i.e. change Poisson(Nobs = sum[w]| Nexp ) --> Poisson( sum[w] * sum[w] / sum[w^2] | Nexp * sum[w] / sum[w^2] )
+    // weighted by the effective weight  sum[w^2]/ sum[w] in the likelihood.
+    // Since here we compute the likelihood with the weight square we need to multiply by the
+    // square of the effective weight
+    // expectedW = expected * sum[w] / sum[w^2]   : effective expected entries
+    // observedW =  sum[w]  * sum[w] / sum[w^2]   : effective observed entries
+    // The extended term for the likelihood weighted by the square of the weight will be then:
+    //  (sum[w^2]/ sum[w] )^2 * expectedW -  (sum[w^2]/ sum[w] )^2 * observedW * log (expectedW)  and this is
+    //  using the previous expressions for expectedW and observedW
+    //  sum[w^2] / sum[w] * expected - sum[w^2] * log (expectedW)
+    //  and since the weights are constants in the likelihood we can use log(expected) instead of log(expectedW)
+
+    double sumW2 = data.sumEntriesW2();
+    term *= sumW2 / sumW;
+  }
+  return term;
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -974,6 +1022,18 @@ std::unique_ptr<RooAbsReal> createMultiRangeNLLCorrectionTerm(
 }
 
 
+const std::string constraintsTermCommandNames = "Constrain,GlobalObservables,GlobalObservablesTag,ExternalConstraints";
+
+void defineConstraintsTermCommands(RooCmdConfig& pc) {
+  pc.defineSet("cPars","Constrain",0,0) ;
+  pc.defineSet("glObs","GlobalObservables",0,0) ;
+  pc.defineString("globstag","GlobalObservablesTag",0,"") ;
+  pc.defineString("globssource","GlobalObservablesSource",0,"data") ;
+  pc.defineSet("extCons","ExternalConstraints",0,0) ;
+  pc.defineMutex("GlobalObservables","GlobalObservablesTag") ;
+}
+
+
 } // namespace
 
 
@@ -993,8 +1053,6 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
 
   pc.defineString("rangeName","RangeWithName",0,"",kTRUE) ;
   pc.defineString("addCoefRange","SumCoefRange",0,"") ;
-  pc.defineString("globstag","GlobalObservablesTag",0,"") ;
-  pc.defineString("globssource","GlobalObservablesSource",0,"data") ;
   pc.defineDouble("rangeLo","Range",0,-999.) ;
   pc.defineDouble("rangeHi","Range",1,-999.) ;
   pc.defineInt("splitRange","SplitRange",0,0) ;
@@ -1005,14 +1063,12 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("optConst","Optimize",0,0) ;
   pc.defineInt("cloneData","CloneData", 0, 2);
   pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
-  pc.defineSet("cPars","Constrain",0,0) ;
-  pc.defineSet("glObs","GlobalObservables",0,0) ;
   pc.defineInt("doOffset","OffsetLikelihood",0,0) ;
-  pc.defineSet("extCons","ExternalConstraints",0,0) ;
   pc.defineInt("BatchMode", "BatchMode", 0, 0);
   pc.defineDouble("IntegrateBins", "IntegrateBins", 0, -1.);
   pc.defineMutex("Range","RangeWithName") ;
-  pc.defineMutex("GlobalObservables","GlobalObservablesTag") ;
+
+  defineConstraintsTermCommands(pc);
 
   // Process and check varargs
   pc.process(cmdList) ;
@@ -1023,7 +1079,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   // Decode command line arguments
   const char* rangeName = pc.getString("rangeName",0,kTRUE) ;
   const char* addCoefRangeName = pc.getString("addCoefRange",0,kTRUE) ;
-  Int_t ext      = pc.getInt("ext") ;
+  const bool ext = interpretExtendedCmdArg(*this, pc.getInt("ext")) ;
   Int_t numcpu   = pc.getInt("numcpu") ;
   Int_t numcpu_strategy = pc.getInt("interleave");
   // strategy 3 works only for RooSimultaneus.
@@ -1043,14 +1099,6 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   // If no explicit cloneData command is specified, cloneData is set to true if optimization is activated
   if (cloneData==2) {
     cloneData = optConst ;
-  }
-
-  // Process automatic extended option
-  if (ext==2) {
-    ext = ((extendMode()==CanBeExtended || extendMode()==MustBeExtended)) ? 1 : 0 ;
-    if (ext) {
-      coutI(Minimization) << "p.d.f. provides expected number of events, including extended term in likelihood." << endl ;
-    }
   }
 
   // Clear possible range attributes from previous fits.
@@ -1477,6 +1525,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooCmdArg& arg1, const Ro
 ///            the RooMinimizer. These are a subset of the options that you can
 ///            also pass to RooAbsPdf::fitTo via the RooFit command arguments.
 std::unique_ptr<RooFitResult> RooAbsPdf::minimizeNLL(RooAbsReal & nll,
+        ROOT::Experimental::RooFitDriver * driver,
         RooAbsData const& data, MinimizerConfig const& cfg) {
 
   // Determine if the dataset has weights
@@ -1513,7 +1562,7 @@ std::unique_ptr<RooFitResult> RooAbsPdf::minimizeNLL(RooAbsReal & nll,
 
   // Instantiate RooMinimizer
 
-  RooMinimizer m(nll);
+  RooMinimizer m(nll, RooMinimizer::FcnMode::classic, driver);
   m.setMinimizerType(cfg.minType.c_str());
   m.setEvalErrorWall(cfg.doEEWall);
   m.setRecoverFromNaNStrength(cfg.recoverFromNaN);
@@ -1576,10 +1625,22 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   RooCmdConfig pc(Form("RooAbsPdf::fitTo(%s)",GetName())) ;
 
   RooLinkedList fitCmdList(cmdList) ;
+
   RooLinkedList nllCmdList = pc.filterCmdList(fitCmdList,"ProjectedObservables,Extended,Range,"
-      "RangeWithName,SumCoefRange,NumCPU,SplitRange,Constrained,Constrain,ExternalConstraints,"
-      "CloneData,GlobalObservables,GlobalObservablesSource,GlobalObservablesTag,OffsetLikelihood,"
-      "BatchMode,IntegrateBins");
+      "RangeWithName,SumCoefRange,NumCPU,SplitRange,Constrained,"
+      "CloneData,OffsetLikelihood,IntegrateBins");
+
+  {
+      // some arguments should not be filtered out, but we will use them also in fitTo
+      // to create the constraints term.
+      RooLinkedList tmp = pc.filterCmdList(fitCmdList,constraintsTermCommandNames.c_str(),false);
+      std::unique_ptr<TIterator> iter{tmp.MakeIterator()} ;
+      while(auto arg=(RooCmdArg*)iter->Next()) {
+        nllCmdList.Add(arg);
+      }
+  }
+
+  defineConstraintsTermCommands(pc);
 
   // Default-initialized instance of MinimizerConfig to get the default
   // minimizer parameter values.
@@ -1597,6 +1658,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("initHesse","InitialHesse",0,minimizerDefaults.initHesse) ;
   pc.defineInt("hesse","Hesse",0,minimizerDefaults.hesse) ;
   pc.defineInt("minos","Minos",0,minimizerDefaults.minos) ;
+  pc.defineInt("BatchMode", "BatchMode", 0, 0);
   pc.defineInt("ext","Extended",0,2) ;
   pc.defineInt("numcpu","NumCPU",0,1) ;
   pc.defineInt("numee","PrintEvalErrors",0,minimizerDefaults.numee) ;
@@ -1608,8 +1670,6 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineString("mintype","Minimizer",0,minimizerDefaults.minType.c_str()) ;
   pc.defineString("minalg","Minimizer",1,minimizerDefaults.minAlg.c_str()) ;
   pc.defineObject("minosSet","Minos",0,minimizerDefaults.minosSet) ;
-  pc.defineSet("cPars","Constrain",0,0) ;
-  pc.defineSet("extCons","ExternalConstraints",0,0) ;
   pc.defineMutex("FitOptions","Verbose") ;
   pc.defineMutex("FitOptions","Save") ;
   pc.defineMutex("FitOptions","Timer") ;
@@ -1678,7 +1738,50 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
     }
   }
 
-  std::unique_ptr<RooAbsReal> nll{createNLL(data,nllCmdList)};
+  RooAbsReal* nll=nullptr;
+  std::unique_ptr<ROOT::Experimental::RooFitDriver> driver;
+  std::unique_ptr<RooRealVar> weightVar;
+  std::unique_ptr<RooAbsReal> constraintsTerm;
+  if (pc.getInt("BatchMode")==0) nll = createNLL(data,nllCmdList);
+  else
+  {
+    const std::string globalObservablesSource = pc.getString("globssource","data",false);
+    if(globalObservablesSource != "data" && globalObservablesSource != "model") {
+      std::string errMsg = "RooAbsPdf::fitTo: GlobalObservablesSource can only be \"data\" or \"model\"!";
+      coutE(InputArguments) << errMsg << std::endl;
+      throw std::invalid_argument(errMsg);
+    }
+    const bool takeGlobalObservablesFromData = globalObservablesSource == "data";
+
+    constraintsTerm = RooConstraintSum::createConstraintTerm(
+            "NewNLLVar_constr", // name
+            *this, // pdf
+            data, // observables
+            pc.getSet("cPars"), // Constrain RooCmdArg
+            pc.getSet("extCons"), // ExternalConstraints RooCmdArg
+            pc.getSet("glObs"), // GlobalObservables RooCmdArg
+            pc.getString("globstag",0,true), // GlobalObservablesTag RooCmdArg
+            takeGlobalObservablesFromData // From GlobalObservablesSource RooCmdArg
+    );
+
+    auto batchMode = static_cast<rbc::BatchMode>(pc.getInt("BatchMode"));
+    const bool isExtended = interpretExtendedCmdArg(*this, pc.getInt("ext")) ;
+
+    if (data.isWeighted())
+    {
+      std::string weightVarName = data.getWeightVarName();
+      
+      // make a clone of the weight variable (or an initial instance, if it doesn't exist)
+      // the clone will hold the weight value (or values as a batch) and will participate
+      // in the computation graph of the RooFit driver. 
+      weightVar.reset( new RooRealVar(weightVarName.c_str(), "Weight(s) of events", data.weight()) );
+    }
+
+    nll = new ROOT::Experimental::RooNLLVarNew("NewNLLVar", "NewNLLVar", *this,
+                           *data.get(), weightVar.get(), constraintsTerm.get(), isExtended);
+
+    driver.reset(new ROOT::Experimental::RooFitDriver( data, static_cast<ROOT::Experimental::RooNLLVarNew&>(*nll), batchMode ));
+  }
 
   MinimizerConfig cfg;
   cfg.recoverFromNaN = pc.getDouble("RecoverFromUndefinedRegions");
@@ -1701,7 +1804,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   cfg.minType = pc.getString("mintype","Minuit");
   cfg.minAlg = pc.getString("minalg","minuit");
 
-  return minimizeNLL(*nll, data, cfg).release();
+  return minimizeNLL(*std::unique_ptr<RooAbsReal>(nll), driver.get(), data, cfg).release();
 }
 
 
@@ -3559,5 +3662,31 @@ void RooAbsPdf::setNormRangeOverride(const char* rangeName)
   if (_norm) {
     _normMgr.sterilize() ;
     _norm = 0 ;
+  }
+}
+
+/** Base function for computing multiple values of a RooAbsPdf.
+First, the RooAbsReal base function is called to compute the raw values of the
+pdf. After that, divide by the normalization values found in the dataMap.
+\param output The array where the results are stored
+\param nEvents The number of events to be processed
+\param dataMap A std::map containing the input data for the computations
+**/ 
+void RooAbsPdf::computeBatch(rbc::RbcInterface* dispatch, double* output, size_t nEvents, rbc::DataMap& dataMap) const
+{
+  RooAbsReal::computeBatch(dispatch, output, nEvents, dataMap);
+
+  auto integralSpan = dataMap[_norm];
+
+  if(integralSpan.size() == 1) {
+    double oneOverNorm = 1. / integralSpan[0];
+    for (std::size_t i=0; i < nEvents; ++i) {
+      output[i] *= oneOverNorm;
+    }
+  } else {
+    assert(integralSpan.size() == nEvents);
+    for (std::size_t i=0; i < nEvents; ++i) {
+      output[i] /= integralSpan[i];
+    }
   }
 }

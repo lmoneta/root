@@ -28,7 +28,7 @@ Function taken from H. Ikeda et al. NIM A441 (2000), p. 401 (Belle Collaboration
 #include "RooNovosibirsk.h"
 #include "RooFit.h"
 #include "RooRealVar.h"
-#include "RooBatchCompute.h"
+#include "rbc.h"
 
 #include "TMath.h"
 
@@ -90,8 +90,9 @@ Double_t RooNovosibirsk::evaluate() const
 }
 ////////////////////////////////////////////////////////////////////////////////
 /// Compute multiple values of Novosibirsk distribution.  
-RooSpan<double> RooNovosibirsk::evaluateSpan(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet) const {
-  return RooBatchCompute::dispatch->computeNovosibirsk(this, evalData, x->getValues(evalData, normSet), peak->getValues(evalData, normSet), width->getValues(evalData, normSet), tail->getValues(evalData, normSet));
+void RooNovosibirsk::computeBatch(rbc::RbcInterface* dispatch, double* output, size_t nEvents, rbc::DataMap& dataMap) const
+{
+  dispatch->compute(rbc::Novosibirsk, output, nEvents, dataMap, {&*x,&*peak,&*width,&*tail,&*_norm});
 }
 
 ////////////////////////////////////////////////////////////////////////////////

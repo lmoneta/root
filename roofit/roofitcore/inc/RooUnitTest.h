@@ -15,13 +15,16 @@
 #ifndef ROO_UNIT_TEST
 #define ROO_UNIT_TEST
 
-#include "TNamed.h"
 #include "RooTable.h"
 #include "RooWorkspace.h"
 #include "RooFitResult.h"
 #include "RooPlot.h"
+#include "rbc.h"
+
+#include "TNamed.h"
 #include "TFile.h"
 #include "TH1.h"
+
 #include <list>
 #include <string>
 #include <utility>
@@ -34,7 +37,7 @@
 
 class RooUnitTest : public TNamed {
 public:
-  RooUnitTest(const char* name, TFile* refFile, Bool_t writeRef, Int_t verbose) ;
+  RooUnitTest(const char* name, TFile* refFile, Bool_t writeRef, Int_t verbose, rbc::BatchMode batchMode=rbc::Off) ;
   ~RooUnitTest() ;
   
   void setDebug(Bool_t flag) { _debug = flag ; }
@@ -74,6 +77,7 @@ protected:
   Bool_t _debug ;
   Bool_t _write ;
   Int_t _verb ;
+  rbc::BatchMode _batchMode=rbc::Off;
    std::list<std::pair<RooPlot*, std::string> > _regPlots ;
    std::list<std::pair<RooFitResult*, std::string> > _regResults ;
    std::list<std::pair<Double_t, std::string> > _regValues ;
@@ -81,6 +85,6 @@ protected:
    std::list<std::pair<RooWorkspace*,std::string> > _regWS ;
    std::list<std::pair<TH1*,std::string> > _regTH ;
 
-  ClassDef(RooUnitTest,0) ; // Abstract base class for RooFit/RooStats unit regression tests
+  ClassDef(RooUnitTest,1) ; // Abstract base class for RooFit/RooStats unit regression tests
 } ;
 #endif

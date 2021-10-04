@@ -42,16 +42,13 @@ The last two versions, while slightly less readable, are more versatile because
 the names of the arguments are not hard coded.
 **/
 
+#include "RooGenericPdf.h"
 #include "RooFit.h"
 #include "Riostream.h"
-
-#include "RooGenericPdf.h"
 #include "RooStreamParser.h"
 #include "RooMsgService.h"
 #include "RooArgList.h"
 #include "RunContext.h"
-
-
 
 using namespace std;
 
@@ -129,7 +126,7 @@ Double_t RooGenericPdf::evaluate() const
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Evaluate this formula for values found in inputData.
-RooSpan<double> RooGenericPdf::evaluateSpan(RooBatchCompute::RunContext& inputData, const RooArgSet* normSet) const {
+RooSpan<double> RooGenericPdf::evaluateSpan(rbc::RunContext& inputData, const RooArgSet* normSet) const {
   if (normSet != nullptr && normSet != _normSet)
     throw std::logic_error("Got conflicting normSets");
 
@@ -138,6 +135,15 @@ RooSpan<double> RooGenericPdf::evaluateSpan(RooBatchCompute::RunContext& inputDa
 
   return results;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+void RooGenericPdf::computeBatch(rbc::RbcInterface* dispatch, double* output, size_t nEvents, rbc::DataMap& dataMap) const
+{
+  formula().computeBatch(dispatch, output, nEvents, dataMap);
+  RooSpan<const double> normVal = dataMap.at(&*_norm);
+  for (size_t i=0; i<nEvents; i++) output[i]/=normVal[0];
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Change formula expression to given expression

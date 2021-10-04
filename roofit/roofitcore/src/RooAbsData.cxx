@@ -343,7 +343,7 @@ RooAbsData::~RooAbsData()
 
 void RooAbsData::convertToVectorStore()
 {
-   if (storageType == RooAbsData::Tree) {
+   if (dynamic_cast<RooTreeDataStore*>(_dstore)) {
       RooVectorDataStore *newStore = new RooVectorDataStore(*(RooTreeDataStore *)_dstore, _vars, GetName());
       delete _dstore;
       _dstore = newStore;
@@ -2445,4 +2445,22 @@ void RooAbsData::setGlobalObservables(RooArgSet const& globalObservables) {
     if(auto lval = dynamic_cast<RooAbsRealLValue*>(arg)) lval->setConstant(true);
     if(auto lval = dynamic_cast<RooAbsCategoryLValue*>(arg)) lval->setConstant(true);
   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Return sum of squared weights of this data.
+
+double RooAbsData::sumEntriesW2() const {
+  double sumW2;
+  const RooSpan<const double> eventWeights = getWeightBatch(0, numEntries());
+  if (eventWeights.empty()) {
+    sumW2 = numEntries() * weightSquared();
+  } else {
+    ROOT::Math::KahanSum<double, 4u> kahanWeight;
+    for (std::size_t i = 0; i < eventWeights.size(); ++i) {
+      kahanWeight.AddIndexed(eventWeights[i] * eventWeights[i], i);
+    }
+    sumW2 = kahanWeight.Sum();
+  }
+  return sumW2;
 }

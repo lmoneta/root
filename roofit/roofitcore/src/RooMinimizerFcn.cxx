@@ -28,6 +28,7 @@
 #include "RooMsgService.h"
 #include "RooMinimizer.h"
 #include "RooNaNPacker.h"
+#include "RooFitDriver.h"
 
 #include "TClass.h"
 #include "TMatrixDSym.h"
@@ -37,15 +38,16 @@
 
 using namespace std;
 
-RooMinimizerFcn::RooMinimizerFcn(RooAbsReal *funct, RooMinimizer* context,
+RooMinimizerFcn::RooMinimizerFcn(RooAbsReal *funct, RooMinimizer* context, ROOT::Experimental::RooFitDriver * driver,
 			   bool verbose) :
-  RooAbsMinimizerFcn(*funct->getParameters(RooArgSet()), context, verbose), _funct(funct)
+  RooAbsMinimizerFcn(*(!driver ? funct->getParameters(RooArgSet()) : &driver->parameters()), context, verbose), _funct(funct), _driver{driver}
 {}
 
 
 
 RooMinimizerFcn::RooMinimizerFcn(const RooMinimizerFcn& other) : RooAbsMinimizerFcn(other), ROOT::Math::IBaseFunctionMultiDim(other),
-  _funct(other._funct)
+  _funct(other._funct),
+  _driver(other._driver)
 {}
 
 
@@ -74,7 +76,7 @@ double RooMinimizerFcn::DoEval(const double *x) const {
 
   // Calculate the function for these parameters
   RooAbsReal::setHideOffset(kFALSE) ;
-  double fvalue = _funct->getVal();
+  double fvalue = !_driver ? _funct->getVal() : _driver->getVal();
   RooAbsReal::setHideOffset(kTRUE) ;
 
   if (!std::isfinite(fvalue) || RooAbsReal::numEvalErrors() > 0 || fvalue > 1e30) {

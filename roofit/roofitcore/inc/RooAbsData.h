@@ -44,7 +44,7 @@ class RooAbsDataStore ;
 template<typename T> class TMatrixTSym;
 using TMatrixDSym = TMatrixTSym<Double_t>;
 class RooFormulaVar;
-namespace RooBatchCompute{
+namespace rbc{
 struct RunContext;
 }
 namespace RooFit {
@@ -158,7 +158,7 @@ public:
   /// \param first Index of first event that ends up in the batch.
   /// \param len   Number of events in each batch.
   /// Needs to be overridden by derived classes. This implementation returns an empty RunContext.
-  virtual void getBatches(RooBatchCompute::RunContext& evalData,
+  virtual void getBatches(rbc::RunContext& evalData,
       std::size_t first = 0, std::size_t len = std::numeric_limits<std::size_t>::max()) const = 0;
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -166,6 +166,7 @@ public:
   /// If no contiguous structure of weights is stored, an empty batch can be returned.
   /// This indicates that the weight is constant. Use weight() to retrieve it.
   virtual RooSpan<const double> getWeightBatch(std::size_t first, std::size_t len) const = 0;
+  virtual std::string getWeightVarName() const = 0;
 
   /// Return number of entries in dataset, *i.e.*, count unweighted entries.
   virtual Int_t numEntries() const ;
@@ -175,6 +176,7 @@ public:
   /// \param[in] cutSpec Apply given cut when counting (*e.g.* `0 < x && x < 5`). Passing `"1"` selects all events.
   /// \param[in] cutRange If the observables have a range with this name, only count events inside this range.
   virtual Double_t sumEntries(const char* cutSpec, const char* cutRange=0) const = 0 ; // DERIVED
+  double sumEntriesW2() const;
   virtual Bool_t isWeighted() const { 
     // Do events in dataset have weights?
     return kFALSE ; 

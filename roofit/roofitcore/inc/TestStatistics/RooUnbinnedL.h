@@ -23,7 +23,7 @@
 class RooAbsPdf;
 class RooAbsData;
 class RooArgSet;
-namespace RooBatchCompute {
+namespace rbc {
 struct RunContext;
 }
 
@@ -45,7 +45,7 @@ private:
    bool apply_weight_squared = false;                              // Apply weights squared?
    mutable bool _first = true;                                     //!
    bool useBatchedEvaluations_ = false;
-   mutable std::unique_ptr<RooBatchCompute::RunContext> evalData_; //! Struct to store function evaluation workspaces.
+   mutable std::unique_ptr<rbc::RunContext> evalData_; //! Struct to store function evaluation workspaces.
 };
 
 } // namespace TestStatistics

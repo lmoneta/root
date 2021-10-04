@@ -19,14 +19,15 @@
 #include "RooPrintable.h"
 #include "RooArgList.h"
 #include "RooArgSet.h"
+
+#include "rbc.h"
 #include "TFormula.h"
-#include "RooSpan.h"
 
 #include <memory>
 #include <vector>
 #include <string>
 
-namespace RooBatchCompute {
+namespace rbc {
   struct RunContext;
 }
 class RooAbsReal;
@@ -59,7 +60,8 @@ public:
   Bool_t ok() const { return _tFormula != nullptr; }
   /// Evalute all parameters/observables, and then evaluate formula.
   Double_t eval(const RooArgSet* nset=0) const;
-  RooSpan<double> evaluateSpan(const RooAbsReal* dataOwner, RooBatchCompute::RunContext& inputData, const RooArgSet* nset = nullptr) const;
+  RooSpan<double> evaluateSpan(const RooAbsReal* dataOwner, rbc::RunContext& inputData, const RooArgSet* nset = nullptr) const;
+  void computeBatch(rbc::RbcInterface* dispatch, double* output, size_t nEvents, rbc::DataMap& dataMap) const;
 
   /// DEBUG: Dump state information
   void dump() const;

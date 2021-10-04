@@ -24,6 +24,7 @@
 #include "RooAbsReal.h"
 #include "RooArgList.h"
 #include "RooRealVar.h"
+#include "RooFitDriver.h"
 
 #include <iostream>
 #include <fstream>

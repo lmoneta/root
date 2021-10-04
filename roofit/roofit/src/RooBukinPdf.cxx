@@ -31,7 +31,7 @@ http://www.slac.stanford.edu/BFROOT/www/Organization/CollabMtgs/2003/detJuly2003
 #include "RooFit.h"
 #include "RooRealVar.h"
 #include "RooHelpers.h"
-#include "RooBatchCompute.h"
+#include "rbc.h"
 
 #include <cmath>
 using namespace std;
@@ -141,7 +141,8 @@ Double_t RooBukinPdf::evaluate() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Compute multiple values of Bukin distribution.
-RooSpan<double> RooBukinPdf::evaluateSpan(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet) const {
-  return RooBatchCompute::dispatch->computeBukin(this, evalData, x->getValues(evalData, normSet), Xp->getValues(evalData, normSet), sigp->getValues(evalData, normSet), xi->getValues(evalData, normSet), rho1->getValues(evalData, normSet), rho2->getValues(evalData, normSet));
+/// Compute multiple values of Bukin distribution.  
+void RooBukinPdf::computeBatch(rbc::RbcInterface* dispatch, double* output, size_t nEvents, rbc::DataMap& dataMap) const
+{
+  dispatch->compute(rbc::Bukin, output, nEvents, dataMap, {&*x,&*Xp,&*sigp,&*xi,&*rho1,&*rho2,&*_norm});
 }

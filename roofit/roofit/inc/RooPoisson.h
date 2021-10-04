@@ -43,7 +43,8 @@ protected:
   Bool_t  _protectNegative{true};
   
   Double_t evaluate() const override;
-  RooSpan<double> evaluateSpan(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet) const override;
+  void computeBatch(rbc::RbcInterface* dispatch, double* output, size_t nEvents, rbc::DataMap& dataMap) const override;
+  inline bool canComputeBatchWithCuda() const override { return true; }
 
   ClassDefOverride(RooPoisson,3) // A Poisson PDF
 };

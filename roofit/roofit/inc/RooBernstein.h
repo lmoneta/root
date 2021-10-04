@@ -45,7 +45,8 @@ private:
   std::string _refRangeName ;
 
   Double_t evaluate() const;
-  RooSpan<double> evaluateSpan(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet) const;
+  void computeBatch(rbc::RbcInterface* dispatch, double* output, size_t nEvents, rbc::DataMap& dataMap) const;
+  inline bool canComputeBatchWithCuda() const { return true; }
 
   ClassDef(RooBernstein,2) // Bernstein polynomial PDF
 };

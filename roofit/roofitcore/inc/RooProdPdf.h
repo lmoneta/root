@@ -27,10 +27,6 @@
 #include <list>
 #include <string>
 
-namespace RooBatchCompute {
-struct RunContext;
-}
-
 typedef RooArgList* pRooArgList ;
 typedef RooLinkedList* pRooLinkedList ;
 
@@ -104,7 +100,8 @@ public:
 private:
 
   Double_t evaluate() const ;
-  virtual RooSpan<double> evaluateSpan(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet) const;
+  void computeBatch(rbc::RbcInterface* dispatch, double* output, size_t nEvents, rbc::DataMap& dataMap) const;
+  inline bool canComputeBatchWithCuda() const { return true; }
 
   RooAbsReal* makeCondPdfRatioCorr(RooAbsReal& term, const RooArgSet& termNset, const RooArgSet& termImpSet, const char* normRange, const char* refRange) const ;
 

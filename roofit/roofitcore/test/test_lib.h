@@ -58,7 +58,7 @@ generate_1D_gaussian_pdf_nll(RooWorkspace &w, unsigned long N_events)
 // return two unique_ptrs, the first because nll is a pointer,
 // the second because RooArgSet doesn't have a move ctor
 std::tuple<std::unique_ptr<RooAbsReal>, RooAbsPdf *, RooDataSet *, std::unique_ptr<RooArgSet>>
-generate_ND_gaussian_pdf_nll(RooWorkspace &w, unsigned int n, unsigned long N_events, bool batch_mode = false) {
+generate_ND_gaussian_pdf_nll(RooWorkspace &w, unsigned int n, unsigned long N_events, rbc::BatchMode batch_mode=rbc::Cpu) {
   RooArgSet obs_set;
 
   // create gaussian parameters

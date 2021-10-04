@@ -54,13 +54,14 @@ Check the tutorial rf506_msgservice.C for details.
 **/
 
 #include "RooFormula.h"
-
-#include "RooFit.h"
+#include "BracketAdapters.h"
 #include "RooAbsReal.h"
 #include "RooAbsCategory.h"
 #include "RooArgList.h"
+#include "RooFit.h"
 #include "RooMsgService.h"
-#include "RooBatchCompute.h"
+#include "RunContext.h"
+#include "rbc.h"
 
 #include "TObjString.h"
 #include "TClass.h"
@@ -365,7 +366,7 @@ Double_t RooFormula::eval(const RooArgSet* nset) const
 }
 
 
-RooSpan<double> RooFormula::evaluateSpan(const RooAbsReal* dataOwner, RooBatchCompute::RunContext& inputData, const RooArgSet* nset) const {
+RooSpan<double> RooFormula::evaluateSpan(const RooAbsReal* dataOwner, rbc::RunContext& inputData, const RooArgSet* nset) const {
   if (!_tFormula) {
     coutF(Eval) << __func__ << " (" << GetName() << "): Formula didn't compile: " << GetTitle() << endl;
     std::string what = "Formula ";
@@ -374,7 +375,7 @@ RooSpan<double> RooFormula::evaluateSpan(const RooAbsReal* dataOwner, RooBatchCo
     throw std::runtime_error(what);
   }
 
-  std::vector<RooBatchCompute::BracketAdapterWithMask> valueAdapters;
+  std::vector<rbc::BracketAdapterWithMask> valueAdapters;
   std::vector<RooSpan<const double>> inputSpans;
   size_t nData=1;
   for (const auto arg : _origList) {
@@ -406,6 +407,21 @@ RooSpan<double> RooFormula::evaluateSpan(const RooAbsReal* dataOwner, RooBatchCo
   }
 
   return output;
+}
+
+void RooFormula::computeBatch(rbc::RbcInterface*, double* output, size_t nEvents, rbc::DataMap& dataMap) const
+{
+  const int nPars=_origList.size();
+  std::vector<RooSpan<const double>> inputSpans(nPars);
+  for (int i=0; i<nPars; i++)
+    inputSpans[i] = dataMap.at( static_cast<const RooAbsReal*>(&_origList[i]) );
+
+  std::vector<double> pars(nPars);
+  for (size_t i=0; i<nEvents; i++)
+  {
+    for (int j=0; j<nPars; j++) pars[j] = inputSpans[j].size()>1 ? inputSpans[j][i] : inputSpans[j][0];
+    output[i] = _tFormula->EvalPar( pars.data() );
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

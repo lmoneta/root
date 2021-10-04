@@ -40,6 +40,7 @@ automatic PDF optimization.
 
 #include "RooMinimizer.h"
 
+#include "RooMinimizer.h"
 #include "RooFit.h"
 #include "RooArgSet.h"
 #include "RooArgList.h"
@@ -66,9 +67,8 @@ automatic PDF optimization.
 #include <iostream>
 #include <fstream>
 
-#if (__GNUC__==3&&__GNUC_MINOR__==2&&__GNUC_PATCHLEVEL__==3)
-char* operator+( streampos&, char* );
-#endif
+#include <iostream>
+#include <fstream>
 
 using namespace std;
 
@@ -105,7 +105,7 @@ void RooMinimizer::cleanup()
 /// for HESSE and MINOS error analysis is taken from the defaultErrorLevel()
 /// value of the input function.
 
-RooMinimizer::RooMinimizer(RooAbsReal &function, FcnMode fcnMode) : _fcnMode(fcnMode)
+RooMinimizer::RooMinimizer(RooAbsReal &function, FcnMode fcnMode, ROOT::Experimental::RooFitDriver* driver) : _fcnMode(fcnMode)
 {
    RooSentinel::activate();
 
@@ -118,7 +118,7 @@ RooMinimizer::RooMinimizer(RooAbsReal &function, FcnMode fcnMode) : _fcnMode(fcn
 
    switch (_fcnMode) {
    case FcnMode::classic: {
-      _fcn = new RooMinimizerFcn(&function, this, _verbose);
+      _fcn = new RooMinimizerFcn(&function, this, driver, _verbose);
       break;
    }
    case FcnMode::gradient: {

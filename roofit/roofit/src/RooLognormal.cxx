@@ -29,7 +29,7 @@ The parameterization here is physics driven and differs from the ROOT::Math::log
 #include "RooRandom.h"
 #include "RooMath.h"
 #include "RooHelpers.h"
-#include "RooBatchCompute.h"
+#include "rbc.h"
 
 #include "TClass.h"
 
@@ -82,8 +82,9 @@ Double_t RooLognormal::evaluate() const
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Compute multiple values of Lognormal distribution.  
-RooSpan<double> RooLognormal::evaluateSpan(RooBatchCompute::RunContext& evalData, const RooArgSet* normSet) const {
-  return RooBatchCompute::dispatch->computeLognormal(this, evalData, x->getValues(evalData, normSet), m0->getValues(evalData, normSet), k->getValues(evalData, normSet));
+void RooLognormal::computeBatch(rbc::RbcInterface* dispatch, double* output, size_t nEvents, rbc::DataMap& dataMap) const
+{
+  dispatch->compute(rbc::Lognormal, output, nEvents, dataMap, {&*x,&*m0,&*k,&*_norm});
 }
 
 ////////////////////////////////////////////////////////////////////////////////
