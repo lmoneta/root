@@ -28,7 +28,7 @@
 #include "vdt/sqrt.h"
 
 namespace rbc{
-  
+
 inline double fast_exp(double x) {
   return vdt::fast_exp(x);
 }
@@ -45,6 +45,9 @@ inline double fast_isqrt(double x) {
 
 #else
 #include <cmath>
+#ifndef __CUDACC__
+  #define __device__
+#endif
 
 namespace rbc{
 

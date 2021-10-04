@@ -1,11 +1,20 @@
 # Library which powers fast batch computations in Roofit.
-ROOT_LINKER_LIBRARY(RooBatchCompute
+ROOT_STANDARD_LIBRARY_PACKAGE(RooBatchCompute
+  HEADERS
+    BracketAdapters.h
+    RooSpan.h
+    RooMath.h
+    RooVDTHeaders.h
+    RunContext.h
+  SOURCES
     src/Initialisation.cxx
     src/RooMath.cxx
     src/RunContext.cxx
   DEPENDENCIES
     Core
     MathCore
+  LINKDEF
+    inc/LinkDef.h
 )
 
 if(vdt AND NOT builtin_vdt)
@@ -58,4 +67,4 @@ if (cuda)
   target_compile_options(RooBatchCompute_CUDA  PRIVATE -DRF_ARCH=CUDA -lineinfo --expt-relaxed-constexpr)
 endif()
 
-ROOT_INSTALL_HEADERS()
+#~  ROOT_INSTALL_HEADERS()
