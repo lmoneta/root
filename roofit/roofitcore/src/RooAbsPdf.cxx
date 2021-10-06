@@ -1196,6 +1196,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
           pc.getSet("glObs"), // GlobalObservables RooCmdArg
           pc.getString("globstag",0,true), // GlobalObservablesTag RooCmdArg
           takeGlobalObservablesFromData, // From GlobalObservablesSource RooCmdArg
+          true,  // clone constraint terms in the scalar case
           _myws // passing workspace to cache the set of constraints
   );
 
@@ -1745,7 +1746,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   if (pc.getInt("BatchMode")==0) nll = createNLL(data,nllCmdList);
   else
   {
-    const std::string globalObservablesSource = pc.getString("globssource","data",false);
+    const std::string globalObservablesSource = pc.getString("globssource","model",false);
     if(globalObservablesSource != "data" && globalObservablesSource != "model") {
       std::string errMsg = "RooAbsPdf::fitTo: GlobalObservablesSource can only be \"data\" or \"model\"!";
       coutE(InputArguments) << errMsg << std::endl;
@@ -1761,8 +1762,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
             pc.getSet("extCons"), // ExternalConstraints RooCmdArg
             pc.getSet("glObs"), // GlobalObservables RooCmdArg
             pc.getString("globstag",0,true), // GlobalObservablesTag RooCmdArg
-            takeGlobalObservablesFromData // From GlobalObservablesSource RooCmdArg
-    );
+            takeGlobalObservablesFromData, // From GlobalObservablesSource RooCmdArg
+            false    ); // clone Constraint is false  
 
     auto batchMode = static_cast<rbc::BatchMode>(pc.getInt("BatchMode"));
     const bool isExtended = interpretExtendedCmdArg(*this, pc.getInt("ext")) ;
