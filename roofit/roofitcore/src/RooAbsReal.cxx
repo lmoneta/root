@@ -333,6 +333,13 @@ RooSpan<const double> RooAbsReal::getValues(rbc::RunContext& evalData, const Roo
 
 ////////////////////////////////////////////////////////////////////////////////
 
+std::unique_ptr<double[]> RooAbsReal::getValues(RooAbsData& data, rbc::BatchMode batchMode) const {
+  ROOT::Experimental::RooFitDriver driver(data, *this, batchMode);
+  return driver.getValues();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 Int_t RooAbsReal::numEvalErrorItems()
 {
   return _evalErrorList.size() ;

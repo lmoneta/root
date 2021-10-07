@@ -5,6 +5,7 @@
 #include "RooNLLVarNew.h"
 
 #include <chrono>
+#include <memory>
 #include <queue>
 #include <unordered_map>
 
@@ -17,8 +18,9 @@ namespace Experimental {
 
 class RooFitDriver {
   public:
-     RooFitDriver(const RooAbsData& data, const RooNLLVarNew& topNode, rbc::BatchMode batchMode);
+     RooFitDriver(const RooAbsData& data, const RooAbsReal& topNode, rbc::BatchMode batchMode);
      ~RooFitDriver();
+     std::unique_ptr<double[]> getValues();
      double getVal();
      std::string const& name() const { return _name; }
      std::string const& title() const { return _title; }
@@ -67,7 +69,7 @@ class RooFitDriver {
     // used for preserving static info about the computation graph
     rbc::DataMap _dataMapCPU;
     rbc::DataMap _dataMapCUDA;
-    const RooNLLVarNew& _topNode;
+    const RooAbsReal& _topNode;
     const RooAbsData* const _data = nullptr;
     const size_t _nEvents = 0;
     std::unordered_map<const RooAbsReal*, NodeInfo> _nodeInfos;
