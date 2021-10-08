@@ -27,6 +27,7 @@ class RbcClass : public RbcInterface {
       : _computeFunctions(getFunctions())
     {
       // Set the dispatch pointer to this instance of the library upon loading
+      printf("create Rbc class\n");
       dispatchCPU = this;
     }
     /** Compute multiple values using optimized functions.

@@ -40,8 +40,20 @@ void loadComputeLibrary()
 #ifdef R__RF_ARCHITECTURE_SPECIFIC_LIBS
   #ifdef R__HAS_CUDA
     TString libcudart{"libcudart"};
-    if (gSystem->FindDynamicLibrary(libcudart, true)) load("libRooBatchCompute_CUDA");
-    if (rbc::dispatchCUDA) rbc::dispatchCUDA->init();
+    printf(" pointer %p \n",rbc::dispatchCUDA);
+   //if (gSystem->FindDynamicLibrary(libcudart, true)) {
+   printf("loading CUDA library\n");
+   loadWithErrorChecking("libRooBatchCompute_CUDA");
+   //  }
+   //  else
+   //     printf("ERROR: cudart library not found\n");
+    printf(" pointer %p \n", rbc::dispatchCUDA);
+    if (rbc::dispatchCUDA) {
+       printf("calling rbc::dispatchCUDA->Init() \n");
+       rbc::dispatchCUDA->init();
+    }
+    else
+       printf("rbc::dispatchCUDA is nullptr\n");
     if (!rbc::dispatchCUDA)
       Info( (std::string(__func__)+"(), "+__FILE__+":"+std::to_string(__LINE__)).c_str(), 
       "Cuda implementation is not supported or not working, trying cpu optimised implementations." );
@@ -81,4 +93,3 @@ static struct RbcInitialiser {
     loadComputeLibrary();
   }
 } __RbcInitialiser;
-

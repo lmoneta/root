@@ -281,7 +281,7 @@ __device__ __host__ static inline std::complex<T> faddeeva_smabmq_impl(
 	}
     }
 
-__device__ static constexpr double npi24[24] = { // precomputed values n * pi
+__device__ static const double npi24[24] = { // precomputed values n * pi
 	0.00000000000000000e+00, 3.14159265358979324e+00, 6.28318530717958648e+00,
 	9.42477796076937972e+00, 1.25663706143591730e+01, 1.57079632679489662e+01,
 	1.88495559215387594e+01, 2.19911485751285527e+01, 2.51327412287183459e+01,
@@ -291,7 +291,7 @@ __device__ static constexpr double npi24[24] = { // precomputed values n * pi
 	5.65486677646162783e+01, 5.96902604182060715e+01, 6.28318530717958648e+01,
 	6.59734457253856580e+01, 6.91150383789754512e+01, 7.22566310325652445e+01,
     };
-__device__ static constexpr double a24[24] = { // precomputed Fourier coefficient prefactors
+__device__ static const double a24[24] = { // precomputed Fourier coefficient prefactors
 	2.95408975150919338e-01, 2.75840233292177084e-01, 2.24573955224615866e-01,
 	1.59414938273911723e-01, 9.86657664154541891e-02, 5.32441407876394120e-02,
 	2.50521500053936484e-02, 1.02774656705395362e-02, 3.67616433284484706e-03,
@@ -301,7 +301,7 @@ __device__ static constexpr double a24[24] = { // precomputed Fourier coefficien
 	6.70217160600200763e-11, 5.30726516347079017e-12, 3.66432411346763916e-13,
 	2.20589494494103134e-14, 1.15782686262855879e-15, 5.29871142946730482e-17,
     };
-__device__ static constexpr double taylorarr24[24 * 12] = {
+__device__ static const double taylorarr24[24 * 12] = {
 	// real part imaginary part, low order coefficients last
 	// nsing = 0
 	 0.00000000000000000e-00,  3.00901111225470020e-01,

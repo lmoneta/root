@@ -25,6 +25,7 @@ class RbcClass : public RbcInterface {
   public:
     RbcClass() : _computeFunctions(getFunctions())
     {
+       printf("create Rbc class\n");
       dispatchCUDA = this; // Set the dispatch pointer to this instance of the library upon loading
     }
 
@@ -35,9 +36,13 @@ class RbcClass : public RbcInterface {
     void init()
     {
       cudaError_t err = cudaSetDevice(0);
-      if (err==cudaSuccess) cudaFree(nullptr);
+      if (err==cudaSuccess) {
+         cudaFree(nullptr);
+         printf("OK in INIT CUDA\n");
+      }
       else
       {
+         printf("Error in INIT CUDA\n");
         dispatchCUDA = nullptr;
         Error( (std::string(__func__)+"(), "+__FILE__+":"+std::to_string(__LINE__)).c_str(), "%s", cudaGetErrorString(err) );
       }
