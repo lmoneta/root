@@ -23,6 +23,7 @@ and gets destroyed when the fitting ends.
 #include "RooRealVar.h"
 #include "RunContext.h"
 
+#include <iomanip>
 #include <thread>
 
 namespace ROOT { namespace Experimental {
@@ -418,6 +419,7 @@ void RooFitDriver::markGPUNodes()
   else if (_getValInvocations==2) // compute (and time) as much as possible in gpu
     for (auto& item:_nodeInfos)
       item.second.computeInGPU = !item.second.computeInScalarMode && item.first->canComputeBatchWithCuda();
+#if 0  // skip automatic assignmet of GPU nodes
   else // assign nodes to gpu using a greedy algorithm
   {
     // deletion of the timing events (to be replaced later by non-timing events)
@@ -507,6 +509,7 @@ void RooFitDriver::markGPUNodes()
       else cudaNode=nullptr;
     } // while(nNodes)
   } // else (_getValInvocations > 2)
+#endif   
 
   for (auto& item:_nodeInfos)
     if (!item.second.computeInScalarMode) // scalar nodes don't need copying
@@ -523,9 +526,20 @@ void RooFitDriver::markGPUNodes()
 
   // restore a cudaEventDisableTiming event when necessary
   if (_getValInvocations==3)
+  {
     for (auto& item:_nodeInfos)
       if (item.second.computeInGPU || item.second.copyAfterEvaluation)
         item.second.event = rbc::dispatchCUDA->newCudaEvent(false);
+
+    int printLevel = 0;
+    if (printLevel > 0) {
+       printf("------Nodes------\t\t\t\tCpu time: \t Cuda time\n");
+       for (auto &item : _nodeInfos)
+          std::cout << std::setw(20) << item.first->GetName() << "\t" << item.first << "\t"
+                    << (item.second.computeInGPU ? "CUDA" : "CPU") << "\t" << item.second.cpuTime.count() << "us\t"
+                    << item.second.cudaTime.count() << "us\n";
+    }
+  }
 }
 
 }
