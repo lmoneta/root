@@ -32,6 +32,7 @@ namespace PyKeras{
 // Referencing Python utility functions present in PyMethodBase
 static void(& PyRunString)(TString, PyObject*, PyObject*) = PyMethodBase::PyRunString;
 static const char*(& PyStringAsString)(PyObject*) = PyMethodBase::PyStringAsString;
+static std::vector<size_t>(& GetDataFromTuple)(PyObject*) = PyMethodBase::GetDataFromTuple;
 
 namespace INTERNAL{
 
@@ -69,8 +70,6 @@ const KerasMethodMapWithActivation mapKerasLayerWithActivation = {
    {"Dense", &MakeKerasDense},
    };
 
-// Function which returns values from a Python Tuple object in vector of size_t
-std::vector<size_t> GetDataFromTuple(PyObject *tupleObject);
 
 //////////////////////////////////////////////////////////////////////////////////
 /// \brief Adds equivalent ROperator with respect to Keras model layer
@@ -365,20 +364,6 @@ std::unique_ptr<ROperator> MakeKerasPermute(PyObject* fLayer)
    return op;
    }
 
-
-//////////////////////////////////////////////////////////////////////////////////
-/// \brief Utility function which retrieves and returns the values of the Tuple
-///        object as a vector of size_t
-///
-/// \param[in] tupleObject Python Tuple object
-/// \return vector of tuple members
-std::vector<size_t> GetDataFromTuple(PyObject* tupleObject){
-   std::vector<size_t>inputShape;
-   for(Py_ssize_t tupleIter=0;tupleIter<PyTuple_Size(tupleObject);++tupleIter){
-               inputShape.push_back((size_t)PyLong_AsLong(PyTuple_GetItem(tupleObject,tupleIter)));
-         }
-   return inputShape;
-}
 }//INTERNAL
 
 
