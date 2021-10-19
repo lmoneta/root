@@ -569,7 +569,7 @@ RModel Parse(std::string filename){
          }
 
          // Getting the shape vector from the Tuple object
-         std::vector<size_t>fInputShape=INTERNAL::GetDataFromTuple(fPInputShapes);
+         std::vector<size_t>fInputShape = GetDataFromTuple(fPInputShapes);
          rmodel.AddInputTensorInfo(fInputName, ETensorType::FLOAT, fInputShape);
          break;
          }
@@ -596,7 +596,7 @@ RModel Parse(std::string filename){
             throw std::runtime_error("None error: Models not initialized with batch-size are not yet supported in TMVA SOFIE");
          }
 
-         std::vector<size_t>fInputShape=INTERNAL::GetDataFromTuple(fInputShapeTuple);
+         std::vector<size_t>fInputShape = GetDataFromTuple(fInputShapeTuple);
          rmodel.AddInputTensorInfo(fInputName, ETensorType::FLOAT, fInputShape);
          break;
          }
