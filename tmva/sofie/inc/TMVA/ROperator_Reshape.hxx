@@ -56,7 +56,6 @@ public:
          throw std::runtime_error("TMVA Reshape Op Input Tensor is not found in model");
       }
       fShapeOutput = model.GetTensorShape(fNShape);
-     //hapeOutput = ShapeInference({fNData, fNShape})[0];
 
       model.AddIntermediateTensor(fNOutput, model.GetTensorType(fNData), fShapeOutput);
    
@@ -67,19 +66,21 @@ public:
       if (fShapeData.empty() || fShapeOutput.empty()){
          throw std::runtime_error("TMVA SOFIE Reshape Op called to Generate without being initialized first");
       }
-
-      // output of reshape is same as input
+      // we copy input into output tensor. 
+       // output of reshape is same as input
       int length = 1;
       for (auto &i : fShapeOutput) {
-         length *= i;
+          length *= i;
       }
+  
+      std::string tensor_input = "tensor_" + fNData;
+      std::string tensor_output = "tensor_" + fNOutput;
       std::stringstream out;
-      out << "\t"
-          << "for (int id = 0; id < " << length << " ; id++){\n";
-      out << "\t\t"
-          << "tensor_" << fNOutput << "[id] = tensor_" << fNData << "[id];\n";
-      out << "\t}\n";
-      return out.str();
+      out << "\t" << "std::copy(" << tensor_input << "," << tensor_input << " + " << length
+          << "," << tensor_output << ")\n";
+      
+      return out.str(); 
+
    }
 
 
