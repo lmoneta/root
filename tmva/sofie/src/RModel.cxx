@@ -227,7 +227,9 @@ namespace SOFIE{
             for (auto & dim: i.second.shape){
                length *= dim;
             }
-            fGC += "float tensor_" + i.first + "[" + std::to_string(length) + "];\n";
+            //fGC += "float tensor_" + i.first + "[" + std::to_string(length) + "];\n";
+            fGC += "std::vector<float> fTensor_" + i.first  + " = std::vector<float>(" + std::to_string(length) + ");\n";
+            fGC += "float * tensor_" + i.first + " = fTensor_" + i.first  + ".data();\n";
          }
       }
       if (useSession) {
@@ -235,6 +237,7 @@ namespace SOFIE{
          fGC += "Session(std::string filename =\"\") {\n";
          // here add initialization and reading of weight tensors
          if (useWeightFile) {
+            fGC += "   if (filename.empty()) filename = \"" + fName + ".dat\";\n";
             ReadInitializedTensorsFromFile();
             fUseWeightFile = useWeightFile;
          }

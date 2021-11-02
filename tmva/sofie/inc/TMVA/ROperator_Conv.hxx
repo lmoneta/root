@@ -217,8 +217,8 @@ public:
          std::string new_bias_tensor = "tensor_" + fNB2;
          out << "     float * new_data_ptr = TMVA::Experimental::SOFIE::UTILITY::Unidirectional_broadcast<float>("
              << original_bias_tensor << ", shapeB, shapeY);\n";
-         out << "     std::copy(new_data_ptr," <<  new_bias_tensor << "," << new_bias_tensor 
-             << " + TMVA::Experimental::SOFIE::ConvertShapeToLength(shapeY));\n";
+         out << "     std::copy(new_data_ptr, new_data_ptr + TMVA::Experimental::SOFIE::ConvertShapeToLength(shapeY), "
+                <<  new_bias_tensor << " );\n";
          out << "   }\n";
       }
       return out.str();
@@ -289,8 +289,13 @@ public:
 
       if (fAttrGroup == 1) {
          if (fType == "float") {
-         out << "\t" << "float " << OpName << "_xcol[" << fShapeX[1] * fAttrKernelShape[0] * fAttrKernelShape[1]
-             * fShapeX[0] * fShapeY[2] * fShapeY[3] << "] = {0};\n";
+//         out << "\t" << "float " << OpName << "_xcol[" << fShapeX[1] * fAttrKernelShape[0] * fAttrKernelShape[1]
+//             * fShapeX[0] * fShapeY[2] * fShapeY[3] << "] = {0};\n";
+         out << "\t"
+             << "std::vector<float> vec_" << OpName << "_xcol("
+             << fShapeX[1] * fAttrKernelShape[0] * fAttrKernelShape[1] * fShapeX[0] * fShapeY[2] * fShapeY[3] << ");\n";
+         out << "\t"
+             << "float * " << OpName << "_xcol = vec_" << OpName << "_xcol.data();\n";
          }
          // Unroll the input tensor
          out << "\t" << "size_t " << OpName << "_index = 0;\n";
@@ -327,8 +332,11 @@ public:
              << ", &" << OpName << "_m);\n";
       } else {
          if (fType == "float") {
-         out << "\t" << "float " << OpName << "_xcol[" << fShapeX[1] * fAttrKernelShape[0] * fAttrKernelShape[1]
-             * fShapeX[0] * fShapeY[2] * fShapeY[3] << "] = {0};\n";
+         //out << "\t" << "float " << OpName << "_xcol[" << fShapeX[1] * fAttrKernelShape[0] * fAttrKernelShape[1]
+         //    * fShapeX[0] * fShapeY[2] * fShapeY[3] << "] = {0};\n";
+         out << "\t" << "std::vector<float> vec_" << OpName << "_xcol(" << fShapeX[1] * fAttrKernelShape[0] * fAttrKernelShape[1]
+             * fShapeX[0] * fShapeY[2] * fShapeY[3] << ");\n";
+         out << "\t" << "float " << OpName << "_xcol = vec_" << OpName << "_xcol.data();\n";
          }
          // Unroll the input tensor
          out << "\t" << "for (size_t g = 0; g < " << fAttrGroup << "; g++) {\n";
