@@ -247,15 +247,30 @@ public:
          out << "\t" << "float " << OpName << "_f[" << fShapeW[0] * fShapeW[1] * fAttrKernelShape[0] * fAttrKernelShape[1] << "] = {0};\n";
       }
       // vectorize the (dilated)convolution kernels into a matrix
-      out << "\t" << "for (std::size_t k = 0; k < " << fShapeW[0] << "; k++) {\n";
+      // no need to transpose the matrix
+      size_t hstride = fShapeW[3];
+      size_t hstrideDil = fAttrDilations[0] * fAttrKernelShape[1];  // stride dilated in the height
+      size_t wstrideDil = fAttrDilations[1];
+      size_t dstride = fShapeW[2] * fShapeW[3];
+      size_t dstrideDil = fAttrKernelShape[0] * fAttrKernelShape[1];
+      size_t kstride = fShapeW[1] * fShapeW[2] * fShapeW[3];
+      size_t kstrideDil = fShapeW[1] * dstrideDil;
+
+      out << "\t"
+          << "for (std::size_t k = 0; k < " << fShapeW[0] << "; k++) {\n";
       out << "\t" << "\t" << "for (std::size_t d = 0; d < " << fShapeW[1] << "; d++) {\n";
       out << "\t" << "\t" << "\t" << "for (std::size_t h = 0; h < " << fShapeW[2] << "; h++) {\n";
       out << "\t" << "\t" << "\t" << "\t" << "for (std::size_t w = 0; w < " << fShapeW[3] << "; w++) {\n";
-      out << "\t" << "\t" << "\t" << "\t" << "\t" << OpName <<  "_f[k + " << "(d * "
-          << fAttrKernelShape[0] * fAttrKernelShape[1] << " + h * " << fAttrDilations[0] * fAttrKernelShape[1]
-          << " + w * " << fAttrDilations[1] << ") * " << fShapeW[0] << "] = tensor_" << fNW << "[k * "
-          << fShapeW[1] * fShapeW[2] * fShapeW[3] << " + d * " << fShapeW[2] * fShapeW[3] << " + h * "
-          << fShapeW[3] << " + w ];\n";
+      // out << "\t" << "\t" << "\t" << "\t" << "\t" << OpName <<  "_f[k + " << "(d * "
+      //     << fAttrKernelShape[0] * fAttrKernelShape[1] << " + h * " << fAttrDilations[0] * fAttrKernelShape[1]
+      //     << " + w * " << fAttrDilations[1] << ") * " << fShapeW[0] << "] = tensor_" << fNW << "[k * "
+      //     << fShapeW[1] * fShapeW[2] * fShapeW[3] << " + d * " << fShapeW[2] * fShapeW[3] << " + h * "
+      //     << fShapeW[3] << " + w ];\n";
+      out << "\t" << "\t" << "\t" << "\t" << "\t" << OpName <<  "_f[k * "
+          << kstrideDil << " + d * " << dstrideDil << " + h * " << hstrideDil << " + w * " << wstrideDil 
+          << "  ] = tensor_" << fNW << "[k * " << kstride << " + d * " << dstride << " + h * "
+          << hstride << " + w ];\n";
+
       out << "\t" << "\t" << "\t" << "\t" << "}\n";
       out << "\t" << "\t" << "\t" << "}\n";
       out << "\t" << "\t" << "}\n";
@@ -302,10 +317,10 @@ public:
       if (fAttrGroup == 1) {
          // case of standard convolution
 
-         out << "\t" << "char " << OpName << "_transA = 'N';\n";
+         out << "\t" << "char " << OpName << "_transA = 'T';\n";
          out << "\t" << "char " << OpName << "_transB = 'N';\n";
-         out << "\t" << "int " << OpName << "_m = " << fShapeW[0] << ";\n"; // output channels
-         out << "\t" << "int " << OpName << "_n = " << bsize * fShapeY[2] * fShapeY[3] << ";\n"; // output b*h*w
+         out << "\t" << "int " << OpName << "_m = " << bsize * fShapeY[2] * fShapeY[3] << ";\n"; // output b*h*w
+         out << "\t" << "int " << OpName << "_n = " << fShapeW[0] << ";\n"; // output channels
          out << "\t" << "int " << OpName << "_k = " << fShapeW[1] * fAttrKernelShape[0] * fAttrKernelShape[1] << ";\n";
          out << "\t" << "float " << OpName << "_alpha = 1.0;\n";
          out << "\t" << "float " << OpName << "_beta = 0.0;\n";
@@ -322,18 +337,22 @@ public:
          out << "\t" << "for (size_t n = 0; n < " << bsize << "; n++) {\n";
 
          // IM2COL: Unroll the input tensor
+         // order input data as  (e.g. kernel 2x2)  and (xa,ya) is channel 1 and (xb,yb) is channel 2
+         //   (xa1,..,xak,ya1,..yak)(xb1,...,xbk,yb1,..,ybk)
+         //   (xa2,...xak+1,ya1,...yak)(......)
          out << "\t" << "\t" << "size_t " << OpName << "_index = 0;\n";
-         out << "\t" << "\t" << "for (size_t c = 0; c < " << fShapeW[1] << "; c++) {\n";
-         out << "\t" << "\t" << "\t" << "for (size_t h = 0; h < " << fShapeX[2] + fAttrPads[0] + fAttrPads[2] - fAttrKernelShape[0] + 1
+         out << "\t" << "\t"  << "for (size_t h = 0; h < " << fShapeX[2] + fAttrPads[0] + fAttrPads[2] - fAttrKernelShape[0] + 1
              << "; h += " << fAttrStrides[0] << ") {\n";
-         out << "\t" << "\t" << "\t" << "\t" << "for (size_t w = 0; w < " << fShapeX[3] + fAttrPads[1] + fAttrPads[3] - fAttrKernelShape[1] + 1
+         out << "\t" << "\t"  << "\t" << "for (size_t w = 0; w < " << fShapeX[3] + fAttrPads[1] + fAttrPads[3] - fAttrKernelShape[1] + 1
              << ";w += " << fAttrStrides[1] << ") {\n";
+         // loop on input channel must be done inside loop on input pixels
+         out << "\t" << "\t" <<  "\t" << "\t" << "for (size_t c = 0; c < " << fShapeW[1] << "; c++) {\n";
          out << "\t" << "\t" << "\t" << "\t" << "\t" << "for (size_t x = 0; x < " << fAttrKernelShape[0] << "; x++) {\n";
          out << "\t" << "\t" << "\t" << "\t" << "\t" << "size_t offset = "
              << " c * " << (fShapeX[2] + fAttrPads[0] + fAttrPads[2]) * (fShapeX[3] + fAttrPads[1] + fAttrPads[3])
              << " + (h + x) * " << (fShapeX[3] + fAttrPads[1] + fAttrPads[3]) << " + w;\n";
-         out << "assert( offset + 5 <= " << fShapeX[1] * (fShapeX[2] + fAttrPads[0] + fAttrPads[2]) * (fShapeX[3] + fAttrPads[1] + fAttrPads[3]) << " );\n";
-         out << "assert( " << OpName << "_index + 5  <= " << fShapeW[1] * fAttrKernelShape[0] * fAttrKernelShape[1] * fShapeY[2] * fShapeY[3] << " );\n";
+         //out << "assert( offset + 5 <= " << fShapeX[1] * (fShapeX[2] + fAttrPads[0] + fAttrPads[2]) * (fShapeX[3] + fAttrPads[1] + fAttrPads[3]) << " );\n";
+         //out << "assert( " << OpName << "_index + 5  <= " << fShapeW[1] * fAttrKernelShape[0] * fAttrKernelShape[1] * fShapeY[2] * fShapeY[3] << " );\n";
          out << "\t" << "\t" << "\t" << "\t" << "\t" << "std::copy(" << OpName << "_xpad + offset, " << OpName
              << "_xpad + offset + " << fAttrKernelShape[1] << ", " << OpName << "_xcol + " << OpName << "_index);\n";
          out << "\t" << "\t" << "\t" << "\t" << "\t" << OpName << "_index += " << fAttrKernelShape[1] << ";\n";
@@ -344,8 +363,8 @@ public:
          
 
          out << "\t" <<  "\t" << "BLAS::sgemm_(&" << OpName << "_transA, &" << OpName << "_transB, &" << OpName << "_m, &"
-             << OpName << "_n, &" << OpName << "_k, &" << OpName << "_alpha, " << OpName << "_f, &" << OpName << "_m,\n";
-         out << "\t" << "\t"  << "\t" << OpName << "_xcol, &" << OpName << "_k, &" << OpName << "_beta, tensor_" << fNY
+             << OpName << "_n, &" << OpName << "_k, &" << OpName << "_alpha, " << OpName << "_xcol, &" << OpName << "_k,\n";
+         out << "\t" << "\t"  << "\t" << OpName << "_f, &" << OpName << "_k, &" << OpName << "_beta, tensor_" << fNY
              << ", &" << OpName << "_m);\n";
 
          out << "\t" << "}\n"; // end of batch size loop 
