@@ -345,6 +345,7 @@ public:
       out << SP << "char " << OpName << "_transB = 'N';\n";
       out << SP << "int " << OpName << "_m = " << fShapeY[2] * fShapeY[3] << ";\n"; // output h*w
       assert(fShapeY[1] == fShapeW[0]);
+      assert(fShapeW[1] == fShapeX[1] / fAttrGroup);
       out << SP << "int " << OpName << "_n = " << fShapeW[0] << ";\n"; // output channels
       out << SP << "int " << OpName << "_k = " << fShapeW[1] * fAttrKernelShape[0] * fAttrKernelShape[1] << ";\n";
       out << SP << "float " << OpName << "_alpha = 1.0;\n";
@@ -360,6 +361,24 @@ public:
       std::string outOffset = "offset_tensor_" + fNY;
       out << SP << "size_t " << outOffset << " = 0;\n";
       out << SP << "for (size_t n = 0; n < " << bsize << "; n++) {\n";
+
+      // Padding the input with zeros
+
+      out << SP << SP << "for (size_t c = 0; c < " << fShapeX[1] << "; c++) {\n";
+      out << SP << SP << SP << "for (size_t h = 0; h < " << fShapeX[2] << "; h++) {\n";
+      out << SP << SP << SP << SP << "size_t xpad_offset = c * "
+         << (fShapeX[2] + fAttrPads[0] + fAttrPads[2]) * (fShapeX[3] + fAttrPads[1] + fAttrPads[3]) << " + (h + "
+         << fAttrPads[0] << ") * " << (fShapeX[3] + fAttrPads[1] + fAttrPads[3]) << " + " << fAttrPads[1] << ";\n";
+      if (bsize == 1)
+         out << SP << SP << SP << SP << "size_t x_offset = c * " << fShapeX[2] * fShapeX[3] << " + h * " << fShapeX[3] << ";\n";
+      else
+         out << SP << SP << SP << SP << "size_t x_offset = n * " << fShapeX[1] * fShapeX[2] * fShapeX[3] << " + c * "
+            << fShapeX[2] * fShapeX[3] << " + h * " << fShapeX[3] << ";\n";
+
+      out << SP << SP << SP << SP << "std::copy(tensor_" << fNX << " + x_offset, tensor_" << fNX << " + x_offset + "
+         << fShapeX[3] << ", " << OpName << "_xpad + xpad_offset);\n";
+      out << SP << SP << SP << "}\n";
+      out << SP << SP << "}\n";
 
          // IM2COL: Unroll the input tensor
          // order input data as  (e.g. kernel 2x2)  and (xa,ya) is channel 1 and (xb,yb) is channel 2
@@ -413,8 +432,9 @@ public:
          ///out << SP << SP << SP << "for (size_t c = g * " << fShapeW[1] << "; c < (g + 1) * " << fShapeW[1] << "; c++) {\n";
          out << SP << SP << SP << SP << SP << SP << "for (size_t x = 0; x < " << fAttrKernelShape[0] << "; x++) {\n";
 
-         out << SP << SP << SP << SP << SP << SP << SP << "size_t offset = "
-             << " c * " << (fShapeX[2] + fAttrPads[0] + fAttrPads[2]) * (fShapeX[3] + fAttrPads[1] + fAttrPads[3])
+         out << SP << SP << SP << SP << SP << SP << SP << "size_t offset = " << " g * " <<
+                fShapeW[1] * (fShapeX[2] + fAttrPads[0] + fAttrPads[2]) * (fShapeX[3] + fAttrPads[1] + fAttrPads[3])
+             << "+ c * " << (fShapeX[2] + fAttrPads[0] + fAttrPads[2]) * (fShapeX[3] + fAttrPads[1] + fAttrPads[3])
              << "+ (h + x) * " << (fShapeX[3] + fAttrPads[1] + fAttrPads[3]) << " + w;\n";
          out << SP << SP << SP << SP << SP << SP << SP << "std::copy(" << OpName << "_xpad + offset, " << OpName
              << "_xpad + offset + " << fAttrKernelShape[1] << ", " << OpName << "_xcol + index);\n";
@@ -427,7 +447,7 @@ public:
          // n must be divided by the number of groups 
          out << SP << SP << SP << OpName << "_n = " << fShapeW[0] / fAttrGroup << ";\n";
          // offset g must be  g * k * n
-         out << SP << SP << SP << "size_t offset_f = g * " << fShapeW[1] * fAttrKernelShape[0] * fAttrKernelShape[1] << ";\n";
+         out << SP << SP << SP << "size_t offset_f = g * " << fShapeW[0] * fShapeW[1] * fAttrKernelShape[0] * fAttrKernelShape[1] / fAttrGroup << ";\n";
          out << SP << SP << SP << "BLAS::sgemm_(&" << OpName << "_transA, &" << OpName << "_transB, &" << OpName
              << "_m, &" << OpName << "_n, &" << OpName << "_k, &" << OpName << "_alpha, " << OpName << "_xcol, &"
              << OpName << "_k, " << OpName << "_f + offset_f, &" << OpName << "_k, &" << OpName << "_beta, tensor_" << fNY << " + "
@@ -436,7 +456,7 @@ public:
          // out << SP << SP << SP << "tensor_" << fNY << "[i + g * " << fgHeight * xgWidth << "] = "
          //     << OpName << "_yg[i];\n";
 
-         out << SP << SP << SP << outOffset << " += " << fShapeW[0]*fShapeY[2]*fShapeY[3]<< ";\n";
+         out << SP << SP << SP << outOffset << " += " << fShapeW[0]*fShapeY[2]*fShapeY[3] / fAttrGroup << ";\n";
          out << SP << SP << "}\n";    // end of group loop
         
          } // endif group convolution
@@ -457,8 +477,7 @@ public:
 
       
       return out.str();
-   }
-
+      }
 };
 
 } // namespace SOFIE
