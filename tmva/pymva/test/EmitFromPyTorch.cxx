@@ -17,9 +17,9 @@ int main(){
    Py_Initialize();
 
    // Generating PyTorch models for testing
-   FILE* fPyTorchModule;
-   fPyTorchModule = fopen("generatePyTorchModel.py", "r");
-   PyRun_SimpleFile(fPyTorchModule, "generatePyTorchModel.py");
+   FILE* fPyTorchModel;
+   fPyTorchModel = fopen("generatePyTorchModel.py", "r");
+   PyRun_SimpleFile(fPyTorchModel, "generatePyTorchModel.py");
 
    //Emitting header file for PyTorch nn.Module
    std::vector<size_t> inputTensorShapeModule{2,6};
@@ -36,7 +36,7 @@ int main(){
    modelSequential.OutputGenerated("PyTorchSequentialModel.hxx");
 
    //Emitting header file for PyTorch Convolution Model
-   std::vector<size_t> inputTensorShapeConvolution{20, 16, 50,100};
+   std::vector<size_t> inputTensorShapeConvolution{20, 16, 50, 100};
    std::vector<std::vector<size_t>> inputShapesConvolution{inputTensorShapeConvolution};
    RModel modelConvolution = TMVA::Experimental::SOFIE::PyTorch::Parse("PyTorchModelConvolution.pt",inputShapesConvolution);
    modelConvolution.Generate();

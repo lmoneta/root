@@ -1,3 +1,5 @@
+#include <numeric>
+
 #include "PyTorchModuleModel.hxx"
 #include "PyTorchSequentialModel.hxx"
 #include "PyTorchConvolutionModel.hxx"
@@ -104,7 +106,7 @@ TEST(RModelParser_PyTorch, CONVOLUTION_MODEL)
     constexpr float TOLERANCE = DEFAULT_TOLERANCE;
     std::vector<float> inputConv(750);
     std::iota(inputConv.begin(), inputConv.end(), 1.0f);
-    std::vector<float> outputConv = TMVA_SOFIE_PyTorchModelConvolution::infer(inputConv);
+    std::vector<float> outputConv = TMVA_SOFIE_PyTorchModelConvolution::infer(inputConv.data());
 
     Py_Initialize();
     PyObject* main = PyImport_AddModule("__main__");
