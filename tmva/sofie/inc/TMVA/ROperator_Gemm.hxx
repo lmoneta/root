@@ -128,9 +128,10 @@ namespace SOFIE{
                broadcast_needed = true;
             }
 
-            std::cout << "doing broadcast " << broadcast_needed << " use session " << model.UseSession() <<
-               " shape C " << ConvertShapeToString(fShapeC) << " shape Y " << ConvertShapeToString(fShapeY)
-                           << std::endl;
+            // std::cout << "doing broadcast " << broadcast_needed << " use session " << model.UseSession() <<
+            //    " shape C " << ConvertShapeToString(fShapeC) << " shape Y " << ConvertShapeToString(fShapeY)
+            //                << std::endl;
+
             if (broadcast_needed) {
                if (!model.UseSession()) {
                   auto original_data = model.GetInitializedTensorData(fNC);
@@ -202,7 +203,7 @@ namespace SOFIE{
          out << SP << "int " << OpName << "_lda = " << (fAttrTransA ? m : k) << ";\n";
          out << SP << "int " << OpName << "_ldb = " << (fAttrTransB ? k : n) << ";\n";
          if (fNC != ""){
-            int length = ConvertShapeToLength(fShapeY);
+            size_t length = ConvertShapeToLength(fShapeY);
             if (fNC2 == fNC)
                // case broadcasting was not needed or done otside of session
                assert(length == ConvertShapeToLength(fShapeC));
