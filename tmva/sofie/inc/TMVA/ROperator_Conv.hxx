@@ -213,7 +213,7 @@ public:
    std::string GenerateInitCode() {
       std::stringstream out;
       // generate initialization code for broadcasting of bias tensor  
-      if (fShapeB.size() != fShapeY.size() ) {
+      if (fShapeB.size() != fShapeY.size() && !fNB2.empty() ) {
          // include a separate scope to avoid defining unique operator temp variables 
          out << "   {\n"; 
          out << "      std::vector<size_t> oldShape = " << ConvertShapeToString(fShapeB) << ";\n";
