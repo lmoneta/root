@@ -14,16 +14,18 @@ result = []
 
 class Net(nn.Module):
     
-    def __init__(self, nc = 1, ng = 1, nl = 4, use_bn = False):
+    def __init__(self, nc = 1, ng = 1, nl = 4, use_bn = False, use_maxpool = False):
         super(Net, self).__init__()
 
         self.nc = nc
         self.ng = ng
         self.nl = nl
         self.use_bn = use_bn
+        self.use_maxpool = use_maxpool
         
         self.conv0 = nn.Conv2d(in_channels=self.nc, out_channels=4, kernel_size=2, groups=1, stride=1, padding=1)
         if (self.use_bn): self.bn1 = nn.BatchNorm2d(4)
+        if (self.use_maxpool): self.pool1 = nn.MaxPool2d(2)
         # output is 4x4 with optionally using group convolution
         self.conv1  = nn.Conv2d(in_channels=4,   out_channels=8, groups = self.ng,   kernel_size=3, stride=1, padding=1)
         #output is same 4x4
@@ -37,6 +39,8 @@ class Net(nn.Module):
       x = F.relu(x)
       if (self.use_bn):
          x = self.bn1(x)
+      if (self.use_maxpool):
+         x = self.pool1(x)
       if (self.nl == 1) : return x
       x = self.conv1(x)
       x = F.relu(x)
@@ -56,6 +60,8 @@ def main():
    
    parser.add_argument('--bn', action='store_true', default=False,
                         help='For using batch norm layer')
+   parser.add_argument('--maxpool', action='store_true', default=False,
+                        help='For using max pool layer')
    parser.add_argument('--v', action='store_true', default=False,
                         help='For verbose mode')
 
@@ -72,9 +78,11 @@ def main():
    ngroups = args.params[3]
    nlayers = args.params[4]
    use_bn = args.bn
+   use_maxpool = args.maxpool
 
    print ("using batch-size =",bsize,"nchannels =",nc,"dim =",d,"ngroups =",ngroups,"nlayers =",nlayers)
    if (use_bn): print("using batch normalization layer")
+   if (use_maxpool): print("using maxpool  layer")
 
     #sample = torch.zeros([2,1,5,5])
    input  = torch.zeros([])
@@ -86,6 +94,8 @@ def main():
          if (nc > 2) :
             xd = torch.zeros([1,nc-2,d,d])
             xc = torch.cat((xa,xb,xd),1)
+      else:
+         xc = xa
         
       #concatenate tensors 
       if (ib == 0) : 
@@ -98,6 +108,7 @@ def main():
    
    name = "Conv2dModel"
    if (use_bn): name += "_BN"
+   if (use_maxpool): name += "_MAXP"
    name += "_B" + str(bsize)
 
    saveOnnx=True
@@ -105,8 +116,9 @@ def main():
    savePtModel = False
 
     
-   model = Net(nc,ngroups,nlayers)
-    
+   model = Net(nc,ngroups,nlayers, use_bn, use_maxpool)
+   print(model)
+
    model(xinput)
  
    model.forward(xinput)
