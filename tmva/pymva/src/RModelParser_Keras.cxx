@@ -579,12 +579,18 @@ RModel Parse(std::string filename){
       switch(fInputDType){
 
          case ETensorType::FLOAT : {
-         if (PyTuple_GetItem(fPInputShapes,0) == Py_None){
-            throw std::runtime_error("None error: Models not initialized with batch-size are not yet supported in TMVA SOFIE");
-         }
+            int bsize = 0;
+            if (PyTuple_GetItem(fPInputShapes, 0) == Py_None) {
+               // throw std::runtime_error("None error: Models not initialized with batch-size are not yet supported in
+               // TMVA SOFIE");
+               std::cout << "no batch size specified, assume = 1" << std::endl;
+               bsize = 1;
+            }
 
          // Getting the shape vector from the Tuple object
          std::vector<size_t>fInputShape=INTERNAL::GetDataFromTuple(fPInputShapes);
+         // in case first dimension is -1 assume batch size = 1
+         if (static_cast<int>(fInputShape[0]) == -1 || bsize == 1) fInputShape[0] = 1;
          rmodel.AddInputTensorInfo(fInputName, ETensorType::FLOAT, fInputShape);
          break;
          }
