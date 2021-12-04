@@ -20,7 +20,7 @@ TEST(RModelParser_PyTorch, SEQUENTIAL_MODEL)
                              0.5058, -1.2560,
                             -0.7750, -1.6701,
                              0.8171, -0.2858};
-    TMVA_SOFIE_PyTorchModelSequential::Session s("PyTorchSequentialModel.dat");                    
+    TMVA_SOFIE_PyTorchModelSequential::Session s("PyTorchSequentialModel.dat");
     std::vector<float> outputSequential = s.infer(inputSequential);
 
     Py_Initialize();
@@ -106,7 +106,9 @@ TEST(RModelParser_PyTorch, CONVOLUTION_MODEL)
     constexpr float TOLERANCE = DEFAULT_TOLERANCE;
     std::vector<float> inputConv(750);
     std::iota(inputConv.begin(), inputConv.end(), 1.0f);
-    std::vector<float> outputConv = TMVA_SOFIE_PyTorchModelConvolution::infer(inputConv.data());
+
+    TMVA_SOFIE_PyTorchModelModule::Session s("PyTorchConvolutionModel.dat");
+    std::vector<float> outputConv = s.infer(inputConv.data());
 
     Py_Initialize();
     PyObject* main = PyImport_AddModule("__main__");
