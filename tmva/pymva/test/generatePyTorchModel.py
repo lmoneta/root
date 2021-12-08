@@ -79,7 +79,7 @@ def generateModuleModel():
 def generateConvolutionModel():
     # Defining the model
     model = nn.Sequential(
-                nn.Conv2d(16, 33, 3, stride=2),
+                nn.Conv2d(6, 5, 3, stride=2),
                 nn.ReLU(),
                 )
 
@@ -88,8 +88,8 @@ def generateConvolutionModel():
     optimizer = torch.optim.SGD(model.parameters(),lr=0.01)
 
     #Constructing random test dataset
-    x=torch.randn(20, 16, 50,100)
-    y=torch.randn(20, 33, 24, 49)
+    x=torch.randn(5, 6, 5, 5)
+    y=torch.randn(5, 5, 2, 2)
 
     #Training the model
     for i in range(100):

@@ -36,7 +36,7 @@ int main(){
    modelSequential.OutputGenerated("PyTorchSequentialModel.hxx");
 
    //Emitting header file for PyTorch Convolution Model
-   std::vector<size_t> inputTensorShapeConvolution{20, 16, 50, 100};
+   std::vector<size_t> inputTensorShapeConvolution{5, 6, 5, 5};
    std::vector<std::vector<size_t>> inputShapesConvolution{inputTensorShapeConvolution};
    RModel modelConvolution = TMVA::Experimental::SOFIE::PyTorch::Parse("PyTorchModelConvolution.pt",inputShapesConvolution);
    modelConvolution.Generate();

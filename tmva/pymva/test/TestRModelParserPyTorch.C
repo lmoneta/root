@@ -103,11 +103,11 @@ TEST(RModelParser_PyTorch, MODULE_MODEL)
 
 TEST(RModelParser_PyTorch, CONVOLUTION_MODEL)
 {
-    constexpr float TOLERANCE = DEFAULT_TOLERANCE;
-    std::vector<float> inputConv(750);
+    constexpr float TOLERANCE = 1.E-4; //DEFAULT_TOLERANCE;
+    std::vector<float> inputConv(20*16*50*100);
     std::iota(inputConv.begin(), inputConv.end(), 1.0f);
 
-    TMVA_SOFIE_PyTorchModelModule::Session s("PyTorchConvolutionModel.dat");
+    TMVA_SOFIE_PyTorchModelConvolution::Session s("PyTorchConvolutionModel.dat");
     std::vector<float> outputConv = s.infer(inputConv.data());
 
     Py_Initialize();
@@ -128,7 +128,7 @@ TEST(RModelParser_PyTorch, CONVOLUTION_MODEL)
     std::size_t pOutputConvSize=(std::size_t)PyLong_AsLong(PyDict_GetItemString(fLocalNS,"outputSize"));
 
     //Testing the actual and expected output tensor sizes
-    EXPECT_EQ(outputConv.size(), pOutputConvSize);
+    EXPECT_EQ(outputConv.size(), 5*5*2*2);
 
     PyArrayObject* pConvValues=(PyArrayObject*)PyDict_GetItemString(fLocalNS,"output");
     float* pOutputConv=(float*)PyArray_DATA(pConvValues);
