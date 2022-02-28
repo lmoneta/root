@@ -30,7 +30,7 @@ namespace TestStatistics {
 class RooAbsL;
 struct WrapperCalculationCleanFlags;
 
-enum class LikelihoodGradientMode { multiprocess };
+enum class LikelihoodGradientMode { multiprocess, clad };
 
 class LikelihoodGradientWrapper {
 public:
