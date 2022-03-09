@@ -182,7 +182,9 @@ namespace SOFIE{
       fGC += "#include \"TMVA/SOFIE_common.hxx\"\n";
       if (useWeightFile)
          fGC += "#include <fstream>\n";
-      
+
+      fGC += "#include <vdt/exp.h>\n";
+
       fGC += "\nnamespace TMVA_SOFIE_" + fName + "{\n";
       if (!fNeededBlasRoutines.empty()) {
          fGC += ("namespace BLAS{\n");
