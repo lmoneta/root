@@ -37,19 +37,19 @@ private:
 	std::vector<size_t> fShapeMean;
 	std::vector<size_t> fShapeVar;
 	std::vector<size_t> fShapeY;
-	
+
 	std::string fType;
 
 public:
 	ROperator_BatchNormalization() = delete;
-	
+
 	/* Constructor */
 	ROperator_BatchNormalization( float epsilon, float momentum, std::size_t training_mode,
-	std::string nameX, std::string nameScale, std::string nameB, 
+	std::string nameX, std::string nameScale, std::string nameB,
 	std::string nameMean, std::string nameVar, std::string nameY):
 	fepsilon(epsilon), fmomentum(momentum), ftraining_mode(training_mode),
-	fNX(UTILITY::Clean_name(nameX)), fNScale(UTILITY::Clean_name(nameScale)), 
-	fNB(UTILITY::Clean_name(nameB)), fNMean(UTILITY::Clean_name(nameMean)), 
+	fNX(UTILITY::Clean_name(nameX)), fNScale(UTILITY::Clean_name(nameScale)),
+	fNB(UTILITY::Clean_name(nameB)), fNMean(UTILITY::Clean_name(nameMean)),
 	fNVar(UTILITY::Clean_name(nameVar)), fNY(UTILITY::Clean_name(nameY))
 	{
 		if(std::is_same<T, float>::value){
@@ -60,7 +60,7 @@ public:
 				std::runtime_error("TMVA SOFIE Encountered unsupported type parsing a BatchNormalization operator");
 		}
 	}
-	
+
 
 	std::vector<ETensorType> TypeInference(std::vector<ETensorType> input) {
 		ETensorType out = input[0];
@@ -79,7 +79,7 @@ public:
 			}
 		}
 
-		auto ret = input; 
+		auto ret = input;
 		return ret;
 	}
 
@@ -106,7 +106,7 @@ public:
 		}
 
 		fShapeX = model.GetTensorShape(fNX);
-      
+
       if (fShapeX.size() <  2 || fShapeX.size() > 4) {
          throw
 				std::runtime_error("TMVA SOFIE BatchNormalization Op input tensor " + fNX + " fnx has wrong shape : " + ConvertShapeToString(fShapeX));
@@ -159,7 +159,7 @@ public:
 				}
 				//// new_var =1. / sqrt(input_var + fepsilon)
 				for(size_t i=0; i<n; i++){
-					new_var[i] = 1./sqrt(new_var[i] + fepsilon);	
+					new_var[i] = 1./sqrt(new_var[i] + fepsilon);
 				}
 				std::vector<size_t> new_bias_shape = {batchSize,channels,height,width};
 				std::shared_ptr<void> new_bias_ptr(new_bias, std::default_delete<float[]>());
@@ -186,14 +186,22 @@ public:
 		}
 
 		std::stringstream out;
-		//// Batch Norm op
+
+	 //// Batch Norm op
       size_t batchSize = fShapeX[0];
       size_t channels = fShapeX[1];
       size_t height = (fShapeX.size() > 2) ? fShapeX[2] : 1;
       size_t width = (fShapeX.size() > 3) ? fShapeX[3] : 1;
       size_t n = batchSize * channels * height * width;
+//#define PASS_THROUGH
+#ifdef PASS_THROUGH
+        out << "///---- Batch Norm  passing through to test\n";
+        out << SP << "constexpr int " << OpName << "_N =" << batchSize * channels * height * width << ";\n";
+		out << SP << "std::copy(tensor_" << fNX << ", tensor_" << fNX << " + " << OpName << "_N, tensor_" << fNY << "//);\n";
+#else
 
 		//// copy X into Y
+	  out << "///---- Batch Norm\n";
       out << SP << "constexpr int " << OpName << "_N =" << batchSize * channels * height * width << ";\n";
       out << SP << "constexpr int "<<OpName<< "_incx = 1;\n";
 		out << SP << "constexpr int "<<OpName<< "_incy = 1;\n";
@@ -201,19 +209,19 @@ public:
 
       //// blas saxpy (Y = -Bmean + Y)
 		out << SP << "float "<<OpName<< "_alpha = -1;\n";
-		out << SP << "BLAS::saxpy_(&" << OpName << "_N, &" << OpName << "_alpha, " << "tensor_" << fNMean << ", &" << OpName << "_incx," 
+		out << SP << "BLAS::saxpy_(&" << OpName << "_N, &" << OpName << "_alpha, " << "tensor_" << fNMean << ", &" << OpName << "_incx,"
                 << "tensor_" << fNY <<", &" << OpName << "_incy);\n\n ";
 
          //// Y *= scale*var
       out << SP << "for (size_t i = 0; i < " << n << "; i++) {\n";
       out << SP << SP << "tensor_" << fNY << "[i] *= tensor_" << fNScale << "[i] * tensor_" << fNVar << "[i]; \n";
 		out << SP << "}\n";
-		
+
 		//// blas saxpy (Y = Bbias + Y)
 		out << SP <<OpName<< "_alpha = 1;\n";
       out << SP << "BLAS::saxpy_(&" << OpName << "_N, &" << OpName << "_alpha, " << "tensor_" << fNB << ", &" << OpName << "_incx, "
                 << "tensor_" << fNY << ", &" << OpName << "_incy);\n\n";
-
+#endif
 		return out.str();
 	}
 
