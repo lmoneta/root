@@ -212,11 +212,24 @@ namespace SOFIE{
             out << SP << "std::copy(" << "tensor_" << fNC2 << ", " << "tensor_" << fNC2 << " + " << length << ", " << "tensor_" << fNY << ");\n";
          }
          if (fType == "float"){
+            if (m > 1) {
+               // use Gemm matrix -matrix multiplication
             out << SP << "BLAS::sgemm_(&" << OpName << "_transB, &" << OpName << "_transA, &" << OpName
              << "_n, &" << OpName << "_m, &" << OpName << "_k, &" << OpName << "_alpha, " << "tensor_" << fNB
              << ", &" << OpName << "_ldb, " << "tensor_" << fNA << ", &" << OpName << "_lda, &" << OpName << "_beta, " << "tensor_" << fNY << ", &"
              << OpName << "_n);\n";
+            }
+            else {
+               out << SP << "int " << OpName << "_incx=1;\n";
+               out << SP << "int " << OpName << "_incy=1;\n";
+               // use Gemmv matrix -vactor multiplication for BS=1
+               out << SP << "BLAS::sgemv_(&" << OpName << "_transA, &" << OpName
+             << "_n, &" << OpName << "_k, &" << OpName << "_alpha, " << "tensor_" << fNB
+             << ", &" << OpName << "_ldb, " << "tensor_" << fNA << ", &" << OpName << "_incx, &" << OpName << "_beta, " << "tensor_" << fNY
+             << ", &" << OpName << "_incy);\n";
+            }
           }
+
 
           return out.str();
 
