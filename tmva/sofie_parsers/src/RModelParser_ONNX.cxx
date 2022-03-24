@@ -240,22 +240,6 @@ std::unique_ptr<ROperator> make_ROperator_GemmFromMatMulandAdd(const onnx::NodeP
    int_t attr_transA =0;
    int_t attr_transB =0;
 
-   // std::string attribute_name = nodeproto1.attribute().name();
-   //    if (attribute_name == "alpha"){
-   //       attr_alpha = nodeproto1.attribute();
-   //    }else if(attribute_name == "beta"){
-   //       attr_beta = nodeproto1.attribute();
-   //    }else if(attribute_name == "transA"){
-   //       attr_transA = nodeproto1.attribute();
-   //       if (attr_transA != 0 && attr_transA != 1) throw std::runtime_error("TMVA::SOFIE Error - Model Loading - attribute transA in Operator GemmFromMatMulandAdd not 0/1");
-   //    }else if(attribute_name == "transB"){
-   //       attr_transB = nodeproto1.attribute();
-   //       if (attr_transB != 0 && attr_transB != 1) throw std::runtime_error("TMVA::SOFIE Error - Model Loading - attribute transB in Operator GemmFromMatMulandAdd not 0/1");
-   //    }else{
-   //       std::cout << "TMVA::SOFIE Warning - Model Loading - Attribute " << attribute_name << " in OperatorNode " << nodeproto1.name() << " is not defined in ONNX IR and not applied!\n";
-   //    }
-   
-
    switch(input_type){
    case ETensorType::FLOAT:
       if (nodeproto1.input_size() == 2){
