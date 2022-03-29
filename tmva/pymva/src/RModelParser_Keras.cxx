@@ -42,8 +42,10 @@ void AddKerasLayer(RModel &rmodel, PyObject *fLayer);
 // Declaring Internal Functions for Keras layers which don't have activation as an additional attribute
 std::unique_ptr<ROperator> MakeKerasActivation(PyObject *fLayer);   // For instantiating ROperator for Keras Activation Layer
 std::unique_ptr<ROperator> MakeKerasReLU(PyObject *fLayer);         // For instantiating ROperator for Keras ReLU layer
+std::unique_ptr<ROperator> MakeKerasLeakyReLU(PyObject *fLayer);    // For instantiating ROperator for Keras Leaky ReLU layer
 std::unique_ptr<ROperator> MakeKerasSelu(PyObject *fLayer);         // For instantiating ROperator for Keras Selu layer
 std::unique_ptr<ROperator> MakeKerasSigmoid(PyObject *fLayer);      // For instantiating ROperator for Keras Sigmoid layer
+std::unique_ptr<ROperator> MakeKerasSoftmax(PyObject *fLayer);      // For instantiating ROperator for Keras Softmax layer
 std::unique_ptr<ROperator> MakeKerasPermute(PyObject *fLayer);      // For instantiating ROperator for Keras Permute Layer
 
 // Declaring Internal function for Keras layers which have additional activation attribute
@@ -59,9 +61,11 @@ const KerasMethodMap mapKerasLayer = {
 
    // For activation layers
    {"ReLU", &MakeKerasReLU},
+   {"LeakyReLU", &MakeKerasLeakyReLU},
 
    // For layers with activation attributes
    {"relu", &MakeKerasReLU},
+   {"leakyRelu", &MakeKerasLeakyReLU},
    {"selu", &MakeKerasSelu},
    {"sigmoid", &MakeKerasSigmoid}
 };
@@ -75,8 +79,9 @@ const KerasMethodMapWithActivation mapKerasLayerWithActivation = {
 /// \brief Adds equivalent ROperator with respect to Keras model layer
 ///        into the referenced RModel object
 ///
-/// \param[inout] rmodel RModel object, by reference, returned ith the added ROperator
+/// \param[in] rmodel RModel object
 /// \param[in] fLayer Python Keras layer as a Dictionary object
+/// \param[out] RModel object with the added ROperator
 ///
 /// Function adds equivalent ROperator into the referenced RModel object.
 /// Keras models can have layers like Dense and Conv which have activation
@@ -260,6 +265,35 @@ std::unique_ptr<ROperator> MakeKerasReLU(PyObject* fLayer)
 
 
 //////////////////////////////////////////////////////////////////////////////////
+/// \brief Prepares a ROperator object for Keras Leaky ReLU activation
+///
+/// \param[in] fLayer Python Keras layer as a Dictionary object
+/// \return Unique pointer to ROperator object
+///
+/// For instantiating a ROperator_Leaky_Relu object, the names of
+/// input & output tensors and the deta-type of the layer are extracted.
+std::unique_ptr<ROperator> MakeKerasLeakyReLU(PyObject* fLayer)
+{
+      PyObject* fInputs=PyDict_GetItemString(fLayer,"layerInput");
+      PyObject* fOutputs=PyDict_GetItemString(fLayer,"layerOutput");
+
+      std::string fLayerDType = PyStringAsString(PyDict_GetItemString(fLayer,"layerDType"));
+      std::string fLayerInputName  = PyStringAsString(PyList_GetItem(fInputs,0));
+      std::string fLayerOutputName = PyStringAsString(PyList_GetItem(fOutputs,0));
+
+      std::unique_ptr<ROperator> op;
+      switch(ConvertStringToType(fLayerDType)){
+         case ETensorType::FLOAT:
+         op.reset(new ROperator_Leaky_Relu<float>(fLayerInputName, fLayerOutputName));
+         break;
+         default:
+         throw std::runtime_error("TMVA::SOFIE - Unsupported - Operator Leaky Relu does not yet support input type " + fLayerDType);
+         }
+   return op;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////
 /// \brief Prepares a ROperator object for Keras Selu activation
 ///
 /// \param[in] fLayer Python Keras layer as a Dictionary object
@@ -310,6 +344,34 @@ std::unique_ptr<ROperator> MakeKerasSigmoid(PyObject* fLayer){
          break;
          default:
          throw std::runtime_error("TMVA::SOFIE - Unsupported - Operator Sigmoid does not yet support input type " + fLayerDType);
+         }
+   return op;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////
+/// \brief Prepares a ROperator object for Keras Softmax activation
+///
+/// \param[in] fLayer Python Keras layer as a Dictionary object
+/// \return Unique pointer to ROperator object
+///
+/// For instantiating a ROperator_Softmax object, the names of
+/// input & output tensors and the deta-type of the layer are extracted.
+std::unique_ptr<ROperator> MakeKerasSoftmax(PyObject* fLayer){
+      PyObject* fInputs  = PyDict_GetItemString(fLayer,"layerInput");
+      PyObject* fOutputs = PyDict_GetItemString(fLayer,"layerOutput");
+
+      std::string fLayerDType = PyStringAsString(PyDict_GetItemString(fLayer,"layerDType"));
+      std::string fLayerInputName  = PyStringAsString(PyList_GetItem(fInputs,0));
+      std::string fLayerOutputName = PyStringAsString(PyList_GetItem(fOutputs,0));
+
+      std::unique_ptr<ROperator> op;
+      switch(ConvertStringToType(fLayerDType)){
+         case ETensorType::FLOAT:
+         op.reset(new ROperator_Softmax<float>(fLayerInputName, fLayerOutputName));
+         break;
+         default:
+         throw std::runtime_error("TMVA::SOFIE - Unsupported - Operator Softmax does not yet support input type " + fLayerDType);
          }
    return op;
 }

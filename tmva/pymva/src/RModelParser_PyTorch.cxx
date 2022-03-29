@@ -44,12 +44,14 @@ namespace INTERNAL{
 // For searching and calling specific preparatory function for PyTorch ONNX Graph's node
 std::unique_ptr<ROperator> MakePyTorchNode(PyObject* fNode);
 
-std::unique_ptr<ROperator> MakePyTorchGemm(PyObject* fNode);      // For instantiating ROperator for PyTorch ONNX's Gemm operator
-std::unique_ptr<ROperator> MakePyTorchConv(PyObject* fNode); // For instantiating ROperator for PyTorch ONNX's Conv operator
-std::unique_ptr<ROperator> MakePyTorchRelu(PyObject* fNode);      // For instantiating ROperator for PyTorch ONNX's Relu operator
-std::unique_ptr<ROperator> MakePyTorchSelu(PyObject* fNode);      // For instantiating ROperator for PyTorch ONNX's Selu operator
-std::unique_ptr<ROperator> MakePyTorchSigmoid(PyObject* fNode);      // For instantiating ROperator for PyTorch ONNX's Sigmoid operator
-std::unique_ptr<ROperator> MakePyTorchTranspose(PyObject* fNode); // For instantiating ROperator for PyTorch ONNX's Transpose operator
+std::unique_ptr<ROperator> MakePyTorchGemm(PyObject* fNode);       // For instantiating ROperator for PyTorch ONNX's Gemm operator
+std::unique_ptr<ROperator> MakePyTorchConv(PyObject* fNode);       // For instantiating ROperator for PyTorch ONNX's Conv operator
+std::unique_ptr<ROperator> MakePyTorchRelu(PyObject* fNode);       // For instantiating ROperator for PyTorch ONNX's Relu operator
+std::unique_ptr<ROperator> MakePyTorchLeakyRelu(PyObject* fNode);  // For instantiating ROperator for PyTorch ONNX's Relu operator
+std::unique_ptr<ROperator> MakePyTorchSelu(PyObject* fNode);       // For instantiating ROperator for PyTorch ONNX's Selu operator
+std::unique_ptr<ROperator> MakePyTorchSigmoid(PyObject* fNode);    // For instantiating ROperator for PyTorch ONNX's Sigmoid operator
+std::unique_ptr<ROperator> MakePyTorchSoftmax(PyObject* fNode);    // For instantiating ROperator for PyTorch ONNX's Softmax operator
+std::unique_ptr<ROperator> MakePyTorchTranspose(PyObject* fNode);  // For instantiating ROperator for PyTorch ONNX's Transpose operator
 
 // For mapping PyTorch ONNX Graph's Node with the preparatory functions for ROperators
 using PyTorchMethodMap = std::unordered_map<std::string, std::unique_ptr<ROperator> (*)(PyObject* fNode)>;
@@ -59,8 +61,10 @@ const PyTorchMethodMap mapPyTorchNode =
     {"onnx::Gemm",      &MakePyTorchGemm},
     {"onnx::Conv",      &MakePyTorchConv},
     {"onnx::Relu",      &MakePyTorchRelu},
+    {"onnx::LeakyRelu",&MakePyTorchLeakyRelu},
     {"onnx::Selu",      &MakePyTorchSelu},
     {"onnx::Sigmoid",   &MakePyTorchSigmoid},
+    {"onnx::Softmax",   &MakePyTorchSoftmax},
     {"onnx::Transpose", &MakePyTorchTranspose}
 };
 
@@ -176,6 +180,33 @@ std::unique_ptr<ROperator> MakePyTorchRelu(PyObject* fNode){
 }
 
 //////////////////////////////////////////////////////////////////////////////////
+/// \brief Prepares a ROperator_Leaky_Relu object
+///
+/// \param[in] fNode Python PyTorch ONNX Graph node
+/// \return Unique pointer to ROperator object
+///
+/// For instantiating a ROperator_Leaky_Relu object, the names of
+/// input & output tensors and the data-type of the Graph node
+/// are extracted.
+std::unique_ptr<ROperator> MakePyTorchLeakyRelu(PyObject* fNode){
+        PyObject* fInputs       = PyDict_GetItemString(fNode,"nodeInputs");
+        PyObject* fOutputs      = PyDict_GetItemString(fNode,"nodeOutputs");
+        std::string fNodeDType  = PyStringAsString(PyList_GetItem(PyDict_GetItemString(fNode,"nodeDType"),0));
+        std::string fNameX      = PyStringAsString(PyList_GetItem(fInputs,0));
+        std::string fNameY      = PyStringAsString(PyList_GetItem(fOutputs,0));
+        std::unique_ptr<ROperator> op;
+        switch(ConvertStringToType(fNodeDType)){
+            case ETensorType::FLOAT: {
+                op.reset(new ROperator_Leaky_Relu<float>(fNameX,fNameY));
+                break;
+                }
+                default:
+                throw std::runtime_error("TMVA::SOFIE - Unsupported - Operator Leaky Relu does not yet support input type " + fNodeDType);
+        }
+        return op;
+}
+
+//////////////////////////////////////////////////////////////////////////////////
 /// \brief Prepares a ROperator_Selu object
 ///
 /// \param[in] fNode Python PyTorch ONNX Graph node
@@ -227,6 +258,31 @@ std::unique_ptr<ROperator> MakePyTorchSigmoid(PyObject* fNode){
         return op;
 }
 
+//////////////////////////////////////////////////////////////////////////////////
+/// \brief Prepares a ROperator_Softmax object
+///
+/// \param[in] fNode Python PyTorch ONNX Graph node
+/// \return Unique pointer to ROperator object
+///
+/// For instantiating a ROperator_Softmax object, the names of
+/// input & output tensors and the data-type of the Graph node
+/// are extracted.
+std::unique_ptr<ROperator> MakePyTorchSoftmax(PyObject* fNode){
+        PyObject* fInputs       = PyDict_GetItemString(fNode,"nodeInputs");
+        PyObject* fOutputs      = PyDict_GetItemString(fNode,"nodeOutputs");
+        std::string fNodeDType  = PyStringAsString(PyList_GetItem(PyDict_GetItemString(fNode,"nodeDType"),0));
+
+        std::unique_ptr<ROperator> op;
+        switch(ConvertStringToType(fNodeDType)){
+            case ETensorType::FLOAT: {
+                op.reset(new ROperator_Softmax<float>(PyStringAsString(PyList_GetItem(fInputs,0)), PyStringAsString(PyList_GetItem(fOutputs,0))));
+                break;
+                }
+                default:
+                throw std::runtime_error("TMVA::SOFIE - Unsupported - Operator Softmax does not yet support input type " + fNodeDType);
+        }
+        return op;
+}
 
 //////////////////////////////////////////////////////////////////////////////////
 /// \brief Prepares a ROperator_Transpose object
@@ -419,7 +475,7 @@ RModel Parse(std::string filename, std::vector<std::vector<size_t>> inputShapes,
 
     //Getting the ONNX graph from model using the dummy inputs and example outputs
     PyRunString("_set_onnx_shape_inference(True)",fGlobalNS,fLocalNS);
-    PyRunString("graph=_model_to_graph(model,dummyInputs,example_outputs=output)",fGlobalNS,fLocalNS);
+    PyRunString("graph=_model_to_graph(model,dummyInputs)",fGlobalNS,fLocalNS);
 
 
     //Extracting the model information in list modelData
@@ -539,7 +595,7 @@ RModel Parse(std::string filename, std::vector<std::vector<size_t>> inputShapes,
 }
 
 //////////////////////////////////////////////////////////////////////////////////
-/// \param[in] filepath file location of PyTorch .pt model
+/// \param[in] filename file location of PyTorch .pt model
 /// \param[in] inputShapes vector of input shape vectors
 /// \return    Parsed RModel object
 ///
