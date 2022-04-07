@@ -139,6 +139,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(RooFitCore
     RooMappedCategory.h
     RooMCIntegrator.h
     RooMCStudy.h
+    RooCladMinimizerFcn.h
     RooMinimizerFcn.h
     RooMinimizer.h
     RooMoment.h
@@ -368,6 +369,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(RooFitCore
     src/RooMCIntegrator.cxx
     src/RooMCStudy.cxx
     src/RooMinimizer.cxx
+    src/RooCladMinimizerFcn.cxx
     src/RooMinimizerFcn.cxx
     src/RooMoment.cxx
     src/RooMPSentinel.cxx
@@ -460,6 +462,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(RooFitCore
     src/TestStatistics/LikelihoodGradientWrapper.cxx
     src/TestStatistics/LikelihoodWrapper.cxx
     src/TestStatistics/LikelihoodSerial.cxx
+    src/TestStatistics/LikelihoodGradientClad.cxx
     src/TestStatistics/MinuitFcnGrad.cxx
     src/TestStatistics/RooAbsL.cxx
     src/TestStatistics/RooBinnedL.cxx

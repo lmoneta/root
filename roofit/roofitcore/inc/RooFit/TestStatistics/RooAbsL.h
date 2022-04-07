@@ -96,6 +96,8 @@ public:
    virtual ROOT::Math::KahanSum<double>
    evaluatePartition(Section events, std::size_t components_begin, std::size_t components_end) = 0;
 
+   virtual void evaluateGradient(double*) const {}
+
    // necessary from MinuitFcnGrad to reach likelihood properties:
    virtual RooArgSet *getParameters();
 

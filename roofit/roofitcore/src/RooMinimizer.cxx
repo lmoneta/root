@@ -51,6 +51,7 @@ automatic PDF optimization.
 #include "RooMsgService.h"
 #include "RooPlot.h"
 #include "RooMinimizerFcn.h"
+#include "RooCladMinimizerFcn.h"
 #include "RooGradMinimizerFcn.h"
 #include "RooFitResult.h"
 #include "TestStatistics/MinuitFcnGrad.h"
@@ -106,6 +107,10 @@ RooMinimizer::RooMinimizer(RooAbsReal &function, FcnMode fcnMode) : _fcnMode(fcn
    switch (_fcnMode) {
    case FcnMode::classic: {
       _fcn = new RooMinimizerFcn(&function, this, _verbose);
+      break;
+   }
+   case FcnMode::clad: {
+      _fcn = new RooCladMinimizerFcn(&function, this, _verbose);
       break;
    }
    case FcnMode::gradient: {
@@ -295,6 +300,10 @@ bool RooMinimizer::fitFcn() const {
    switch (_fcnMode) {
    case FcnMode::classic: {
       ret = _theFitter->FitFCN(*dynamic_cast<RooMinimizerFcn *>(_fcn));
+      break;
+   }
+   case FcnMode::clad: {
+      ret = _theFitter->FitFCN(*dynamic_cast<RooCladMinimizerFcn *>(_fcn));
       break;
    }
    case FcnMode::gradient: {
@@ -835,6 +844,9 @@ ROOT::Math::IMultiGenFunction* RooMinimizer::getMultiGenFcn() const
       case FcnMode::classic: {
          return static_cast<ROOT::Math::IMultiGenFunction *>(dynamic_cast<RooMinimizerFcn *>(_fcn));
       }
+      case FcnMode::clad: {
+         return static_cast<ROOT::Math::IMultiGenFunction *>(dynamic_cast<RooCladMinimizerFcn *>(_fcn));
+      }
       case FcnMode::gradient: {
          return static_cast<ROOT::Math::IMultiGenFunction *>(dynamic_cast<RooGradMinimizerFcn *>(_fcn));
       }
@@ -858,6 +870,9 @@ const RooAbsMinimizerFcn *RooMinimizer::fitterFcn() const
       }
       case FcnMode::gradient: {
          return static_cast<RooAbsMinimizerFcn *>(dynamic_cast<RooGradMinimizerFcn *>(getFitterMultiGenFcn()));
+      }
+      case FcnMode::clad: {
+         return static_cast<RooAbsMinimizerFcn *>(dynamic_cast<RooCladMinimizerFcn *>(getFitterMultiGenFcn()));
       }
       case FcnMode::generic_wrapper: {
          return static_cast<RooAbsMinimizerFcn *>(dynamic_cast<RooFit::TestStatistics::MinuitFcnGrad *>(getFitterMultiGenFcn()));

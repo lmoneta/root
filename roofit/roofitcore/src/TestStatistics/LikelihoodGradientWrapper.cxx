@@ -11,6 +11,7 @@
  */
 
 #include "RooFit/TestStatistics/LikelihoodGradientWrapper.h"
+#include "LikelihoodGradientClad.h"
 #include "RooMinimizer.h"
 
 // including derived classes for factory method
@@ -71,6 +72,11 @@ LikelihoodGradientWrapper::create(LikelihoodGradientMode likelihoodGradientMode,
                                   RooMinimizer *minimizer)
 {
    switch (likelihoodGradientMode) {
+   case LikelihoodGradientMode::clad: {
+      return std::make_unique<LikelihoodGradientClad>(std::move(likelihood), std::move(calculationIsClean), nDim,
+                                                     minimizer);
+      break;
+   }
    case LikelihoodGradientMode::multiprocess: {
 #ifdef R__HAS_ROOFIT_MULTIPROCESS
       return std::make_unique<LikelihoodGradientJob>(std::move(likelihood), std::move(calculationIsClean), nDim,
