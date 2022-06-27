@@ -40,8 +40,8 @@ std::unique_ptr<ROperator> make_ROperator_BasicBinary(const onnx::NodeProto& nod
       } else {
          // check if input tensor is an initialized tensor
          bool isInitializer = false;
-         for (int i=0; i < graphproto.initializer_size(); i++){
-            if (input_name == graphproto.initializer(i).name()) {
+         for (int j=0; j < graphproto.initializer_size(); j++){
+            if (input_name == graphproto.initializer(j).name()) {
                isInitializer = true;
                break;
             }
