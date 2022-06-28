@@ -83,11 +83,11 @@ public:
       auto shapeX2 = model.GetTensorShape(fNX2);
       // assume same shape X1 and X2
       if (shapeX1 != shapeX2) {
-         std::string msg = "TMVA SOFIE Binary Op: Support only inputs with same shape, shape 1 is " +
-                           ConvertShapeToString(shapeX1) + "shape 2 is " + ConvertShapeToString(shapeX2);
-         throw std::runtime_error(msg);
+         fShape = UTILITY::Multidirectional_broadcast(shapeX1,shapeX2);
       }
-      fShape = shapeX1;
+      else if(shapeX1 == shapeX2){
+         fShape = shapeX1;
+      }   
       model.AddIntermediateTensor(fNY, model.GetTensorType(fNX1), fShape);
    }
 

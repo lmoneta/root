@@ -179,10 +179,12 @@ TEST(ONNX, Add)
 
       // Preparing the standard input
       std::vector<float> input1({
-         1, 2
+         5, 10, 15, 20,
+        25, 30, 35, 40,
+        45, 50, 55, 60
       });
       std::vector<float> input2({
-         0, 1
+        5, 10, 15, 20
       });
       TMVA_SOFIE_Add::Session s("Add_FromONNX.dat");
 
