@@ -328,7 +328,7 @@ struct TUtmpContent {
          fclose(utmp);
 
       free(fUtmpContents);
-      fUtmpContents = 0;
+      fUtmpContents = nullptr;
       return 0;
    }
 
@@ -649,17 +649,13 @@ void TUnixSystem::SetDisplay()
          STRUCT_UTMP *utmp_entry = utmp.SearchUtmpEntry(tty);
          if (utmp_entry) {
             if (utmp_entry->ut_host[0]) {
-               if (strchr(utmp_entry->ut_host, ':')) {
-                  Setenv("DISPLAY", utmp_entry->ut_host);
-                  Warning("SetDisplay", "DISPLAY not set, setting it to %s",
-                          utmp_entry->ut_host);
-               } else {
-                  char disp[260];
-                  snprintf(disp, sizeof(disp), "%s:0.0", utmp_entry->ut_host);
-                  Setenv("DISPLAY", disp);
-                  Warning("SetDisplay", "DISPLAY not set, setting it to %s",
-                          disp);
-               }
+               TString disp;
+               for (unsigned n = 0; (n < sizeof(utmp_entry->ut_host)) && utmp_entry->ut_host[n]; n++)
+                  disp.Append(utmp_entry->ut_host[n]);
+               if (disp.First(':') == kNPOS)
+                  disp.Append(":0.0");
+               Setenv("DISPLAY", disp.Data());
+               Warning("SetDisplay", "DISPLAY not set, setting it to %s", disp.Data());
             }
 #ifndef UTMP_NO_ADDR
             else if (utmp_entry->ut_addr) {
@@ -1162,7 +1158,7 @@ Int_t TUnixSystem::Select(TList *act, Long_t to)
    TFdSet rd, wr;
    Int_t mxfd = -1;
    TIter next(act);
-   TFileHandler *h = 0;
+   TFileHandler *h = nullptr;
    while ((h = (TFileHandler *) next())) {
       Int_t fd = h->GetFd();
       if (fd > -1) {
@@ -1768,15 +1764,15 @@ needshell:
             *q++ = *p++;
          *q = '\0';
          hd = UnixHomedirectory(name);
-         if (hd == 0)
+         if (!hd)
             cmd += stuffedPat;
          else {
             cmd += hd;
             cmd += p;
          }
       } else {
-         hd = UnixHomedirectory(0);
-         if (hd == 0) {
+         hd = UnixHomedirectory(nullptr);
+         if (!hd) {
             GetLastErrorString() = GetError();
             return kTRUE;
          }

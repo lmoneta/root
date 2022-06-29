@@ -104,7 +104,12 @@ public:
   std::size_t size() const {
     return stateNames().size();
   }
+  /// If there are no states defined
+  bool empty() const {
+    return stateNames().empty();
+  }
 
+  bool isCategory() const override { return true; }
 
   /// \name Legacy interface
   /// Previous versions of RooAbsCategory were based on RooCatType, a class containing a state and a label.

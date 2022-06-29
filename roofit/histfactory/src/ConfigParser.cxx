@@ -184,7 +184,7 @@ std::vector< RooStats::HistFactory::Measurement > ConfigParser::GetMeasurementsF
 
     }
 
-    TXMLNode* node = NULL;
+    TXMLNode* node = nullptr;
 
     // Get the list of channel XML files to combine
     // Do this first so we can quickly exit
@@ -193,7 +193,7 @@ std::vector< RooStats::HistFactory::Measurement > ConfigParser::GetMeasurementsF
     node = rootNode->GetChildren();
     while( node != 0 ) {
       if( node->GetNodeName() == TString( "Input" ) ) {
-   if( node->GetText() == NULL ) {
+   if( node->GetText() == nullptr ) {
      cxcoutEHF << "Error: node: " << node->GetName()
           << " has no text." << std::endl;
      throw hf_exc();
@@ -282,7 +282,7 @@ std::vector< RooStats::HistFactory::Measurement > ConfigParser::GetMeasurementsF
 
     cxcoutIHF << "Done Processing Measurements" << std::endl;
 
-    if( measurement_list.size() == 0 ) {
+    if( measurement_list.empty() ) {
       cxcoutEHF << "Error: No Measurements found in XML Driver File" << std::endl;
       throw hf_exc();
     }
@@ -1025,9 +1025,6 @@ HistFactory::NormFactor ConfigParser::MakeNormFactor( TXMLNode* node ) {
     }
     else if( curAttr->GetName() == TString( "High" ) ) {
       norm.SetHigh( atof(attrVal.c_str()) );
-    }
-    else if( curAttr->GetName() == TString( "Const" ) ) {
-      norm.SetConst( CheckTrueFalse(attrVal,"NormFactor") );
     }
 
     else {

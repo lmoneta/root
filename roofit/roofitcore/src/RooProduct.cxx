@@ -29,7 +29,6 @@ A RooProduct represents the product of a given set of RooAbsReal objects.
 #include "RooAbsReal.h"
 #include "RooAbsCategory.h"
 #include "RooMsgService.h"
-#include "RunContext.h"
 #include "RooTrace.h"
 
 #include <cmath>
@@ -86,6 +85,9 @@ RooProduct::RooProduct(const char* name, const char* title, const RooArgList& pr
   TRACE_CREATE
 }
 
+
+RooProduct::RooProduct(const char *name, const char *title, RooAbsReal& real1, RooAbsReal& real2) :
+  RooProduct{name, title, {real1, real2}} {}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -262,7 +264,7 @@ Int_t RooProduct::getPartIntList(const RooArgSet* iset, const char *isetRange) c
       term = (RooAbsReal*)j.next();
     }
     assert(term!=0);
-    if (i->first->getSize()==0) { // check whether we need to integrate over this term or not...
+    if (i->first->empty()) { // check whether we need to integrate over this term or not...
       cache->_prodList.add(*term);
       cxcoutD(Integration) << "RooProduct::getPartIntList(" << GetName() << ") adding simple factor " << term->GetName() << endl;
     } else {
@@ -299,7 +301,7 @@ Int_t RooProduct::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVar
   // Declare that we can analytically integrate all requested observables
   // (basically, we will take care of the problem, and delegate where required)
   //assert(normSet==0);
-  assert(analVars.getSize()==0);
+  assert(analVars.empty());
   analVars.add(allVars) ;
   Int_t code = getPartIntList(&analVars,rangeName)+1;
   return code ;
@@ -497,7 +499,7 @@ void RooProduct::setCacheAndTrackHints(RooArgSet& trackNodes)
     if (parg->isDerived()) {
       if (parg->canNodeBeCached()==Always) {
         trackNodes.add(*parg) ;
-   //cout << "tracking node RooProduct component " << parg->IsA()->GetName() << "::" << parg->GetName() << endl ;
+   //cout << "tracking node RooProduct component " << parg->ClassName() << "::" << parg->GetName() << endl ;
       }
     }
   }
@@ -531,7 +533,34 @@ void RooProduct::printMetaArgs(ostream& os) const
 }
 
 
+void RooProduct::ioStreamerPass2() {
+  RooAbsReal::ioStreamerPass2(); // call the baseclass method
 
+  if(numProxies() < 2) {
+    throw std::runtime_error("RooProduct::ioStreamerPass2(): the number of proxies in the proxy list should be at leat 2!");
+  }
+
+  // If the proxy data members are evolved by schema evolution, the proxy list
+  // that references them will contain null pointers because the evolved
+  // members are only created after the proxy list. That's why we have to set
+  // them manually in that case. But to make sure we don't overwrite valid
+  // proxies, an exception will be thrown if the proxy list constains
+  // unexpected values.
+  RooAbsProxy * p0 = getProxy(0);
+  if(p0 != &_compRSet) {
+    if(p0) {
+      throw std::runtime_error("RooProduct::ioStreamerPass2(): the first proxy unexpectedly wasn't the compRSet!");
+    }
+    _proxyList.AddAt(&_compRSet, 0);
+  }
+  RooAbsProxy * p1 = getProxy(1);
+  if(p1 != &_compCSet) {
+    if(p1) {
+      throw std::runtime_error("RooProduct::ioStreamerPass2(): the second proxy unexpectedly wasn't the compCSet!");
+    }
+    _proxyList.AddAt(&_compCSet, 1);
+  }
+}
 
 
 namespace {
@@ -562,7 +591,3 @@ void dump_map(ostream& os, RPPMIter i, RPPMIter end)
 }
 
 }
-
-
-
-

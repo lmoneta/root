@@ -69,13 +69,13 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
               bool verbose, const RooArgSet* forceDirect) :
   RooAbsGenContext(model,vars,prototype,auxProto,verbose),
   _pdfClone(0), _acceptRejectFunc(0), _generator(0),
-  _maxVar(0), _uniIter(0), _updateFMaxPerEvent(0)
+  _maxVar(0), _updateFMaxPerEvent(0)
 {
   cxcoutI(Generation) << "RooGenContext::ctor() setting up event generator context for p.d.f. " << model.GetName()
          << " for generation of observable(s) " << vars ;
   if (prototype) ccxcoutI(Generation) << " with prototype data for " << *prototype->get() ;
-  if (auxProto && auxProto->getSize()>0)  ccxcoutI(Generation) << " with auxiliary prototypes " << *auxProto ;
-  if (forceDirect && forceDirect->getSize()>0)  ccxcoutI(Generation) << " with internal generation forced for observables " << *forceDirect ;
+  if (auxProto && !auxProto->empty())  ccxcoutI(Generation) << " with auxiliary prototypes " << *auxProto ;
+  if (forceDirect && !forceDirect->empty())  ccxcoutI(Generation) << " with internal generation forced for observables " << *forceDirect ;
   ccxcoutI(Generation) << endl ;
 
 
@@ -100,11 +100,10 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
 
   // Analyze the list of variables to generate...
   _isValid= true;
-  TIterator *iterator= vars.createIterator();
-  TIterator *servers= _pdfClone->serverIterator();
-  const RooAbsArg *tmp = 0;
   const RooAbsArg *arg = 0;
-  while((_isValid && (tmp= (const RooAbsArg*)iterator->Next()))) {
+  for(RooAbsArg * tmp : vars) {
+    if(!_isValid) break;
+
     // is this argument derived?
     if(!tmp->isFundamental()) {
       coutE(Generation) << "RooGenContext::ctor(): cannot generate values for derived \""  << tmp->GetName() << "\"" << endl;
@@ -139,8 +138,7 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
       }
     }
   }
-  delete servers;
-  delete iterator;
+
   if(!isValid()) {
     coutE(Generation) << "RooGenContext::ctor() constructor failed with errors" << endl;
     return;
@@ -148,10 +146,10 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
 
   // At this point directVars are all variables that are safe to be generated directly
   //               otherVars are all variables that are _not_ safe to be generated directly
-  if (_directVars.getSize()>0) {
+  if (!_directVars.empty()) {
     cxcoutD(Generation) << "RooGenContext::ctor() observables " << _directVars << " are safe for internal generator (if supported by p.d.f)" << endl ;
   }
-  if (_otherVars.getSize()>0) {
+  if (!_otherVars.empty()) {
     cxcoutD(Generation) << "RooGenContext::ctor() observables " << _otherVars << " are NOT safe for internal generator (if supported by p.d.f)" << endl ;
   }
 
@@ -164,7 +162,7 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
 
   // Can the model generate any of the direct variables itself?
   RooArgSet generatedVars;
-  if (_directVars.getSize()>0) {
+  if (!_directVars.empty()) {
     _code= _pdfClone->getGenerator(_directVars,generatedVars,staticInitOK);
 
     cxcoutD(Generation) << "RooGenContext::ctor() Model indicates that it can internally generate observables "
@@ -182,10 +180,10 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
   _directVars.add(generatedVars);
 
   cxcoutI(Generation) << "RooGenContext::ctor() Context will" ;
-  if (_directVars.getSize()>0) ccxcoutI(Generation) << " let model internally generate observables " << _directVars ;
-  if (_directVars.getSize()>0 && _otherVars.getSize()>0)  ccxcoutI(Generation) << " and" ;
-  if (_otherVars.getSize()>0)  ccxcoutI(Generation) << " generate variables " << _otherVars << " with accept/reject sampling" ;
-  if (_uniformVars.getSize()>0) ccxcoutI(Generation) << ", non-observable variables " << _uniformVars << " will be generated with flat distribution" ;
+  if (!_directVars.empty()) ccxcoutI(Generation) << " let model internally generate observables " << _directVars ;
+  if (!_directVars.empty() && !_otherVars.empty())  ccxcoutI(Generation) << " and" ;
+  if (!_otherVars.empty())  ccxcoutI(Generation) << " generate variables " << _otherVars << " with accept/reject sampling" ;
+  if (!_uniformVars.empty()) ccxcoutI(Generation) << ", non-observable variables " << _uniformVars << " will be generated with flat distribution" ;
   ccxcoutI(Generation) << endl ;
 
   // initialize the accept-reject generator
@@ -203,7 +201,7 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
   model.getObservables(&_protoVars, protoDeps);
 
 
-  if (_protoVars.getSize()==0) {
+  if (_protoVars.empty()) {
 
     // No prototype variables
 
@@ -283,7 +281,7 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
    if (max==0) {
      coutE(Generation) << "RooGenContext::ctor(" << model.GetName()
              << ") ERROR: generating conditional p.d.f. which requires prior knowledge of function maximum, "
-             << "but chosen numeric generator (" << maxFinder->IsA()->GetName() << ") does not support maximum finding" << endl ;
+             << "but chosen numeric generator (" << maxFinder->ClassName() << ") does not support maximum finding" << endl ;
      delete maxFinder ;
      throw string("RooGenContext::ctor()") ;
    }
@@ -297,7 +295,7 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
 
   if (_acceptRejectFunc && _otherVars.getSize()>0) {
     _generator = RooNumGenFactory::instance().createSampler(*_acceptRejectFunc,_otherVars,RooArgSet(_protoVars),*model.getGeneratorConfig(),_verbose,_maxVar) ;
-    cxcoutD(Generation) << "RooGenContext::ctor() creating MC sampling generator " << _generator->IsA()->GetName() << "  from function for observables " << _otherVars << endl ;
+    cxcoutD(Generation) << "RooGenContext::ctor() creating MC sampling generator " << _generator->ClassName() << "  from function for observables " << _otherVars << endl ;
     //_generator= new RooAcceptReject(*_acceptRejectFunc,_otherVars,RooNumGenConfig::defaultConfig(),_verbose,_maxVar);
   } else {
     _generator = 0 ;
@@ -316,7 +314,6 @@ RooGenContext::~RooGenContext()
   if (_generator) delete _generator;
   if (_acceptRejectFunc) delete _acceptRejectFunc;
   if (_maxVar) delete _maxVar ;
-  if (_uniIter) delete _uniIter ;
 }
 
 
@@ -361,12 +358,6 @@ void RooGenContext::initGenerator(const RooArgSet &theEvent)
     cxcoutD(Generation) << "RooGenContext::initGenerator() initializing internal generator of model with code " << _code << endl ;
     _pdfClone->initGenerator(_code) ;
   }
-
-  // Create iterator for uniform vars (if any)
-  if (_uniformVars.getSize()>0) {
-    delete _uniIter;
-    _uniIter = _uniformVars.createIterator() ;
-  }
 }
 
 
@@ -410,19 +401,15 @@ void RooGenContext::generateEvent(RooArgSet &theEvent, Int_t remaining)
   }
 
   // Generate uniform variables (non-dependents)
-  if (_uniIter) {
-    _uniIter->Reset() ;
-    RooAbsArg* uniVar ;
-    while((uniVar=(RooAbsArg*)_uniIter->Next())) {
-      RooAbsLValue* arglv = dynamic_cast<RooAbsLValue*>(uniVar) ;
-      if (!arglv) {
-   coutE(Generation) << "RooGenContext::generateEvent(" << GetName() << ") ERROR: uniform variable " << uniVar->GetName() << " is not an lvalue" << endl ;
-   RooErrorHandler::softAbort() ;
-      }
-      arglv->randomize() ;
+  for(auto * uniVar : _uniformVars) {
+    auto * arglv = dynamic_cast<RooAbsLValue*>(uniVar);
+    if (!arglv) {
+      coutE(Generation) << "RooGenContext::generateEvent(" << GetName() << ") ERROR: uniform variable " << uniVar->GetName() << " is not an lvalue" << endl ;
+      RooErrorHandler::softAbort() ;
     }
-    theEvent.assign(_uniformVars) ;
+    arglv->randomize() ;
   }
+  theEvent.assign(_uniformVars) ;
 
 }
 
@@ -439,7 +426,7 @@ void RooGenContext::printMultiline(ostream &os, Int_t content, bool verbose, TSt
 
   if(verbose) {
     os << indent << "Use PDF generator for " << _directVars << endl ;
-    os << indent << "Use MC sampling generator " << (_generator ? _generator->IsA()->GetName() : "<none>") << " for " << _otherVars << endl ;
+    os << indent << "Use MC sampling generator " << (_generator ? _generator->ClassName() : "<none>") << " for " << _otherVars << endl ;
     if (_protoVars.getSize()>0) {
       os << indent << "Prototype observables are " << _protoVars << endl ;
     }

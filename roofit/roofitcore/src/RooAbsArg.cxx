@@ -102,10 +102,6 @@ for single nodes.
 
 using namespace std;
 
-#if (__GNUC__==3&&__GNUC_MINOR__==2&&__GNUC_PATCHLEVEL__==3)
-char* operator+( streampos&, char* );
-#endif
-
 ClassImp(RooAbsArg);
 ;
 
@@ -810,11 +806,9 @@ bool RooAbsArg::recursiveCheckObservables(const RooArgSet* nset) const
 {
   RooArgSet nodeList ;
   treeNodeServerList(&nodeList) ;
-  RooFIter iter = nodeList.fwdIterator() ;
 
-  RooAbsArg* arg ;
   bool ret(false) ;
-  while((arg=iter.next())) {
+  for(RooAbsArg * arg : nodeList) {
     if (arg->getAttribute("ServerDied")) {
       coutE(LinkStateMgmt) << "RooAbsArg::recursiveCheckObservables(" << GetName() << "): ERROR: one or more servers of node "
             << arg->GetName() << " no longer exists!" << endl ;
@@ -933,7 +927,7 @@ void RooAbsArg::setValueDirty(const RooAbsArg* source)
   if (_operMode!=Auto || _inhibitDirty) return ;
 
   // Handle no-propagation scenarios first
-  if (_clientListValue.size() == 0) {
+  if (_clientListValue.empty()) {
     _valueDirty = true ;
     return ;
   }
@@ -1032,7 +1026,7 @@ bool RooAbsArg::redirectServers(const RooAbsCollection& newSetOrig, bool mustRep
 {
   // Trivial case, no servers
   if (_serverList.empty()) return false ;
-  if (newSetOrig.getSize()==0) return false ;
+  if (newSetOrig.empty()) return false ;
 
   // Strip any non-matching removal nodes from newSetOrig
   RooAbsCollection* newSet ;
@@ -1163,7 +1157,7 @@ RooAbsArg *RooAbsArg::findNewServer(const RooAbsCollection &newSet, bool nameCha
     if(0 != tmp) {
 
       // Check if any match was found
-      if (tmp->getSize()==0) {
+      if (tmp->empty()) {
         delete tmp ;
         return 0 ;
       }
@@ -1448,7 +1442,7 @@ void RooAbsArg::printTitle(ostream& os) const
 
 void RooAbsArg::printClassName(ostream& os) const
 {
-  os << IsA()->GetName() ;
+  os << ClassName() ;
 }
 
 
@@ -1665,9 +1659,7 @@ void RooAbsArg::printDirty(bool depth) const
 
     RooArgSet branchList ;
     branchNodeServerList(&branchList) ;
-    RooFIter bIter = branchList.fwdIterator() ;
-    RooAbsArg* branch ;
-    while((branch=bIter.next())) {
+    for(RooAbsArg * branch : branchList) {
       branch->printDirty(false) ;
     }
 
@@ -1802,9 +1794,7 @@ bool RooAbsArg::findConstantNodes(const RooArgSet& observables, RooArgSet& cache
   // Check if node depends on any non-constant parameter
   bool canOpt(true) ;
   RooArgSet* paramSet = getParameters(observables) ;
-  RooFIter iter = paramSet->fwdIterator() ;
-  RooAbsArg* param ;
-  while((param = iter.next())) {
+  for(RooAbsArg * param : *paramSet) {
     if (!param->isConstant()) {
       canOpt=false ;
       break ;
@@ -1928,7 +1918,7 @@ void RooAbsArg::printCompactTree(ostream& os, const char* indent, const char* na
     }
     os << " " ;
 
-    os << IsA()->GetName() << "::" << GetName() <<  " = " ;
+    os << ClassName() << "::" << GetName() <<  " = " ;
     printValue(os) ;
 
     if (!_serverList.empty()) {
@@ -2136,11 +2126,9 @@ void RooAbsArg::graphVizTree(ostream& os, const char* delimiter, bool useTitle, 
   // First list all the tree nodes
   RooArgSet nodeSet ;
   treeNodeServerList(&nodeSet) ;
-  RooFIter iter = nodeSet.fwdIterator() ;
-  RooAbsArg* node ;
 
   // iterate over nodes
-  while((node=iter.next())) {
+  for(RooAbsArg * node : nodeSet) {
     string nodeName = node->GetName();
     string nodeTitle = node->GetTitle();
     string nodeLabel = (useTitle && !nodeTitle.empty()) ? nodeTitle : nodeName;
@@ -2152,7 +2140,7 @@ void RooAbsArg::graphVizTree(ostream& os, const char* delimiter, bool useTitle, 
     }
 
     string typeFormat = "\\texttt{";
-    string nodeType = (useLatex) ? typeFormat+node->IsA()->GetName()+"}" : node->IsA()->GetName();
+    string nodeType = (useLatex) ? typeFormat+node->ClassName()+"}" : node->ClassName();
 
     if (auto realNode = dynamic_cast<RooAbsReal*>(node)) {
       nodeLabel += delimiter + std::to_string(realNode->getVal());
@@ -2189,84 +2177,6 @@ void RooAbsArg::graphVizAddConnections(set<pair<RooAbsArg*,RooAbsArg*> >& linkSe
     server->graphVizAddConnections(linkSet) ;
   }
 }
-
-
-
-// //_____________________________________________________________________________
-// TGraphStruct* RooAbsArg::graph(bool useFactoryTag, double textSize)
-// {
-//   // Return a TGraphStruct object filled with the tree structure of the pdf object
-
-//   TGraphStruct* theGraph = new TGraphStruct() ;
-
-//   // First list all the tree nodes
-//   RooArgSet nodeSet ;
-//   treeNodeServerList(&nodeSet) ;
-//   TIterator* iter = nodeSet.createIterator() ;
-//   RooAbsArg* node ;
-
-
-//   // iterate over nodes
-//   while((node=(RooAbsArg*)iter->Next())) {
-
-//     // Skip node that represent numeric constants
-//     if (node->IsA()->InheritsFrom(RooConstVar::Class())) continue ;
-
-//     string nodeName ;
-//     if (useFactoryTag && node->getStringAttribute("factory_tag")) {
-//       nodeName  = node->getStringAttribute("factory_tag") ;
-//     } else {
-//       if (node->isFundamental()) {
-//    nodeName = node->GetName();
-//       } else {
-//    ostringstream oss ;
-//    node->printStream(oss,(node->defaultPrintContents(0)&(~kValue)),node->defaultPrintStyle(0)) ;
-//    nodeName= oss.str() ;
-// //    nodeName = Form("%s::%s",node->IsA()->GetName(),node->GetName());
-
-//       }
-//     }
-//     if (strncmp(nodeName.c_str(),"Roo",3)==0) {
-//       nodeName = string(nodeName.c_str()+3) ;
-//     }
-//     node->setStringAttribute("graph_name",nodeName.c_str()) ;
-
-//     TGraphNode* gnode = theGraph->AddNode(nodeName.c_str(),nodeName.c_str()) ;
-//     gnode->SetLineWidth(2) ;
-//     gnode->SetTextColor(node->isFundamental()?kBlue:kRed) ;
-//     gnode->SetTextSize(textSize) ;
-//   }
-//   delete iter ;
-
-//   // Get set of all server links
-//   set<pair<RooAbsArg*,RooAbsArg*> > links ;
-//   graphVizAddConnections(links) ;
-
-//   // And insert them into the graph
-//   set<pair<RooAbsArg*,RooAbsArg*> >::iterator liter = links.begin() ;
-//   for( ; liter != links.end() ; ++liter ) {
-
-//     TGraphNode* n1 = (TGraphNode*)theGraph->GetListOfNodes()->FindObject(liter->first->getStringAttribute("graph_name")) ;
-//     TGraphNode* n2 = (TGraphNode*)theGraph->GetListOfNodes()->FindObject(liter->second->getStringAttribute("graph_name")) ;
-//     if (n1 && n2) {
-//       TGraphEdge* edge = theGraph->AddEdge(n1,n2) ;
-//       edge->SetLineWidth(2) ;
-//     }
-//   }
-
-//   return theGraph ;
-// }
-
-
-
-// //_____________________________________________________________________________
-// bool RooAbsArg::inhibitDirty()
-// {
-//   // Return current status of the inhibitDirty global flag. If true
-//   // no dirty state change tracking occurs and all caches are considered
-//   // to be always dirty.
-//   return _inhibitDirty ;
-// }
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2369,9 +2279,7 @@ const char* RooAbsArg::aggregateCacheUniqueSuffix() const
 
   RooArgSet branches ;
   branchNodeServerList(&branches) ;
-  RooFIter iter = branches.fwdIterator();
-  RooAbsArg* arg ;
-  while((arg=iter.next())) {
+  for(RooAbsArg * arg : branches) {
     const char* tmp = arg->cacheUniqueSuffix() ;
     if (tmp) suffix += tmp ;
   }
@@ -2558,13 +2466,14 @@ void RooAbsArg::applyWeightSquared(bool flag) {
 
 
 /// Fills a RooArgSet to be used as the normalization set for a server, given a
-/// normalization set for this RooAbsArg.
+/// normalization set for this RooAbsArg. If the output is a `nullptr`, it
+/// means that the normalization set doesn't change.
 ///
 /// \param[in] normSet The normalization set for this RooAbsArg.
 /// \param[in] server A server of this RooAbsArg that we determine the
 ///            normalization set for.
 /// \param[out] serverNormSet Output parameter. Normalization set for the
 ///             server.
-void RooAbsArg::fillNormSetForServer(RooArgSet const& normSet, RooAbsArg const& server, RooArgSet& serverNormSet) const {
-  for(auto * arg : normSet) if(server.dependsOn(*arg)) serverNormSet.add(*arg);
+std::unique_ptr<RooArgSet> RooAbsArg::fillNormSetForServer(RooArgSet const& /*normSet*/, RooAbsArg const& /*server*/) const {
+   return nullptr;
 }

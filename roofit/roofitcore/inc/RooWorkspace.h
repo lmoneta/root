@@ -94,7 +94,7 @@ public:
   const RooArgSet* getSnapshot(const char* name) const ;
 
   // Retrieve list of parameter snapshots
-  RooLinkedList getSnapshots(){ return this->_snapshots; }
+  RooLinkedList getSnapshots(){ return _snapshots; }
 
   void merge(const RooWorkspace& /*other*/) {} ;
 
@@ -113,7 +113,9 @@ public:
   RooAbsArg* arg(RooStringView name) const ;
   RooAbsArg* fundArg(RooStringView name) const ;
   RooArgSet argSet(RooStringView nameList) const ;
-  TIterator* componentIterator() const { return _allOwnedNodes.createIterator() ; }
+  TIterator* componentIterator() const
+  R__SUGGEST_ALTERNATIVE("Better iterate over RooWorkspace::components() with range-based loop instead of using RooWorkspace::componentIterator().")
+  { return _allOwnedNodes.createIterator() ; }
   const RooArgSet& components() const { return _allOwnedNodes ; }
   TObject* genobj(RooStringView name) const ;
   TObject* obj(RooStringView name) const ;
@@ -147,7 +149,7 @@ public:
 
   // Tools management
   RooFactoryWSTool& factory() ;
-  RooAbsArg* factory(const char* expr) ;
+  RooAbsArg* factory(RooStringView expr) ;
 
   // RooStudyManager modules
   bool addStudy(RooAbsStudy& study) ;

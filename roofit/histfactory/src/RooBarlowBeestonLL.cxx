@@ -52,12 +52,10 @@ ClassImp(RooStats::HistFactory::RooBarlowBeestonLL);
    _nll(),
 //   _obs("paramOfInterest","Parameters of interest",this),
 //  _par("nuisanceParam","Nuisance parameters",this,false,false),
-  _pdf(NULL), _data(NULL)
+  _pdf(nullptr), _data(nullptr)
 {
   // Default constructor
   // Should only be used by proof.
-  //  _piter = _par.createIterator() ;
-  //  _oiter = _obs.createIterator() ;
 }
 
 
@@ -69,7 +67,7 @@ RooStats::HistFactory::RooBarlowBeestonLL::RooBarlowBeestonLL(const char *name, 
   _nll("input","-log(L) function",this,nllIn),
   //  _obs("paramOfInterest","Parameters of interest",this),
   //  _par("nuisanceParam","Nuisance parameters",this,false,false),
-  _pdf(NULL), _data(NULL)
+  _pdf(nullptr), _data(nullptr)
 {
   // Constructor of profile likelihood given input likelihood nll w.r.t
   // the given set of variables. The input log likelihood is minimized w.r.t
@@ -86,9 +84,6 @@ RooStats::HistFactory::RooBarlowBeestonLL::RooBarlowBeestonLL(const char *name, 
 
   delete actualObs ;
   delete actualPars ;
-
-  _piter = _par.createIterator() ;
-  _oiter = _obs.createIterator() ;
   */
 }
 
@@ -101,13 +96,10 @@ RooStats::HistFactory::RooBarlowBeestonLL::RooBarlowBeestonLL(const RooBarlowBee
   _nll("nll",this,other._nll),
   //  _obs("obs",this,other._obs),
   //  _par("par",this,other._par),
-  _pdf(NULL), _data(NULL),
+  _pdf(nullptr), _data(nullptr),
   _paramFixed(other._paramFixed)
 {
   // Copy constructor
-
-  //  _piter = _par.createIterator() ;
-  //  _oiter = _obs.createIterator() ;
 
   // _paramAbsMin.addClone(other._paramAbsMin) ;
   // _obsAbsMin.addClone(other._obsAbsMin) ;
@@ -166,12 +158,12 @@ void RooStats::HistFactory::RooBarlowBeestonLL::initializeBarlowCache() {
   RooArgSet* obsSet = _pdf->getObservables(*_data);
   FactorizeHistFactoryPdf(*obsSet, *_pdf, obsTerms, constraints);
 
-  if( obsTerms.getSize() == 0 ) {
+  if( obsTerms.empty() ) {
     std::cout << "Error: Found no observable terms with pdf: " << _pdf->GetName()
          << " using dataset: " << _data->GetName() << std::endl;
     return;
   }
-  if( constraints.getSize() == 0 ) {
+  if( constraints.empty() ) {
     std::cout << "Error: Found no constraint terms with pdf: " << _pdf->GetName()
          << " using dataset: " << _data->GetName() << std::endl;
     return;
@@ -196,7 +188,7 @@ void RooStats::HistFactory::RooBarlowBeestonLL::initializeBarlowCache() {
 
     // First, we check if this channel uses Stat Uncertainties:
     RooArgList* gammas = new RooArgList();
-    ParamHistFunc* param_func=NULL;
+    ParamHistFunc* param_func=nullptr;
     bool hasStatUncert = getStatUncertaintyFromChannel( channelPdf, param_func, gammas );
     if( ! hasStatUncert ) {
       if(verbose) {
@@ -252,8 +244,8 @@ void RooStats::HistFactory::RooBarlowBeestonLL::initializeBarlowCache() {
       RooArgList obs_list( *(cache.bin_center) );
 
       // Get the gamma's constraint term
-      RooAbsReal* pois_mean = NULL;
-      RooRealVar* tau = NULL;
+      RooAbsReal* pois_mean = nullptr;
+      RooRealVar* tau = nullptr;
       getStatUncertaintyConstraintTerm( &constraints, gamma_stat, pois_mean, tau );
       if( !tau || !pois_mean ) {
    std::cout << "Failed to find pois mean or tau parameter for " << gamma_stat->GetName() << std::endl;
@@ -270,7 +262,7 @@ void RooStats::HistFactory::RooBarlowBeestonLL::initializeBarlowCache() {
 
       // Get the RooRealSumPdf
       RooAbsPdf* sum_pdf = getSumPdfFromChannel( channelPdf );
-      if( sum_pdf == NULL )  {
+      if( sum_pdf == nullptr )  {
    std::cout << "Failed to find RooRealSumPdf in channel " <<  channel_name
         << ", therefor skipping this channel for analytic uncertainty minimization"
         << std::endl;
@@ -440,19 +432,6 @@ void RooStats::HistFactory::RooBarlowBeestonLL::FactorizePdf(const RooArgSet &ob
 
 double RooStats::HistFactory::RooBarlowBeestonLL::evaluate() const
 {
-  /*
-  // Loop over the cached bins and channels
-  RooArgSet* channels = new RooArgSet();
-  RooArgSet* channelsWithConstraints = new RooArgSet();
-  RooStats::getChannelsFromModel( _pdf, channels, channelsWithConstraints );
-
-  // Loop over channels
-  TIterator* iter_channels = channelsWithConstraints->createIterator();
-  RooAbsPdf* channelPdf=NULL;
-  while(( channelPdf=(RooAbsPdf*)iter_channels->Next()  )) {
-    std::string channel_name = channelPdf->GetName(); //RooStats::channelNameFromPdf( channelPdf );
-  */
-
   // Loop over the channels (keys to the map)
   //clock_t time_before_setVal, time_after_setVal;
   //time_before_setVal=clock();

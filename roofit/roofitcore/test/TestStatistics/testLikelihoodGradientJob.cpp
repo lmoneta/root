@@ -26,7 +26,8 @@
 #include "RooFit/MultiProcess/JobManager.h"
 #include "RooFit/MultiProcess/Config.h"
 #include "RooStats/ModelConfig.h"
-#include "RunContext.h" // complete RooBatchCompute::RunContext type used in RooUnbinnedL
+
+#include "Math/Minimizer.h"
 
 #include <TFile.h>
 
@@ -39,7 +40,10 @@ using RooFit::TestStatistics::LikelihoodWrapper;
 
 class Environment : public testing::Environment {
 public:
-   void SetUp() override { RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR); }
+   void SetUp() override {
+      RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
+      ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
+   }
 };
 
 // Previously, we just called AddGlobalTestEnvironment in global namespace, but this caused either a warning about an
@@ -82,8 +86,7 @@ TEST_P(LikelihoodGradientJob, Gaussian1D)
 
    // --------
 
-   std::unique_ptr<RooMinimizer> m0 = std::make_unique<RooMinimizer>(*nll, RooMinimizer::FcnMode::gradient);
-   m0->setMinimizerType("Minuit2");
+   auto m0 = std::make_unique<RooMinimizer>(*nll, RooMinimizer::FcnMode::gradient);
 
    m0->setStrategy(0);
    m0->setPrintLevel(-1);
@@ -102,7 +105,6 @@ TEST_P(LikelihoodGradientJob, Gaussian1D)
    auto likelihood = std::make_shared<RooFit::TestStatistics::RooUnbinnedL>(pdf, data);
    RooMinimizer m1(likelihood, RooFit::TestStatistics::LikelihoodMode::serial,
                    RooFit::TestStatistics::LikelihoodGradientMode::multiprocess);
-   m1.setMinimizerType("Minuit2");
 
    m1.setStrategy(0);
    m1.setPrintLevel(-1);
@@ -151,8 +153,6 @@ TEST(LikelihoodGradientJob, RepeatMigrad)
    RooMinimizer m1(likelihood, RooFit::TestStatistics::LikelihoodMode::serial,
                    RooFit::TestStatistics::LikelihoodGradientMode::multiprocess);
 
-   m1.setMinimizerType("Minuit2");
-
    m1.setStrategy(0);
    m1.setPrintLevel(-1);
 
@@ -193,7 +193,6 @@ TEST_P(LikelihoodGradientJob, GaussianND)
    // --------
 
    RooMinimizer m0(*nll, RooMinimizer::FcnMode::gradient);
-   m0.setMinimizerType("Minuit2");
 
    m0.setStrategy(0);
    m0.setPrintLevel(-1);
@@ -228,7 +227,6 @@ TEST_P(LikelihoodGradientJob, GaussianND)
    auto likelihood = std::make_shared<RooFit::TestStatistics::RooUnbinnedL>(pdf, data);
    RooMinimizer m1(likelihood, RooFit::TestStatistics::LikelihoodMode::serial,
                    RooFit::TestStatistics::LikelihoodGradientMode::multiprocess);
-   m1.setMinimizerType("Minuit2");
 
    m1.setStrategy(0);
    m1.setPrintLevel(-1);
@@ -373,7 +371,6 @@ TEST_F(LikelihoodSimBinnedConstrainedTest, ConstrainedAndOffset)
 
    RooMinimizer m0(*nll, RooMinimizer::FcnMode::gradient);
 
-   m0.setMinimizerType("Minuit2");
    m0.setStrategy(0);
    m0.setPrintLevel(1);
 
@@ -401,7 +398,6 @@ TEST_F(LikelihoodSimBinnedConstrainedTest, ConstrainedAndOffset)
                    RooFit::TestStatistics::LikelihoodGradientMode::multiprocess);
    m1.setOffsetting(true);
 
-   m1.setMinimizerType("Minuit2");
    m1.setStrategy(0);
    m1.setPrintLevel(1);
    m1.optimizeConst(2);

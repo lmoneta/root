@@ -1,11 +1,7 @@
 import { gStyle, settings, constants, isBatchMode } from '../core.mjs';
-
 import { rgb as d3_rgb } from '../d3.mjs';
-
 import { floatToString, DrawOptions, buildSvgPath } from '../base/BasePainter.mjs';
-
 import { RHistPainter } from './RHistPainter.mjs';
-
 import { ensureRCanvas } from '../gpad/RCanvasPainter.mjs';
 
 /**
@@ -921,11 +917,10 @@ class RH1Painter extends RHistPainter {
    canZoomInside(axis,min,max) {
       let xaxis = this.getAxis("x");
 
-      if ((axis=="x") && (xaxis.FindBin(max,0.5) - xaxis.FindBin(min,0) > 1)) return true;
+      if ((axis == "x") && (xaxis.FindBin(max,0.5) - xaxis.FindBin(min,0) > 1)) return true;
 
-      if ((axis=="y") && (Math.abs(max-min) > Math.abs(this.ymax-this.ymin)*1e-6)) return true;
+      if ((axis == "y") && (Math.abs(max-min) > Math.abs(this.ymax-this.ymin)*1e-6)) return true;
 
-      // check if it makes sense to zoom inside specified axis range
       return false;
    }
 

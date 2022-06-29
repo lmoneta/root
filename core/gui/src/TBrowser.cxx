@@ -34,6 +34,7 @@ Browser.Name:      TRootBrowser
 #include "TBrowser.h"
 #include "TGuiFactory.h"
 #include "TROOT.h"
+#include "TEnv.h"
 #include "TSystem.h"
 #include "TStyle.h"
 #include "TTimer.h"
@@ -97,11 +98,15 @@ Bool_t TBrowser::InitGraphics()
    TApplication::NeedGraphicsLibs();
    if (gApplication)
       gApplication->InitializeGraphics();
-   if (gROOT->IsBatch()) {
-      Warning("TBrowser", "The ROOT browser cannot run in batch mode");
-      return kFALSE;
-   }
-   return kTRUE;
+   if (!gROOT->IsBatch())
+      return kTRUE;
+
+   TString imp = gEnv->GetValue("Browser.Name", "---");
+   if ((imp == "ROOT::Experimental::RWebBrowserImp") && (gROOT->GetWebDisplay() == "server"))
+      return kTRUE;
+
+   Warning("TBrowser", "The ROOT browser cannot run in batch mode");
+   return kFALSE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -112,13 +117,13 @@ Bool_t TBrowser::InitGraphics()
 
 TBrowser::TBrowser(const char *name, const char *title, TBrowserImp *extimp,
                    Option_t *opt)
-   : TNamed(name, title), fLastSelectedObject(0), fImp(extimp), fTimer(0),
-     fContextMenu(0), fNeedRefresh(kFALSE)
+   : TNamed(name, title), fLastSelectedObject(nullptr), fImp(extimp), fTimer(nullptr),
+     fContextMenu(nullptr), fNeedRefresh(kFALSE)
 {
    if (!InitGraphics())
       return;
    if (TClass::IsCallingNew() != TClass::kRealNew) {
-      fImp = 0;
+      fImp = nullptr;
    } else {
       Float_t cx = gStyle->GetScreenFactor();
       UInt_t w = UInt_t(cx*800);
@@ -133,7 +138,7 @@ TBrowser::TBrowser(const char *name, const char *title, TBrowserImp *extimp,
 
 TBrowser::TBrowser(const char *name, const char *title, UInt_t width,
                    UInt_t height, TBrowserImp *extimp, Option_t *opt)
-   : TNamed(name, title), fLastSelectedObject(0), fImp(extimp), fTimer(0), fContextMenu(0),
+   : TNamed(name, title), fLastSelectedObject(nullptr), fImp(extimp), fTimer(nullptr), fContextMenu(nullptr),
      fNeedRefresh(kFALSE)
 {
    if (!InitGraphics())
@@ -147,7 +152,7 @@ TBrowser::TBrowser(const char *name, const char *title, UInt_t width,
 
 TBrowser::TBrowser(const char *name, const char *title, Int_t x, Int_t y,
                    UInt_t width, UInt_t height, TBrowserImp *extimp, Option_t *opt)
-   : TNamed(name, title), fLastSelectedObject(0), fImp(extimp), fTimer(0), fContextMenu(0),
+   : TNamed(name, title), fLastSelectedObject(nullptr), fImp(extimp), fTimer(nullptr), fContextMenu(nullptr),
      fNeedRefresh(kFALSE)
 {
    if (!InitGraphics())
@@ -160,7 +165,7 @@ TBrowser::TBrowser(const char *name, const char *title, Int_t x, Int_t y,
 /// Create a new browser with a name, title, width and height for TObject *obj.
 
 TBrowser::TBrowser(const char *name, TObject *obj, const char *title, Option_t *opt)
-   : TNamed(name, title), fLastSelectedObject(0), fImp(0), fTimer(0), fContextMenu(0),
+   : TNamed(name, title), fLastSelectedObject(nullptr), fImp(nullptr), fTimer(nullptr), fContextMenu(nullptr),
      fNeedRefresh(kFALSE)
 {
    if (!InitGraphics())
@@ -178,7 +183,7 @@ TBrowser::TBrowser(const char *name, TObject *obj, const char *title, Option_t *
 
 TBrowser::TBrowser(const char *name, TObject *obj, const char *title,
                    UInt_t width, UInt_t height, Option_t *opt)
-   : TNamed(name, title), fLastSelectedObject(0), fTimer(0), fContextMenu(0),
+   : TNamed(name, title), fLastSelectedObject(nullptr), fImp(nullptr), fTimer(nullptr), fContextMenu(nullptr),
      fNeedRefresh(kFALSE)
 {
    if (!InitGraphics())
@@ -193,7 +198,7 @@ TBrowser::TBrowser(const char *name, TObject *obj, const char *title,
 TBrowser::TBrowser(const char *name, TObject *obj, const char *title,
                    Int_t x, Int_t y,
                    UInt_t width, UInt_t height, Option_t *opt)
-   : TNamed(name, title), fLastSelectedObject(0), fTimer(0), fContextMenu(0),
+   : TNamed(name, title), fLastSelectedObject(nullptr), fImp(nullptr), fTimer(nullptr), fContextMenu(nullptr),
      fNeedRefresh(kFALSE)
 {
    if (!InitGraphics())
@@ -207,7 +212,7 @@ TBrowser::TBrowser(const char *name, TObject *obj, const char *title,
 
 TBrowser::TBrowser(const char *name, void *obj, TClass *cl,
                    const char *objname, const char *title, Option_t *opt)
-   : TNamed(name, title), fLastSelectedObject(0), fTimer(0), fContextMenu(0),
+   : TNamed(name, title), fLastSelectedObject(nullptr), fImp(nullptr), fTimer(nullptr), fContextMenu(nullptr),
      fNeedRefresh(kFALSE)
 {
    if (!InitGraphics())
@@ -227,7 +232,7 @@ TBrowser::TBrowser(const char *name, void *obj, TClass *cl,
 TBrowser::TBrowser(const char *name, void *obj, TClass *cl,
                    const char *objname, const char *title,
                    UInt_t width, UInt_t height, Option_t *opt)
-   : TNamed(name, title), fLastSelectedObject(0), fTimer(0), fContextMenu(0),
+   : TNamed(name, title), fLastSelectedObject(nullptr), fImp(nullptr), fTimer(nullptr), fContextMenu(nullptr),
      fNeedRefresh(kFALSE)
 {
    if (!InitGraphics())
@@ -243,7 +248,7 @@ TBrowser::TBrowser(const char *name,void *obj,  TClass *cl,
                    const char *objname, const char *title,
                    Int_t x, Int_t y,
                    UInt_t width, UInt_t height, Option_t *opt)
-   : TNamed(name, title), fLastSelectedObject(0), fTimer(0), fContextMenu(0),
+   : TNamed(name, title), fLastSelectedObject(nullptr), fImp(nullptr), fTimer(nullptr), fContextMenu(nullptr),
      fNeedRefresh(kFALSE)
 {
    if (!InitGraphics())

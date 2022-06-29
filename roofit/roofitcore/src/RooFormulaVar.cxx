@@ -76,7 +76,7 @@ RooFormulaVar::RooFormulaVar(const char *name, const char *title, const char* in
 {
   _actualVars.add(dependents) ;
 
-  if (_actualVars.getSize()==0) {
+  if (_actualVars.empty()) {
     _value = traceEval(0);
   } else {
     _formula.reset(new RooFormula(GetName(), _formExpr, _actualVars, checkVariables));
@@ -100,7 +100,7 @@ RooFormulaVar::RooFormulaVar(const char *name, const char *title, const RooArgLi
 {
   _actualVars.add(dependents) ;
 
-  if (_actualVars.getSize()==0) {
+  if (_actualVars.empty()) {
     _value = traceEval(0);
   } else {
     _formula.reset(new RooFormula(GetName(), _formExpr, _actualVars, checkVariables));
@@ -133,7 +133,7 @@ RooFormula& RooFormulaVar::getFormula() const
   if (!_formula) {
     // After being read from file, the formula object might not exist, yet:
     auto theFormula = new RooFormula(GetName(), _formExpr, _actualVars);
-    const_cast<std::unique_ptr<RooFormula>&>(this->_formula).reset(theFormula);
+    const_cast<std::unique_ptr<RooFormula>&>(_formula).reset(theFormula);
     const_cast<TString&>(_formExpr) = _formula->formulaString().c_str();
   }
 

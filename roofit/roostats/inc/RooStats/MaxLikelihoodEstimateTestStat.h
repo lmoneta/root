@@ -40,13 +40,12 @@ class MaxLikelihoodEstimateTestStat: public TestStatistic {
 
    //__________________________________
    MaxLikelihoodEstimateTestStat() :
-   fPdf(NULL),fParameter(NULL), fUpperLimit(true)
+   fPdf(nullptr),fParameter(nullptr), fUpperLimit(true)
    {
      /// constructor
      ///      fPdf = pdf;
      ///      fParameter = parameter;
 
-   fMinimizer=::ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
    fStrategy=::ROOT::Math::MinimizerOptions::DefaultStrategy();
    fPrintLevel=::ROOT::Math::MinimizerOptions::DefaultPrintLevel();
 
@@ -58,7 +57,6 @@ class MaxLikelihoodEstimateTestStat: public TestStatistic {
       // constructor
       //      fPdf = pdf;
       //      fParameter = parameter;
-   fMinimizer=::ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
    fStrategy=::ROOT::Math::MinimizerOptions::DefaultStrategy();
    fPrintLevel=::ROOT::Math::MinimizerOptions::DefaultPrintLevel();
 

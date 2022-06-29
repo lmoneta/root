@@ -36,6 +36,7 @@ in the two sets.
 #include "RooNLLVarNew.h"
 #include "RooChi2Var.h"
 #include "RooMsgService.h"
+#include "RooBatchCompute.h"
 
 #include <algorithm>
 #include <cmath>
@@ -179,6 +180,24 @@ double RooAddition::evaluate() const
 
 
 ////////////////////////////////////////////////////////////////////////////////
+/// Compute addition of PDFs in batches.
+void RooAddition::computeBatch(cudaStream_t* stream, double* output, size_t nEvents, RooFit::Detail::DataMap const& dataMap) const
+{
+  RooBatchCompute::VarVector pdfs;
+  RooBatchCompute::ArgVector coefs;
+  pdfs.reserve(_set.size());
+  coefs.reserve(_set.size());
+  for (const auto arg : _set)
+  {
+    pdfs.push_back(dataMap.at(arg));
+    coefs.push_back(1.0);
+  }
+  auto dispatch = stream ? RooBatchCompute::dispatchCUDA : RooBatchCompute::dispatchCPU;
+  dispatch->compute(stream, RooBatchCompute::AddPdf, output, nEvents, pdfs, coefs);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
 /// Return the default error level for MINUIT error analysis
 /// If the addition contains one or more RooNLLVars and
 /// no RooChi2Vars, return the defaultErrorLevel() of
@@ -192,11 +211,8 @@ double RooAddition::defaultErrorLevel() const
   RooAbsReal* nllArg(0) ;
   RooAbsReal* chi2Arg(0) ;
 
-  RooAbsArg* arg ;
-
   RooArgSet* comps = getComponents() ;
-  TIterator* iter = comps->createIterator() ;
-  while((arg=(RooAbsArg*)iter->Next())) {
+  for(RooAbsArg * arg : *comps) {
     if (dynamic_cast<RooNLLVar*>(arg) || dynamic_cast<ROOT::Experimental::RooNLLVarNew*>(arg)) {
       nllArg = (RooAbsReal*)arg ;
     }
@@ -204,7 +220,6 @@ double RooAddition::defaultErrorLevel() const
       chi2Arg = (RooAbsReal*)arg ;
     }
   }
-  delete iter ;
   delete comps ;
 
   if (nllArg && !chi2Arg) {
@@ -328,10 +343,8 @@ std::list<double>* RooAddition::binBoundaries(RooAbsRealLValue& obs, double xlo,
   std::list<double>* sumBinB = 0 ;
   bool needClean(false) ;
 
-  RooFIter iter = _set.fwdIterator() ;
-  RooAbsReal* func ;
   // Loop over components pdf
-  while((func=(RooAbsReal*)iter.next())) {
+  for(auto * func : static_range_cast<RooAbsReal*>(_set)) {
 
     std::list<double>* funcBinB = func->binBoundaries(obs,xlo,xhi) ;
 

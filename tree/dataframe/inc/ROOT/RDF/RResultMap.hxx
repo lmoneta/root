@@ -16,6 +16,7 @@
 #include "ROOT/RDF/RMergeableValue.hxx"
 #include "ROOT/RDF/Utils.hxx" // Union
 
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -65,7 +66,7 @@ class RResultMap {
    std::unordered_map<std::string, std::shared_ptr<T>> fMap;  // shared_ptrs are never null
    ROOT::Detail::RDF::RLoopManager *fLoopManager;             // never null
    std::shared_ptr<ROOT::Internal::RDF::RActionBase> fNominalAction; // never null
-   std::shared_ptr<ROOT::Internal::RDF::RActionBase> fVariedAction;  // never null
+   std::shared_ptr<ROOT::Internal::RDF::RActionBase> fVariedAction;  // might be null if there are no variations
 
    friend RResultMap
    ROOT::Internal::RDF::MakeResultMap<T>(std::shared_ptr<T> nominalResult,
@@ -95,7 +96,16 @@ class RResultMap {
       }
    }
 
+   void RunEventLoopIfNeeded()
+   {
+      if ((fVariedAction != nullptr && !fVariedAction->HasRun()) || !fNominalAction->HasRun())
+         fLoopManager->Run();
+   }
+
 public:
+   using iterator = typename decltype(fMap)::iterator;
+   using const_iterator = typename decltype(fMap)::const_iterator;
+
    // TODO: can we use a std::string_view here without having to create a temporary std::string anyway?
    T &operator[](const std::string &key)
    {
@@ -103,9 +113,34 @@ public:
       if (it == fMap.end())
          throw std::runtime_error("RResultMap: no result with key \"" + key + "\".");
 
-      if (!fVariedAction->HasRun())
-         fLoopManager->Run();
+      RunEventLoopIfNeeded();
       return *it->second;
+   }
+
+   /// Iterator to walk through key-value pairs of all variations for a given object.
+   /// Runs the event loop before returning if necessary.
+   iterator begin()
+   {
+      RunEventLoopIfNeeded();
+      return fMap.begin();
+   }
+
+   const_iterator cbegin()
+   {
+      RunEventLoopIfNeeded();
+      return fMap.cbegin();
+   }
+
+   iterator end()
+   {
+      RunEventLoopIfNeeded();
+      return fMap.end();
+   }
+
+   const_iterator cend() const
+   {
+      RunEventLoopIfNeeded();
+      return fMap.cend();
    }
 
    const std::vector<std::string> &GetKeys() const { return fKeys; }
@@ -138,14 +173,15 @@ namespace RDF {
 template <typename T>
 std::unique_ptr<RMergeableVariations<T>> GetMergeableValue(ROOT::RDF::Experimental::RResultMap<T> &rmap)
 {
-   if (!rmap.fVariedAction->HasRun())
-      rmap.fLoopManager->Run(); // Prevents from using `const` specifier in parameter
+   rmap.RunEventLoopIfNeeded();
 
-   auto mValueBase = rmap.fVariedAction->GetMergeableValue();
-
-   std::unique_ptr<RMergeableVariationsBase> mVariationsBase{
-      static_cast<RMergeableVariationsBase *>(mValueBase.release())};
-
+   std::unique_ptr<RMergeableVariationsBase> mVariationsBase;
+   if (rmap.fVariedAction != nullptr) {
+      auto mValueBase = rmap.fVariedAction->GetMergeableValue();
+      mVariationsBase.reset(static_cast<RMergeableVariationsBase *>(mValueBase.release())); // downcast unique_ptr
+   } else {
+      mVariationsBase = std::unique_ptr<RMergeableVariationsBase>({}, {});
+   }
    mVariationsBase->AddNominal(rmap.fNominalAction->GetMergeableValue());
 
    return std::make_unique<RMergeableVariations<T>>(std::move(*mVariationsBase));

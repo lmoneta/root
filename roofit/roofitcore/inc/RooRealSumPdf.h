@@ -68,7 +68,8 @@ public:
   CacheMode canNodeBeCached() const override { return RooAbsArg::NotAdvised ; } ;
   void setCacheAndTrackHints(RooArgSet&) override ;
 
-  void fillNormSetForServer(RooArgSet const& /*normSet*/, RooAbsArg const& /*server*/, RooArgSet& /*serverNormSet*/) const override {
+  std::unique_ptr<RooArgSet> fillNormSetForServer(RooArgSet const& /*normSet*/, RooAbsArg const& /*server*/) const override {
+     return std::make_unique<RooArgSet>();
   }
 
 protected:
@@ -94,9 +95,38 @@ protected:
 
 private:
 
-  bool haveLastCoef() const {
-    return _funcList.size() == _coefList.size();
-  }
+  friend class RooRealSumFunc;
+
+  static void initializeFuncsAndCoefs(RooAbsReal const& caller,
+                                      const RooArgList& inFuncList, const RooArgList& inCoefList,
+                                      RooArgList& funcList, RooArgList& coefList);
+
+  static double evaluate(RooAbsReal const& caller,
+                         RooArgList const& funcList,
+                         RooArgList const& coefList,
+                         bool doFloor,
+                         bool & hasWarnedBefore);
+
+  static bool checkObservables(RooAbsReal const& caller, RooArgSet const* nset,
+                               RooArgList const& funcList, RooArgList const& coefList);
+
+  static Int_t getAnalyticalIntegralWN(RooAbsReal const& caller, RooObjCacheManager & normIntMgr,
+                                       RooArgList const& funcList, RooArgList const& coefList,
+                                       RooArgSet& allVars, RooArgSet& numVars, const RooArgSet* normSet, const char* rangeName);
+  static double analyticalIntegralWN(RooAbsReal const& caller, RooObjCacheManager & normIntMgr,
+                                     RooArgList const& funcList, RooArgList const& coefList,
+                                     Int_t code, const RooArgSet* normSet, const char* rangeName,
+                                     bool hasWarnedBefore);
+
+  static std::list<double>* binBoundaries(
+          RooArgList const& funcList, RooAbsRealLValue& /*obs*/, double /*xlo*/, double /*xhi*/);
+  static std::list<double>* plotSamplingHint(
+          RooArgList const& funcList, RooAbsRealLValue& /*obs*/, double /*xlo*/, double /*xhi*/);
+  static bool isBinnedDistribution(RooArgList const& funcList, const RooArgSet& obs);
+
+  static void printMetaArgs(RooArgList const& funcList, RooArgList const& coefList, std::ostream& os);
+
+  static void setCacheAndTrackHints(RooArgList const& funcList, RooArgSet& trackNodes);
 
   ClassDefOverride(RooRealSumPdf, 5) // PDF constructed from a sum of (non-pdf) functions
 };

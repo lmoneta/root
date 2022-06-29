@@ -134,7 +134,7 @@ SPlot::SPlot():
 
   fSWeightVars.assign(Args);
 
-  fSData = NULL;
+  fSData = nullptr;
 
 }
 
@@ -147,7 +147,7 @@ SPlot::SPlot(const char* name, const char* title):
 
   fSWeightVars.assign(Args);
 
-  fSData = NULL;
+  fSData = nullptr;
 
 }
 
@@ -233,7 +233,7 @@ RooDataSet* SPlot::SetSData(RooDataSet* data)
     fSData = (RooDataSet*) data;
     return fSData;
   }  else
-    return NULL;
+    return nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -471,11 +471,6 @@ void SPlot::AddSWeight( RooAbsPdf* pdf, const RooArgList &yieldsTmp,
   RooArgSet vars(*fSData->get() );
   vars.remove(projDeps, true, true);
 
-  // Attach data set
-
-  // const_cast<RooAbsPdf*>(pdf)->attachDataSet(*fSData);
-
-  pdf->attachDataSet(*fSData);
 
   // first calculate the pdf values for all species and all events
   std::vector<RooAbsRealLValue*> yieldvars ;
@@ -544,7 +539,7 @@ void SPlot::AddSWeight( RooAbsPdf* pdf, const RooArgList &yieldsTmp,
   {
     //WVE: FIX THIS PART, EVALUATION PROGRESS!!
 
-    RooStats::SetParameters(fSData->get(ievt), pdfvars);
+    pdfvars->assign(*fSData->get(ievt));
 
     for(Int_t k = 0; k < nspec; ++k) {
       auto theVar = static_cast<RooAbsRealLValue*>(yieldvars[k]);

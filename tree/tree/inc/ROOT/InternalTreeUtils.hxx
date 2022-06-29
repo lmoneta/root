@@ -18,6 +18,10 @@
 #ifndef ROOT_INTERNAL_TREEUTILS_H
 #define ROOT_INTERNAL_TREEUTILS_H
 
+#include "TChain.h"
+#include "TNotifyLink.h"
+#include "TObjArray.h"
+
 #include <utility> // std::pair
 #include <vector>
 #include <string>
@@ -51,15 +55,55 @@ struct RFriendInfo {
       Names of the subtrees of a friend TChain. fFriendChainSubNames[i] is the
       list of names of the trees that make a friend TChain whose information is
       stored at fFriendNames[i] and fFriendFileNames[i]. If instead the friend
-      tree at position `i` is a TTree, fFriendChainSubNames[i] will be just a
-      vector with a single empty string.
+      tree at position `i` is a TTree, fFriendChainSubNames[i] will be an empty
+      vector.
    */
    std::vector<std::vector<std::string>> fFriendChainSubNames;
+
+   void AddFriend(const std::string &treeName, const std::string &fileNameGlob, const std::string &alias = "");
+
+   void
+   AddFriend(const std::string &treeName, const std::vector<std::string> &fileNameGlobs, const std::string &alias = "");
+
+   void AddFriend(const std::vector<std::pair<std::string, std::string>> &treeAndFileNameGlobs,
+                  const std::string &alias = "");
 };
 
 std::vector<std::string> GetFileNamesFromTree(const TTree &tree);
 RFriendInfo GetFriendInfo(const TTree &tree);
 std::vector<std::string> GetTreeFullPaths(const TTree &tree);
+
+void ClearMustCleanupBits(TObjArray &arr);
+
+class RNoCleanupNotifierHelper {
+   TChain *fChain = nullptr;
+
+public:
+   bool Notify()
+   {
+      TTree *t = fChain->GetTree();
+      TObjArray *branches = t->GetListOfBranches();
+      ClearMustCleanupBits(*branches);
+      return true;
+   }
+
+   void RegisterChain(TChain *c) { fChain = c; }
+};
+
+class RNoCleanupNotifier : public TNotifyLink<RNoCleanupNotifierHelper> {
+   RNoCleanupNotifierHelper fNoCleanupNotifierHelper;
+
+public:
+   RNoCleanupNotifier() : TNotifyLink<RNoCleanupNotifierHelper>(&fNoCleanupNotifierHelper) {}
+
+   void RegisterChain(TChain &c)
+   {
+      fNoCleanupNotifierHelper.RegisterChain(&c);
+      this->PrependLink(c);
+   }
+
+   ClassDef(RNoCleanupNotifier, 0);
+};
 
 } // namespace TreeUtils
 } // namespace Internal

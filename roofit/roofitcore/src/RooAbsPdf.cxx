@@ -483,7 +483,7 @@ double RooAbsPdf::getNorm(const RooArgSet* nset) const
   if (!nset) return 1 ;
 
   syncNormalization(nset,true) ;
-  if (_verboseEval>1) cxcoutD(Tracing) << IsA()->GetName() << "::getNorm(" << GetName() << "): norm(" << _norm << ") = " << _norm->getVal() << endl ;
+  if (_verboseEval>1) cxcoutD(Tracing) << ClassName() << "::getNorm(" << GetName() << "): norm(" << _norm << ") = " << _norm->getVal() << endl ;
 
   double ret = _norm->getVal() ;
   if (ret==0.) {
@@ -569,11 +569,11 @@ bool RooAbsPdf::syncNormalization(const RooArgSet* nset, bool adjustProxies) con
 
   if (_verboseEval>0) {
     if (!selfNormalized()) {
-      cxcoutD(Tracing) << IsA()->GetName() << "::syncNormalization(" << GetName()
+      cxcoutD(Tracing) << ClassName() << "::syncNormalization(" << GetName()
       << ") recreating normalization integral " << endl ;
       depList.printStream(ccoutD(Tracing),kName|kValue|kArgs,kSingleLine) ;
     } else {
-      cxcoutD(Tracing) << IsA()->GetName() << "::syncNormalization(" << GetName() << ") selfNormalized, creating unit norm" << endl;
+      cxcoutD(Tracing) << ClassName() << "::syncNormalization(" << GetName() << ") selfNormalized, creating unit norm" << endl;
     }
   }
 
@@ -650,13 +650,9 @@ void RooAbsPdf::setTraceCounter(Int_t value, bool allNodes)
   } else {
     RooArgList branchList ;
     branchNodeServerList(&branchList) ;
-    TIterator* iter = branchList.createIterator() ;
-    RooAbsArg* arg ;
-    while((arg=(RooAbsArg*)iter->Next())) {
-      RooAbsPdf* pdf = dynamic_cast<RooAbsPdf*>(arg) ;
+    for(auto * pdf : dynamic_range_cast<RooAbsPdf*>(branchList)) {
       if (pdf) pdf->setTraceCounter(value,false) ;
     }
-    delete iter ;
   }
 
 }
@@ -1117,7 +1113,8 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
                                                projDeps,
                                                ext,
                                                pc.getDouble("IntegrateBins"),
-                                               batchMode).release();
+                                               batchMode,
+                                               doOffset).release();
   }
 
   // Construct NLL
@@ -1679,7 +1676,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   cfg.doSumW2 = pc.getInt("doSumW2");
   cfg.doAsymptotic = pc.getInt("doAsymptoticError");
   cfg.minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet"));
-  cfg.minType = pc.getString("mintype","Minuit");
+  cfg.minType = pc.getString("mintype","");
   cfg.minAlg = pc.getString("minalg","minuit");
 
   return minimizeNLL(*nll, data, cfg).release();

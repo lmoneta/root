@@ -168,12 +168,11 @@ RooAbsReal *  ProfileLikelihoodCalculator::DoGlobalFit() const {
 RooFitResult * ProfileLikelihoodCalculator::DoMinimizeNLL(RooAbsReal * nll)  {
    // Minimizer the given NLL using the default options
 
-   const char * minimType = ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
+   const char * minimType = ""; // empty string to select RooMinimizer default
    const char * minimAlgo = ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo().c_str();
    int strategy = ROOT::Math::MinimizerOptions::DefaultStrategy();
    int level = ROOT::Math::MinimizerOptions::DefaultPrintLevel() -1;// RooFit level starts from  -1
    int tolerance = ROOT::Math::MinimizerOptions::DefaultTolerance();
-   oocoutP(nullptr,Minimization) << "ProfileLikelihoodCalcultor::DoMinimizeNLL - using " << minimType << " / " << minimAlgo << " with strategy " << strategy << std::endl;
    // do global fit and store fit result for further use
 
    const auto& config = GetGlobalRooStatsConfig();
@@ -184,6 +183,9 @@ RooFitResult * ProfileLikelihoodCalculator::DoMinimizeNLL(RooAbsReal * nll)  {
    minim.setPrintLevel(level);
    minim.optimizeConst(2); // to optimize likelihood calculations
    minim.setEvalErrorWall(config.useEvalErrorWall);
+
+   oocoutP(nullptr,Minimization) << "ProfileLikelihoodCalcultor::DoMinimizeNLL - using " << minim.minimizerType()
+                                 << " / " << minimAlgo << " with strategy " << strategy << std::endl;
 
    int status = -1;
    for (int tries = 1, maxtries = 4; tries <= maxtries; ++tries) {
@@ -224,7 +226,7 @@ LikelihoodInterval* ProfileLikelihoodCalculator::GetInterval() const {
 //    RooAbsData* data = fWS->data(fDataName);
    RooAbsPdf * pdf = GetPdf();
    RooAbsData* data = GetData();
-   if (!data || !pdf || fPOI.getSize() == 0) return 0;
+   if (!data || !pdf || fPOI.empty()) return 0;
 
    RooArgSet* constrainedParams = pdf->getParameters(*data);
    RemoveConstantParameters(constrainedParams);
@@ -305,7 +307,7 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
 
    if (!data || !pdf) return 0;
 
-   if (fNullParams.getSize() == 0) return 0;
+   if (fNullParams.empty()) return 0;
 
    // make a clone and ordered list since a vector will be associated to keep parameter values
    // clone the list since first fit will changes the fNullParams values

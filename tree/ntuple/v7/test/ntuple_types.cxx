@@ -12,6 +12,12 @@ TEST(RNTuple, TypeName) {
 
    auto field = RField<DerivedB>("derived");
    EXPECT_EQ(sizeof(DerivedB), field.GetValueSize());
+
+   EXPECT_STREQ("std::pair<std::pair<float,CustomStruct>,std::int32_t>", (ROOT::Experimental::RField<
+                 std::pair<std::pair<float,CustomStruct>,int>>::TypeName().c_str()));
+   EXPECT_STREQ(
+      "std::tuple<std::tuple<char,CustomStruct,char>,std::int32_t>",
+      (ROOT::Experimental::RField<std::tuple<std::tuple<char, CustomStruct, char>, int>>::TypeName().c_str()));
 }
 
 
@@ -21,6 +27,126 @@ TEST(RNTuple, CreateField)
    EXPECT_STREQ("std::vector<std::uint32_t>", field->GetType().c_str());
    auto value = field->GenerateValue();
    field->DestroyValue(value);
+
+   std::vector<std::unique_ptr<RFieldBase>> itemFields;
+   itemFields.push_back(std::make_unique<RField<std::uint32_t>>("u32"));
+   itemFields.push_back(std::make_unique<RField<std::uint8_t>>("u8"));
+   ROOT::Experimental::RRecordField record("test", itemFields);
+   EXPECT_EQ(alignof(std::uint32_t), record.GetAlignment());
+   // Check that trailing padding is added after `u8` to comply with the alignment requirements of uint32_t
+   EXPECT_EQ(sizeof(std::uint32_t) + alignof(std::uint32_t), record.GetValueSize());
+}
+
+TEST(RNTuple, StdPair)
+{
+   auto field = RField<std::pair<int64_t, float>>("pairField");
+   EXPECT_STREQ("std::pair<std::int64_t,float>", field.GetType().c_str());
+   auto otherField = RFieldBase::Create("test", "std::pair<int64_t, float>").Unwrap();
+   EXPECT_STREQ(field.GetType().c_str(), otherField->GetType().c_str());
+   EXPECT_EQ((sizeof(std::pair<int64_t, float>)), field.GetValueSize());
+   EXPECT_EQ((sizeof(std::pair<int64_t, float>)), otherField->GetValueSize());
+   EXPECT_EQ((alignof(std::pair<int64_t, float>)), field.GetAlignment());
+   EXPECT_EQ((alignof(std::pair<int64_t, float>)), otherField->GetAlignment());
+
+   auto pairPairField = RField<std::pair<std::pair<int64_t, float>,
+      std::vector<std::pair<CustomStruct, double>>>>("pairPairField");
+   EXPECT_STREQ(
+      "std::pair<std::pair<std::int64_t,float>,std::vector<std::pair<CustomStruct,double>>>",
+      pairPairField.GetType().c_str());
+
+   FileRaii fileGuard("test_ntuple_rfield_stdpair.root");
+   {
+      auto model = RNTupleModel::Create();
+      auto pair_field = model->MakeField<std::pair<double, std::string>>(
+         {"myPair", "a very cool field"}
+      );
+      auto myPair2 = RFieldBase::Create("myPair2", "std::pair<double, std::string>").Unwrap();
+      model->AddField(std::move(myPair2));
+
+      auto ntuple = RNTupleWriter::Recreate(std::move(model), "pair_ntuple", fileGuard.GetPath());
+      auto pair_field2 = ntuple->GetModel()->GetDefaultEntry()->Get<std::pair<double, std::string>>("myPair2");
+      for (int i = 0; i < 2; i++) {
+         *pair_field = {static_cast<double>(i), std::to_string(i)};
+         *pair_field2 = {static_cast<double>(i + 1), std::to_string(i + 1)};
+         ntuple->Fill();
+      }
+   }
+
+   auto ntuple = RNTupleReader::Open("pair_ntuple", fileGuard.GetPath());
+   EXPECT_EQ(2, ntuple->GetNEntries());
+
+   auto viewPair = ntuple->GetView<std::pair<double, std::string>>("myPair");
+   auto viewPair2 = ntuple->GetView<std::pair<double, std::string>>("myPair2");
+   for (auto i : ntuple->GetEntryRange()) {
+      EXPECT_EQ(static_cast<double>(i), viewPair(i).first);
+      EXPECT_EQ(std::to_string(i), viewPair(i).second);
+
+      EXPECT_EQ(static_cast<double>(i + 1), viewPair2(i).first);
+      EXPECT_EQ(std::to_string(i + 1), viewPair2(i).second);
+   }
+}
+
+TEST(RNTuple, StdTuple)
+{
+   auto field = RField<std::tuple<char, int64_t, char>>("tupleField");
+   EXPECT_STREQ("std::tuple<char,std::int64_t,char>", field.GetType().c_str());
+   auto otherField = RFieldBase::Create("test", "std::tuple<char, int64_t, char>").Unwrap();
+   EXPECT_STREQ(field.GetType().c_str(), otherField->GetType().c_str());
+   EXPECT_EQ((sizeof(std::tuple<char, int64_t, char>)), field.GetValueSize());
+   EXPECT_EQ((sizeof(std::tuple<char, int64_t, char>)), otherField->GetValueSize());
+   EXPECT_EQ((alignof(std::tuple<char, int64_t, char>)), field.GetAlignment());
+   EXPECT_EQ((alignof(std::tuple<char, int64_t, char>)), otherField->GetAlignment());
+
+   auto tupleTupleField =
+      RField<std::tuple<std::tuple<int64_t, float, char, float>, std::vector<std::tuple<char, char, char>>>>(
+         "tupleTupleField");
+   EXPECT_STREQ("std::tuple<std::tuple<std::int64_t,float,char,float>,std::vector<std::tuple<char,char,char>>>",
+                tupleTupleField.GetType().c_str());
+
+   FileRaii fileGuard("test_ntuple_rfield_stdtuple.root");
+   {
+      auto model = RNTupleModel::Create();
+      auto tuple_field = model->MakeField<std::tuple<char, float, std::string, char>>({"myTuple", "4-tuple"});
+      auto myTuple2 = RFieldBase::Create("myTuple2", "std::tuple<char, float, std::string, char>").Unwrap();
+      auto myTuple3 = RFieldBase::Create("myTuple3", "std::tuple<int32_t, std::tuple<std::string, char>>").Unwrap();
+      model->AddField(std::move(myTuple2));
+      model->AddField(std::move(myTuple3));
+
+      auto ntuple = RNTupleWriter::Recreate(std::move(model), "tuple_ntuple", fileGuard.GetPath());
+      auto tuple_field2 =
+         ntuple->GetModel()->GetDefaultEntry()->Get<std::tuple<char, float, std::string, char>>("myTuple2");
+      auto tuple_field3 =
+         ntuple->GetModel()->GetDefaultEntry()->Get<std::tuple<int32_t, std::tuple<std::string, char>>>("myTuple3");
+      for (int i = 0; i < 2; i++) {
+         *tuple_field = {'A' + i, static_cast<float>(i), std::to_string(i), '0' + i};
+         *tuple_field2 = {'B' + i, static_cast<float>(i), std::to_string(i), '1' + i};
+         *tuple_field3 = {i, {std::to_string(i), '2' + i}};
+         ntuple->Fill();
+      }
+   }
+
+   auto ntuple = RNTupleReader::Open("tuple_ntuple", fileGuard.GetPath());
+   EXPECT_EQ(2, ntuple->GetNEntries());
+
+   auto viewTuple = ntuple->GetView<std::tuple<char, float, std::string, char>>("myTuple");
+   auto viewTuple2 = ntuple->GetView<std::tuple<char, float, std::string, char>>("myTuple2");
+   auto viewTuple3 = ntuple->GetView<std::tuple<int32_t, std::tuple<std::string, char>>>("myTuple3");
+   for (auto i : ntuple->GetEntryRange()) {
+      EXPECT_EQ(static_cast<char>('A' + i), std::get<0>(viewTuple(i)));
+      EXPECT_EQ(static_cast<double>(i), std::get<1>(viewTuple(i)));
+      EXPECT_EQ(std::to_string(i), std::get<2>(viewTuple(i)));
+      EXPECT_EQ(static_cast<char>('0' + i), std::get<3>(viewTuple(i)));
+
+      EXPECT_EQ(static_cast<char>('B' + i), std::get<0>(viewTuple2(i)));
+      EXPECT_EQ(static_cast<double>(i), std::get<1>(viewTuple2(i)));
+      EXPECT_EQ(std::to_string(i), std::get<2>(viewTuple2(i)));
+      EXPECT_EQ(static_cast<char>('1' + i), std::get<3>(viewTuple2(i)));
+
+      EXPECT_EQ(static_cast<int32_t>(i), std::get<0>(viewTuple3(i)));
+      const auto &nested = std::get<1>(viewTuple3(i));
+      EXPECT_EQ(std::to_string(i), std::get<0>(nested));
+      EXPECT_EQ(static_cast<char>('2' + i), std::get<1>(nested));
+   }
 }
 
 TEST(RNTuple, Int64_t)
@@ -61,18 +187,6 @@ TEST(RNTuple, UInt16_t)
 
 TEST(RNTuple, UnsupportedStdTypes)
 {
-   try {
-      auto field = RFieldBase::Create("pair_field", "std::pair<int, float>").Unwrap();
-      FAIL() << "should not be able to make a std::pair field";
-   } catch (const RException& err) {
-      EXPECT_THAT(err.what(), testing::HasSubstr("pair<int,float> is not supported"));
-   }
-   try {
-      auto field = RField<std::pair<int, float>>("pair_field");
-      FAIL() << "should not be able to make a std::pair field";
-   } catch (const RException& err) {
-      EXPECT_THAT(err.what(), testing::HasSubstr("pair<int,float> is not supported"));
-   }
    try {
       auto field = RField<std::weak_ptr<int>>("myWeakPtr");
       FAIL() << "should not be able to make a std::weak_ptr field";

@@ -99,7 +99,7 @@ public:
    /**
       Default constructor
    */
-   Fitter ();
+   Fitter () {}
 
    /**
       Constructor from a result
@@ -110,19 +110,17 @@ public:
    /**
       Destructor
    */
-   ~Fitter ();
-
-private:
+   ~Fitter () {}
 
    /**
       Copy constructor (disabled, class is not copyable)
    */
-   Fitter(const Fitter &);
+   Fitter(const Fitter &) = delete;
 
    /**
       Assignment operator (disabled, class is not copyable)
    */
-   Fitter & operator = (const Fitter & rhs);
+   Fitter & operator = (const Fitter &) = delete;
 
 
 public:
@@ -442,7 +440,9 @@ public:
       In this case a new instance of the function pointer will be re-created and can be
       obtained calling again GetFCN()
     */
-   ROOT::Math::IMultiGenFunction * GetFCN() const { return fObjFunction.get(); }
+   ROOT::Math::IMultiGenFunction * GetFCN() const {
+      return fObjFunction.get();
+    }
 
 
    /**
@@ -467,6 +467,9 @@ protected:
    bool DoUnbinnedLikelihoodFit( bool extended = false, const ROOT::EExecutionPolicy &executionPolicy = ROOT::EExecutionPolicy::kSequential);
    /// linear least square fit
    bool DoLinearFit();
+   /// Set Objective function
+   bool DoSetFCN(bool useExtFCN, const ROOT::Math::IMultiGenFunction &fcn, const double *params, unsigned int dataSize,
+                 bool chi2fit);
 
    // initialize the minimizer
    bool DoInitMinimizer();
@@ -512,18 +515,24 @@ protected:
    template <class ObjFuncType>
    bool GetDataFromFCN();
 
+   /// return pointer to used objective function
+   /// if using an external one use external, otherwise use the one stored
+   /// in shared ptr
+   const ROOT::Math::IMultiGenFunction * ObjFunction() const {
+      return (fExtObjFunction) ? fExtObjFunction : fObjFunction.get();
+   }
 
 private:
 
-   bool fUseGradient;       ///< flag to indicate if using gradient or not
+   bool fUseGradient = false;  ///< flag to indicate if using gradient or not
 
-   bool fBinFit;            ///< flag to indicate if fit is binned
+   bool fBinFit = false;    ///< flag to indicate if fit is binned
                             ///< in case of false the fit is unbinned or undefined)
                             ///< flag it is used to compute chi2 for binned likelihood fit
 
-   int fFitType;   ///< type of fit   (0 undefined, 1 least square, 2 likelihood)
+   int fFitType = 0;   ///< type of fit   (0 undefined, 1 least square, 2 likelihood)
 
-   int fDataSize;  ///< size of data sets (need for Fumili or LM fitters)
+   int fDataSize = 0;  ///< size of data sets (need for Fumili or LM fitters)
 
    FitConfig fConfig;       ///< fitter configuration (options and parameter settings)
 
@@ -539,6 +548,8 @@ private:
 
    std::shared_ptr<ROOT::Math::IMultiGenFunction>  fObjFunction;  ///<! pointer to used objective function
 
+   const ROOT::Math::IMultiGenFunction * fExtObjFunction = nullptr;     ///<! pointer to an external FCN
+
 };
 
 
@@ -546,7 +557,7 @@ private:
 // useful for fits done with customized FCN classes
 template <class ObjFuncType>
 bool Fitter::GetDataFromFCN()  {
-   ObjFuncType * objfunc = dynamic_cast<ObjFuncType*>(fObjFunction.get() );
+   const ObjFuncType * objfunc = dynamic_cast<const ObjFuncType*>(ObjFunction());
    if (objfunc) {
       fFunc = objfunc->ModelFunctionPtr();
       fData = objfunc->DataPtr();
@@ -613,12 +624,14 @@ void Fitter::SetFunction(const IGradModelFunction_v &func, bool useGradient)
 template<class Function>
 bool ROOT::Fit::Fitter::FitFCN(unsigned int npar, Function & f, const double * par, unsigned int datasize,bool chi2fit) {
    ROOT::Math::WrappedMultiFunction<Function &> wf(f,npar);
-   return FitFCN(wf,par,datasize,chi2fit);
+   if (!DoSetFCN(false, wf, par, datasize, chi2fit))
+      return false;
+   return FitFCN();
 }
 template<class Function>
 bool ROOT::Fit::Fitter::SetFCN(unsigned int npar, Function & f, const double * par, unsigned int datasize,bool chi2fit) {
    ROOT::Math::WrappedMultiFunction<Function &> wf(f,npar);
-   return SetFCN(wf,par,datasize,chi2fit);
+   return DoSetFCN(false, wf, par, datasize, chi2fit);
 }
 
 

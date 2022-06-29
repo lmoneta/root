@@ -35,9 +35,9 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////
 
 void FrequentistCalculator::PreHook() const {
-   if (fFitInfo != NULL) {
+   if (fFitInfo != nullptr) {
       delete fFitInfo;
-      fFitInfo = NULL;
+      fFitInfo = nullptr;
    }
    if (fStoreFitInfo) {
       fFitInfo = new RooArgSet();
@@ -77,7 +77,7 @@ int FrequentistCalculator::PreNullHook(RooArgSet *parameterPoint, double obsTest
          if (fNullModel->GetNuisanceParameters()) {
             RooArgSet remain(*fNullModel->GetNuisanceParameters());
             remain.remove(*fConditionalMLEsNull,true,true);
-            if( remain.getSize() == 0 ) doProfile = false;
+            if( remain.empty() ) doProfile = false;
          }
       }
    }else{
@@ -100,7 +100,6 @@ int FrequentistCalculator::PreNullHook(RooArgSet *parameterPoint, double obsTest
                                                         RooFit::Offset(config.useLikelihoodOffset));
       RooProfileLL* profile = dynamic_cast<RooProfileLL*>(nll->createProfile(allButNuisance));
       // set minimier options
-      profile->minimizer()->setMinimizerType(ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str());
       profile->minimizer()->setPrintLevel(ROOT::Math::MinimizerOptions::DefaultPrintLevel()-1);
       profile->getVal(); // this will do fit and set nuisance parameters to profiled values
 
@@ -189,7 +188,7 @@ int FrequentistCalculator::PreAltHook(RooArgSet *parameterPoint, double obsTestS
          if (fAltModel->GetNuisanceParameters()) {
             RooArgSet remain(*fAltModel->GetNuisanceParameters());
             remain.remove(*fConditionalMLEsAlt,true,true);
-            if( remain.getSize() == 0 ) doProfile = false;
+            if( remain.empty() ) doProfile = false;
          }
       }
    }else{
@@ -213,7 +212,6 @@ int FrequentistCalculator::PreAltHook(RooArgSet *parameterPoint, double obsTestS
 
       RooProfileLL* profile = dynamic_cast<RooProfileLL*>(nll->createProfile(allButNuisance));
       // set minimizer options
-      profile->minimizer()->setMinimizerType(ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str());
       profile->minimizer()->setPrintLevel(ROOT::Math::MinimizerOptions::DefaultPrintLevel()-1); // use -1 to make more silent
       profile->getVal(); // this will do fit and set nuisance parameters to profiled values
 

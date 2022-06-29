@@ -56,7 +56,7 @@ void RooPolyFunc::addTerm(double coefficient)
 
    termList->addOwned(*exponents);
    termList->addOwned(*coeff);
-   this->_terms.push_back(move(termList));
+   _terms.push_back(move(termList));
 }
 
 void RooPolyFunc::addTerm(double coefficient, const RooAbsReal &var1, int exp1)
@@ -80,7 +80,7 @@ void RooPolyFunc::addTerm(double coefficient, const RooAbsReal &var1, int exp1)
 
    termList->addOwned(*exponents);
    termList->addOwned(*coeff);
-   this->_terms.push_back(move(termList));
+   _terms.push_back(move(termList));
 }
 
 void RooPolyFunc::addTerm(double coefficient, const RooAbsReal &var1, int exp1, const RooAbsReal &var2, int exp2)
@@ -105,7 +105,7 @@ void RooPolyFunc::addTerm(double coefficient, const RooAbsReal &var1, int exp1, 
    }
    termList->addOwned(*exponents);
    termList->addOwned(*coeff);
-   this->_terms.push_back(move(termList));
+   _terms.push_back(move(termList));
 }
 
 void RooPolyFunc::addTerm(double coefficient, const RooAbsCollection &exponents)
@@ -122,7 +122,7 @@ void RooPolyFunc::addTerm(double coefficient, const RooAbsCollection &exponents)
    auto coeff = new RooRealVar(coeff_name.c_str(), coeff_name.c_str(), coefficient);
    termList->addOwned(exponents);
    termList->addOwned(*coeff);
-   this->_terms.push_back(move(termList));
+   _terms.push_back(move(termList));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -156,22 +156,8 @@ RooPolyFunc::RooPolyFunc(const RooPolyFunc &other, const char *name)
    : RooAbsReal(other, name), _vars("vars", this, other._vars)
 {
    for (auto const &term : other._terms) {
-      this->_terms.emplace_back(std::make_unique<RooListProxy>(term->GetName(), this, *term));
+      _terms.emplace_back(std::make_unique<RooListProxy>(term->GetName(), this, *term));
    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Assignment operator
-
-RooPolyFunc &RooPolyFunc::operator=(const RooPolyFunc &other)
-{
-   RooAbsReal::operator=(other);
-   _vars = other._vars;
-
-   for (auto const &term : other._terms) {
-      this->_terms.emplace_back(std::make_unique<RooListProxy>(term->GetName(), this, *term));
-   }
-   return *this;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -1,17 +1,9 @@
-/// histogram painter base class
-
 import { gStyle, BIT, settings, constants, internals, create } from '../core.mjs';
-
 import { ColorPalette, toHex, getColor } from '../base/colors.mjs';
-
 import { DrawOptions } from '../base/BasePainter.mjs';
-
 import { ObjectPainter } from '../base/ObjectPainter.mjs';
-
 import { EAxisBits } from '../gpad/TAxisPainter.mjs';
-
 import { TPavePainter } from '../hist/TPavePainter.mjs';
-
 import { ensureTCanvas } from '../gpad/TCanvasPainter.mjs';
 
 
@@ -1462,7 +1454,7 @@ class THistPainter extends ObjectPainter {
 
    /** @summary Check if such function should be drawn directly */
    needDrawFunc(histo, func) {
-      if (func._typename === 'TPaveText' || func._typename === 'TPaveStats')
+      if (func._typename === 'TPaveStats')
           return !histo.TestBit(TH1StatusBits.kNoStats) && !this.options.NoStat;
 
        if (func._typename === 'TF1')
@@ -2244,7 +2236,7 @@ class THistPainter extends ObjectPainter {
       if (handle.kind === 'time')
          return funcs.axisAsText(name, (x1+x2)/2);
 
-      return "[" + funcs.axisAsText(name, x1) + ", " + funcs.axisAsText(name, x2) + ")";
+      return `[${funcs.axisAsText(name, x1)}, ${funcs.axisAsText(name, x2)})`;
    }
 
    /** @summary generic draw function for histograms

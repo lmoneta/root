@@ -149,7 +149,7 @@ Int_t ParamHistFunc::GetNumBins( const RooArgSet& vars ) {
 
   // A helper method to get the number of bins
 
-  if( vars.getSize() == 0 ) return 0;
+  if( vars.empty() ) return 0;
 
   Int_t numBins = 1;
 
@@ -601,6 +601,8 @@ double ParamHistFunc::evaluate() const
 void ParamHistFunc::computeBatch(cudaStream_t*, double* output, size_t size, RooFit::Detail::DataMap const& dataMap) const {
   std::vector<double> oldValues;
   std::vector<RooSpan<const double>> data;
+  oldValues.reserve(_dataVars.size());
+  data.reserve(_dataVars.size());
 
   // Retrieve data for all variables
   for (auto arg : _dataVars) {
@@ -637,7 +639,7 @@ Int_t ParamHistFunc::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& anal
                     const char* /*rangeName*/) const
 {
   // Handle trivial no-integration scenario
-  if (allVars.getSize()==0) return 0 ;
+  if (allVars.empty()) return 0 ;
   if (_forceNumInt) return 0 ;
 
 

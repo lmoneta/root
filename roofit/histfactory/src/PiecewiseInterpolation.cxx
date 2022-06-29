@@ -474,7 +474,7 @@ Int_t PiecewiseInterpolation::getAnalyticalIntegralWN(RooArgSet& allVars, RooArg
 
 
   // Handle trivial no-integration scenario
-  if (allVars.getSize()==0) return 0 ;
+  if (allVars.empty()) return 0 ;
   if (_forceNumInt) return 0 ;
 
 
@@ -608,8 +608,8 @@ double PiecewiseInterpolation::analyticalIntegralWN(Int_t code, const RooArgSet*
 
   // old integral, only works for linear and not positive definite
   CacheElem* cache = (CacheElem*) _normIntMgr.getObjByIndex(code-1) ;
-  if( cache==NULL ) {
-    std::cout << "Error: Cache Element is NULL" << std::endl;
+  if( cache==nullptr ) {
+    std::cout << "Error: Cache Element is nullptr" << std::endl;
     throw std::exception();
   }
 

@@ -227,7 +227,7 @@ void RooStats::HistFactory::Measurement::PrintTree( std::ostream& stream )
     << std::endl;
 
 
-  if( fConstantParams.size() != 0 ) {
+  if( !fConstantParams.empty() ) {
     stream << "Constant Params: ";
     for( unsigned int i = 0; i < fConstantParams.size(); ++i ) {
       stream << " " << fConstantParams.at(i);
@@ -235,7 +235,7 @@ void RooStats::HistFactory::Measurement::PrintTree( std::ostream& stream )
     stream << std::endl;
   }
 
-  if( fFunctionObjects.size() != 0 ) {
+  if( !fFunctionObjects.empty() ) {
     stream << "Preprocess Functions: ";
     for( unsigned int i = 0; i < fFunctionObjects.size(); ++i ) {
       stream << " " << fFunctionObjects.at(i).GetCommand();
@@ -243,7 +243,7 @@ void RooStats::HistFactory::Measurement::PrintTree( std::ostream& stream )
     stream << std::endl;
   }
 
-  if( fChannels.size() != 0 ) {
+  if( !fChannels.empty() ) {
     stream << "Channels:" << std::endl;
     for( unsigned int i = 0; i < fChannels.size(); ++i ) {
       fChannels.at(i).Print( stream );
@@ -479,7 +479,7 @@ void RooStats::HistFactory::Measurement::writeToFile( TFile* file )
     // for this channel
 
     TDirectory* chanDir = file->mkdir( (chanName + "_hists").c_str() );
-    if( chanDir == NULL ) {
+    if( chanDir == nullptr ) {
       cxcoutEHF << "Error: Cannot create channel " << (chanName + "_hists")
       << std::endl;
       throw hf_exc();
@@ -488,7 +488,7 @@ void RooStats::HistFactory::Measurement::writeToFile( TFile* file )
 
     // Save the data:
     TDirectory* dataDir = chanDir->mkdir( "data" );
-    if( dataDir == NULL ) {
+    if( dataDir == nullptr ) {
       cxcoutEHF << "Error: Cannot make directory " << chanDir << std::endl;
       throw hf_exc();
     }
@@ -521,7 +521,7 @@ void RooStats::HistFactory::Measurement::writeToFile( TFile* file )
       file->cd();
       chanDir->cd();
       TDirectory* sampleDir = chanDir->mkdir( sampName.c_str() );
-      if( sampleDir == NULL ) {
+      if( sampleDir == nullptr ) {
    cxcoutEHF << "Error: Directory " << sampName << " not created properly" << std::endl;
    throw hf_exc();
       }

@@ -42,12 +42,11 @@ namespace RooStats {
    fSigned = false;
         fDetailedOutputWithErrorsAndPulls = false;
         fDetailedOutputEnabled = false;
-        fDetailedOutput = NULL;
+        fDetailedOutput = nullptr;
    fLOffset = RooStats::IsNLLOffset() ;
 
         fVarName = "Profile Likelihood Ratio";
         fReuseNll = false;
-   fMinimizer=::ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
    fStrategy=::ROOT::Math::MinimizerOptions::DefaultStrategy();
         fTolerance=TMath::Max(1.,::ROOT::Math::MinimizerOptions::DefaultTolerance());
    fPrintLevel=::ROOT::Math::MinimizerOptions::DefaultPrintLevel();
@@ -62,12 +61,11 @@ namespace RooStats {
        fSigned = false;
        fDetailedOutputWithErrorsAndPulls = false;
        fDetailedOutputEnabled = false;
-       fDetailedOutput = NULL;
+       fDetailedOutput = nullptr;
        fLOffset = RooStats::IsNLLOffset() ;
 
        fVarName = "Profile Likelihood Ratio";
        fReuseNll = false;
-       fMinimizer=::ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
        fStrategy=::ROOT::Math::MinimizerOptions::DefaultStrategy();
        // avoid default tolerance to be too small (1. is default in RooMinimizer)
        fTolerance=TMath::Max(1.,::ROOT::Math::MinimizerOptions::DefaultTolerance());
@@ -109,7 +107,7 @@ namespace RooStats {
         fDetailedOutputEnabled = e;
         fDetailedOutputWithErrorsAndPulls = withErrorsAndPulls;
         delete fDetailedOutput;
-        fDetailedOutput = NULL;
+        fDetailedOutput = nullptr;
      }
      /// Returns detailed output. The value returned by this function is updated after each call to Evaluate().
      /// The returned RooArgSet contains the following:

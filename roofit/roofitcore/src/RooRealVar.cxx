@@ -260,7 +260,7 @@ RooSpan<const double> RooRealVar::getValues(RooBatchCompute::RunContext& inputDa
 
   for (const auto& var_span : inputData.spans) {
     auto var = var_span.first;
-    if (var->namePtr() == namePtr()) {
+    if (var == RooFit::Detail::DataKey{this}) {
       // A variable with the same name exists in the input data. Use their values as ours.
       inputData.spans[this] = var_span.second;
       return var_span.second;
@@ -286,6 +286,7 @@ void RooRealVar::setVal(double value)
   if (clipValue != _value) {
     setValueDirty() ;
     _value = clipValue;
+    ++_valueResetCounter;
   }
 }
 
@@ -302,6 +303,7 @@ void RooRealVar::setVal(double value, const char* rangeName)
   if (clipValue != _value) {
     setValueDirty() ;
     _value = clipValue;
+    ++_valueResetCounter;
   }
 }
 
@@ -395,7 +397,7 @@ RooAbsBinning& RooRealVar::getBinning(const char* name, bool verbose, bool creat
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Get a list of all binning names. An empty name implies the default binning and
-/// a NULL pointer should be passed to getBinning in this case.
+/// a nullptr pointer should be passed to getBinning in this case.
 
 std::list<std::string> RooRealVar::getBinningNames() const
 {
@@ -1217,7 +1219,11 @@ void RooRealVar::fillTreeBranch(TTree& t)
 void RooRealVar::copyCache(const RooAbsArg* source, bool valueOnly, bool setValDirty)
 {
   // Follow usual procedure for valueklog
+  double oldVal = _value;
   RooAbsReal::copyCache(source,valueOnly,setValDirty) ;
+  if(_value != oldVal) {
+    ++_valueResetCounter;
+  }
 
   if (valueOnly) return ;
 

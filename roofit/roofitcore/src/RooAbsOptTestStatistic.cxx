@@ -623,12 +623,12 @@ void RooAbsOptTestStatistic::optimizeConstantTerms(bool activate, bool applyTrac
     //  WVE - Patch to allow customization of optimization level per component pdf
     if (_funcClone->getAttribute("NoOptimizeLevel1")) {
       coutI(Minimization) << " Optimization customization: Level-1 constant-term optimization prohibited by attribute NoOptimizeLevel1 set on top-level pdf  "
-                          << _funcClone->IsA()->GetName() << "::" << _funcClone->GetName() << endl ;
+                          << _funcClone->ClassName() << "::" << _funcClone->GetName() << endl ;
       return ;
     }
     if (_funcClone->getAttribute("NoOptimizeLevel2")) {
       coutI(Minimization) << " Optimization customization: Level-2 constant-term optimization prohibited by attribute NoOptimizeLevel2 set on top-level pdf  "
-                          << _funcClone->IsA()->GetName() << "::" << _funcClone->GetName() << endl ;
+                          << _funcClone->ClassName() << "::" << _funcClone->GetName() << endl ;
       applyTrackingOpt=false ;
     }
 
@@ -761,7 +761,7 @@ bool RooAbsOptTestStatistic::setDataSlave(RooAbsData& indata, bool cloneData, bo
 
   if (cloneData) {
     // Cloning input dataset
-    if (_rangeName.size()==0) {
+    if (_rangeName.empty()) {
       _dataClone = (RooAbsData*) indata.reduce(*indata.get()) ;
     } else {
       _dataClone = ((RooAbsData&)indata).reduce(RooFit::SelectVars(*indata.get()),RooFit::CutRange(_rangeName.c_str())) ;

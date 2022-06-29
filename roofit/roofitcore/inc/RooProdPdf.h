@@ -34,7 +34,6 @@ class RooProdPdf : public RooAbsPdf {
 public:
 
   RooProdPdf() ;
-  RooProdPdf(const char *name, const char *title, double cutOff=0);
   RooProdPdf(const char *name, const char *title,
        RooAbsPdf& pdf1, RooAbsPdf& pdf2, double cutOff=0) ;
   RooProdPdf(const char* name, const char* title, const RooArgList& pdfList, double cutOff=0) ;
@@ -97,7 +96,7 @@ public:
 
   void writeCacheToStream(std::ostream& os, RooArgSet const* nset) const;
 
-  void fillNormSetForServer(RooArgSet const& normSet, RooAbsArg const& server, RooArgSet& serverNormSet) const override;
+  std::unique_ptr<RooArgSet> fillNormSetForServer(RooArgSet const& normSet, RooAbsArg const& server) const override;
 
 private:
 

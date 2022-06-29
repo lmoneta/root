@@ -931,7 +931,7 @@ void RooAbsData::printTitle(ostream& os) const
 
 void RooAbsData::printClassName(ostream& os) const
 {
-  os << IsA()->GetName() ;
+  os << ClassName() ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1131,9 +1131,6 @@ TMatrixDSym* RooAbsData::corrcovMatrix(const RooArgList& vars, const char* cutSp
   // Setup RooFormulaVar for cutSpec if it is present
   std::unique_ptr<RooFormula> select = cutSpec ? std::make_unique<RooFormula>("select",cutSpec,*get()) : nullptr;
 
-  std::unique_ptr<TIterator> iter{varList.createIterator()};
-  std::unique_ptr<TIterator> iter2{varList.createIterator()};
-
   TMatrixDSym xysum(varList.size()) ;
   std::vector<double> xsum(varList.size()) ;
   std::vector<double> x2sum(varList.size()) ;
@@ -1144,24 +1141,18 @@ TMatrixDSym* RooAbsData::corrcovMatrix(const RooArgList& vars, const char* cutSp
     if (select && select->eval()==0) continue ;
     if (cutRange && dvars->allInRange(cutRange)) continue ;
 
-    RooRealVar* varx, *vary ;
-    iter->Reset() ;
-    Int_t ix=0,iy=0 ;
-    while((varx=(RooRealVar*)iter->Next())) {
-      xsum[ix] += weight()*varx->getVal() ;
+    for(std::size_t ix = 0; ix < varList.size(); ++ix) {
+      auto varx = static_cast<RooRealVar const&>(varList[ix]);
+      xsum[ix] += weight() * varx.getVal() ;
       if (corr) {
-   x2sum[ix] += weight()*varx->getVal()*varx->getVal() ;
+        x2sum[ix] += weight() * varx.getVal() * varx.getVal();
       }
 
-      *iter2=*iter ; iy=ix ;
-      vary=varx ;
-      while(vary) {
-   xysum(ix,iy) += weight()*varx->getVal()*vary->getVal() ;
-   xysum(iy,ix) = xysum(ix,iy) ;
-   iy++ ;
-   vary=(RooRealVar*)iter2->Next() ;
+      for(std::size_t iy = ix; iy < varList.size(); ++iy) {
+        auto vary = static_cast<RooRealVar const&>(varList[iy]);
+        xysum(ix,iy) += weight() * varx.getVal() * vary.getVal();
+        xysum(iy,ix) = xysum(ix,iy) ;
       }
-      ix++ ;
     }
 
   }
@@ -2683,15 +2674,12 @@ double RooAbsData::sumEntriesW2() const {
 /// The key to retrieve an item is the pointer of the variable that owns the data.
 /// \param begin Index of first event that ends up in the batch.
 /// \param len   Number of events in each batch.
-void RooAbsData::getBatches(RooBatchCompute::RunContext& evalData, std::size_t begin, std::size_t len) const {
-  for (auto&& batch : store()->getBatches(begin, len).spans) {
-    evalData.spans[batch.first] = std::move(batch.second);
-  }
+RooAbsData::RealSpans RooAbsData::getBatches(std::size_t begin, std::size_t len) const {
+  return store()->getBatches(begin, len);
 }
 
 
-std::map<const std::string, RooSpan<const RooAbsCategory::value_type>> RooAbsData::getCategoryBatches(
-        std::size_t first, std::size_t len) const {
+RooAbsData::CategorySpans RooAbsData::getCategoryBatches(std::size_t first, std::size_t len) const {
   return store()->getCategoryBatches(first, len);
 }
 

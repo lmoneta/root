@@ -293,8 +293,8 @@ RooNDKeysPdf::RooNDKeysPdf(const RooNDKeysPdf &other, const char *name)
      _nSigma(other._nSigma), _rotate(other._rotate), _sortInput(other._sortInput),
      _nAdpt(other._nAdpt)
 {
-   _tracker = (other._tracker != NULL ? new RooChangeTracker(*other._tracker) : NULL);
-   // if (_tracker!=NULL) { _tracker->hasChanged(true); }
+   _tracker = (other._tracker != nullptr ? new RooChangeTracker(*other._tracker) : nullptr);
+   // if (_tracker!=nullptr) { _tracker->hasChanged(true); }
 
    _fixedShape = other._fixedShape;
    _mirror = other._mirror;
@@ -691,7 +691,7 @@ void RooNDKeysPdf::mirrorDataSet()
 
     vector<Int_t>& mjdx0 = mjdcs[0];
     // no mirror point(s) for this event
-    if (size==1 && mjdx0.size()==0) continue;
+    if (size==1 && mjdx0.empty()) continue;
 
     // 2.
     // generate all mirror points for event i

@@ -60,7 +60,7 @@ namespace RooStats {
 /// - Parameters of interest: empty,
 /// - Nuisance parameters: all parameters except parameters of interest
 ///
-/// We use NULL to mean not set, so we don't want to fill
+/// We use nullptr to mean not set, so we don't want to fill
 /// with empty RooArgSets.
 
 void ModelConfig::GuessObsAndNuisance(const RooAbsData& data, bool printModelConfig) {
@@ -197,7 +197,7 @@ RooWorkspace * ModelConfig::GetWS() const {
    RooWorkspace *ws = dynamic_cast<RooWorkspace *>(fRefWS.GetObject() );
    if(!ws) {
       coutE(ObjectHandling) << "workspace not set" << endl;
-      return NULL;
+      return nullptr;
    }
    return ws;
 }
@@ -229,7 +229,7 @@ const RooArgSet * ModelConfig::GetSnapshot() const{
    // since we do not want to change the model parameters - we restore the previous ones
    if (! GetWS()->set(fSnapshotName.c_str() ) )return 0;
    RooArgSet snapshotVars(*GetWS()->set(fSnapshotName.c_str() ) );
-   if (snapshotVars.getSize() == 0) return 0;
+   if (snapshotVars.empty()) return 0;
    // make my snapshot which will contain a copy of the snapshot variables
    RooArgSet tempSnapshot;
    snapshotVars.snapshot(tempSnapshot);
@@ -319,7 +319,7 @@ bool ModelConfig::SetHasOnlyParameters(const RooArgSet& set, const char* errorMs
     if (errorMsgPrefix && nonparams.getSize()>0) {
       cout << errorMsgPrefix << " ERROR: specified set contains non-parameters: " << nonparams << endl ;
     }
-    return (nonparams.getSize()==0) ;
+    return (nonparams.empty()) ;
   }
 
 } // end namespace RooStats

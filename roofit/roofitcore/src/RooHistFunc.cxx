@@ -32,7 +32,6 @@ discrete dimensions and may have negative values.
 #include "RooWorkspace.h"
 #include "RooHistPdf.h"
 #include "RooHelpers.h"
-#include "RunContext.h"
 
 #include "TError.h"
 #include "TBuffer.h"
@@ -565,7 +564,9 @@ void RooHistFunc::Streamer(TBuffer &R__b)
 
 void RooHistFunc::ioStreamerPass2()
 {
-  if (_histObsList.getSize()==0) {
+  RooAbsReal::ioStreamerPass2(); // call the baseclass method
+
+  if (_histObsList.empty()) {
     _histObsList.addClone(_depList) ;
   }
 }

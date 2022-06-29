@@ -20,20 +20,40 @@
 #include <ROOT/TypeTraits.hxx>
 
 #include <daos.h>
-// Avoid depending on `gurt/common.h` as the only required declaration is `d_rank_list_free()`.
-// Also, this header file is known to provide macros that conflict with std::min()/std::max().
-extern "C" void d_rank_list_free(d_rank_list_t *rank_list);
 
 #include <functional>
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <optional>
+
+#ifndef DAOS_UUID_STR_SIZE
+#define DAOS_UUID_STR_SIZE 37
+#endif
 
 namespace ROOT {
 
 namespace Experimental {
 namespace Detail {
+
+struct RDaosEventQueue {
+   daos_handle_t fQueue;
+   RDaosEventQueue();
+   ~RDaosEventQueue();
+
+   /// \brief Sets event barrier for a given parent event and waits for the completion of all children launched before
+   /// the barrier (must have at least one child).
+   /// \return 0 on success; a DAOS error code otherwise (< 0).
+   int WaitOnParentBarrier(daos_event_t *ev_ptr);
+   /// \brief Reserve event in queue, optionally tied to a parent event.
+   /// \return 0 on success; a DAOS error code otherwise (< 0).
+   int InitializeEvent(daos_event_t *ev_ptr, daos_event_t *parent_ptr = nullptr);
+   /// \brief Release event data from queue.
+   /// \return 0 on success; a DAOS error code otherwise (< 0).
+   int FinalizeEvent(daos_event_t *ev_ptr);
+};
+
 class RDaosContainer;
 
 /**
@@ -45,13 +65,16 @@ class RDaosPool {
 private:
    daos_handle_t fPoolHandle{};
    uuid_t fPoolUuid{};
+   std::string fPoolLabel{};
+   std::unique_ptr<RDaosEventQueue> fEventQueue;
 
 public:
    RDaosPool(const RDaosPool&) = delete;
-   RDaosPool(std::string_view poolUuid, std::string_view serviceReplicas);
+   RDaosPool(std::string_view poolId);
    ~RDaosPool();
 
    RDaosPool& operator=(const RDaosPool&) = delete;
+   std::string GetPoolUuid();
 };
 
 /**
@@ -88,8 +111,9 @@ public:
       FetchUpdateArgs() = default;
       FetchUpdateArgs(const FetchUpdateArgs&) = delete;
       FetchUpdateArgs(FetchUpdateArgs&& fua);
-      FetchUpdateArgs(DistributionKey_t &d, AttributeKey_t &a, std::vector<d_iov_t> &v, daos_event_t *p = nullptr);
-      FetchUpdateArgs& operator=(const FetchUpdateArgs&) = delete;
+      FetchUpdateArgs(DistributionKey_t &d, AttributeKey_t &a, std::vector<d_iov_t> &v, bool is_async = false);
+      FetchUpdateArgs &operator=(const FetchUpdateArgs &) = delete;
+      daos_event_t *GetEventPointer();
 
       /// \brief A `daos_key_t` is a type alias of `d_iov_t`. This type stores a pointer and a length.
       /// In order for `fDistributionKey` and `fIods` to point to memory that we own, `fDkey` and
@@ -102,12 +126,12 @@ public:
       daos_iod_t fIods[1] = {};
       d_sg_list_t fSgls[1] = {};
       std::vector<d_iov_t> fIovs{};
-      daos_event_t *fEv = nullptr;
+      std::optional<daos_event_t> fEvent{};
    };
 
    RDaosObject() = delete;
    /// Provides low-level access to an object. If `cid` is OC_UNKNOWN, the user is responsible for
-   /// calling `daos_obj_generate_id()` to fill the reserved bits in `oid` before calling this constructor.
+   /// calling `daos_obj_generate_oid()` to fill the reserved bits in `oid` before calling this constructor.
    RDaosObject(RDaosContainer &container, daos_obj_id_t oid, ObjClassId cid = OC_UNKNOWN);
    ~RDaosObject();
 
@@ -137,22 +161,12 @@ public:
       std::vector<d_iov_t> fIovs{};
    };
 
-private:
-   struct DaosEventQueue {
-      std::size_t fSize;
-      std::unique_ptr<daos_event_t[]> fEvs;
-      daos_handle_t fQueue;
-      DaosEventQueue(std::size_t size);
-      ~DaosEventQueue();
-      /**
-        \brief Wait for all events in this event queue to complete.
-        \return Number of events still in the queue. This should be 0 on success.
-       */
-      int Poll();
-   };
+   std::string GetContainerUuid();
 
+private:
    daos_handle_t fContainerHandle{};
    uuid_t fContainerUuid{};
+   std::string fContainerLabel{};
    std::shared_ptr<RDaosPool> fPool;
    ObjClassId_t fDefaultObjectClass{OC_SX};
 
@@ -161,29 +175,44 @@ private:
      \param vec A `std::vector<RWOperation>` that describes read/write operations to perform.
      \param cid The `daos_oclass_id_t` used to qualify OIDs.
      \param fn Either `std::mem_fn<&RDaosObject::Fetch>` (read) or `std::mem_fn<&RDaosObject::Update>` (write).
-     \return Number of requests that did not complete; this should be 0 after a successful call.
+     \return DAOS error code (< 0) in case of failure, 0 on success.
      */
    template <typename Fn>
    int VectorReadWrite(std::vector<RWOperation> &vec, ObjClassId_t cid, Fn fn) {
+      using request_t = std::tuple<std::unique_ptr<RDaosObject>, RDaosObject::FetchUpdateArgs>;
+
       int ret;
-      DaosEventQueue eventQueue(vec.size());
-      {
-         std::vector<std::tuple<std::unique_ptr<RDaosObject>, RDaosObject::FetchUpdateArgs>> requests{};
-         requests.reserve(vec.size());
-         for (size_t i = 0; i < vec.size(); ++i) {
-           requests.push_back(std::make_tuple(std::unique_ptr<RDaosObject>(new RDaosObject(*this, vec[i].fOid, cid.fCid)),
-                                               RDaosObject::FetchUpdateArgs{
-                                                 vec[i].fDistributionKey, vec[i].fAttributeKey,
-                                                 vec[i].fIovs, &eventQueue.fEvs[i]}));
-            fn(std::get<0>(requests.back()).get(), std::get<1>(requests.back()));
-         }
-         ret = eventQueue.Poll();
+      std::vector<request_t> requests{};
+      requests.reserve(vec.size());
+
+      // Initialize parent event used for grouping and waiting for completion of all requests
+      daos_event_t parent_event{};
+      if ((ret = fPool->fEventQueue->InitializeEvent(&parent_event)) < 0)
+         return ret;
+
+      for (size_t i = 0; i < vec.size(); ++i) {
+         requests.push_back(std::make_tuple(std::make_unique<RDaosObject>(*this, vec[i].fOid, cid.fCid),
+                                            RDaosObject::FetchUpdateArgs{vec[i].fDistributionKey, vec[i].fAttributeKey,
+                                                                         vec[i].fIovs, /*is_async=*/true}));
+
+         if ((ret = fPool->fEventQueue->InitializeEvent(std::get<1>(requests.back()).GetEventPointer(),
+                                                        &parent_event)) < 0)
+            return ret;
+
+         // Launch operation
+         if ((ret = fn(std::get<0>(requests.back()).get(), std::get<1>(requests.back()))) < 0)
+            return ret;
       }
-      return ret;
+
+      // Sets parent barrier and waits for all children launched before it.
+      if ((ret = fPool->fEventQueue->WaitOnParentBarrier(&parent_event)) < 0)
+         return ret;
+
+      return fPool->fEventQueue->FinalizeEvent(&parent_event);
    }
 
 public:
-   RDaosContainer(std::shared_ptr<RDaosPool> pool, std::string_view containerUuid, bool create = false);
+   RDaosContainer(std::shared_ptr<RDaosPool> pool, std::string_view containerId, bool create = false);
    ~RDaosContainer();
 
    ObjClassId_t GetDefaultObjectClass() const { return fDefaultObjectClass; }
