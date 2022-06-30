@@ -647,8 +647,8 @@ public:
    ///
    /// ### Example usage:
    /// ~~~{.py}
-   /// df = ROOT.RDataFrame("mytree", ["sample1.root","sample2.root"])
-   /// df.DefinePerSample("weightbysample", "rdfsampleinfo_.Contains('sample1') ? 1.0f : 2.0f")
+   /// df = ROOT.RDataFrame('mytree', ['sample1.root','sample2.root'])
+   /// df.DefinePerSample('weightbysample', 'rdfsampleinfo_.Contains("sample1") ? 1.0f : 2.0f')
    /// ~~~
    ///
    /// \note
@@ -2756,10 +2756,7 @@ public:
    /// variations.Print();
    /// ~~~
    ///
-   RVariationsDescription GetVariations()
-   {
-      return {fColRegister.GetVariations()};
-   }
+   RVariationsDescription GetVariations() const { return {fColRegister.GetVariations()}; }
 
    /// \brief Checks if a column is present in the dataset.
    /// \return true if the column is available, false otherwise
