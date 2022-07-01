@@ -20,6 +20,7 @@ private:
    std::string fNX;
    std::string fNY;
    std::vector<size_t> fShape;
+   bool fUseVdt = false;
 
 public:
    ROperator_Sigmoid(){}
@@ -41,8 +42,8 @@ public:
       }
       fShape = model.GetTensorShape(fNX);
       model.AddIntermediateTensor(fNY, model.GetTensorType(fNX), fShape);
+      fUseVdt = model.UseVdt();
    }
-
 
    std::string Generate(std::string OpName){
       OpName = "op_" + OpName;
@@ -54,9 +55,14 @@ public:
       for(auto& i: fShape){
          length *= i;
       }
-      out << "\t" << "for (int id = 0; id < " << length << " ; id++){\n";
-      out << "\t\t" << "tensor_" << fNY << "[id] = 1 / (1 + std::exp( - tensor_"  << fNX << "[id]));\n";
-      out << "\t}\n";
+      out << SP << "for (int id = 0; id < " << length << " ; id++){\n";
+      out << SP << SP << "tensor_" << fNY << "[id] = 1 / (1 + "; 
+      if (fUseVdt)
+         out << "vdt::fast_expf";
+      else
+         out << "std::exp";
+      out << "( - tensor_" << fNX << "[id]));\n ";
+      out << SP << "}\n";
       return out.str();
    }
 

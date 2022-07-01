@@ -218,6 +218,10 @@ namespace SOFIE{
       if (useWeightFile)
          fGC += "#include <fstream>\n";
 
+      if (fUseVdt){
+         fGC += "#include \"vdt/vdtMath.h\"\n";
+      }
+
       fGC += "\nnamespace TMVA_SOFIE_" + fName + "{\n";
       if (!fNeededBlasRoutines.empty()) {
          fGC += ("namespace BLAS{\n");
