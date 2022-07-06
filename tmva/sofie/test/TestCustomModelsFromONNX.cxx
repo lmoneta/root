@@ -27,12 +27,9 @@
 #include "Div_FromONNX.hxx"
 #include "input_models/references/Div.ref.hxx"
 
-<<<<<<< HEAD
-=======
 #include "ReduceMean_FromONNX.hxx"
 #include "input_models/references/ReduceMean.ref.hxx"
 
->>>>>>> ad9c050ba9... Made changes in the Reduce Operator
 #include "LinearWithLeakyRelu_FromONNX.hxx"
 #include "input_models/references/LinearWithLeakyRelu.ref.hxx"
 
