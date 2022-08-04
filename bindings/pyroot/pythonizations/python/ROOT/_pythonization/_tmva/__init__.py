@@ -16,12 +16,12 @@ import cppyy
 from .. import pythonization
 
 from ._factory import Factory
-from ._dataloader import Dataloader
+from ._dataloader import DataLoader
 from ._crossvalidation import CrossValidation
 
 
 # list of python classes that are used to pythonize TMVA classes
-python_classes = [Factory, Dataloader, CrossValidation]
+python_classes = [Factory, DataLoader, CrossValidation]
 
 # create a dictionary for convenient access to python classes
 python_classes_dict = dict()
@@ -112,13 +112,21 @@ def make_func_name_orig(func_name):
     return "_" + func_name
 
 
-@pythonization(class_name="TMVA", is_prefix=False)
+
+
+@pythonization(class_name=["Factory","DataLoader","CrossValidation"], ns="TMVA")
 def pythonize_tmva(klass, name):
     # Parameters:
     # klass: class to pythonize
     # name: string containing the name of the class
 
+    #need to strip the TMVA namespace
+
+    ns_prefix = "TMVA::"
+    name = name[len(ns_prefix):len(name)]
+
     if not name in python_classes_dict:
+        print("Error - class ",name,"is not in the pythonization list")
         return
 
     python_klass = python_classes_dict[name]

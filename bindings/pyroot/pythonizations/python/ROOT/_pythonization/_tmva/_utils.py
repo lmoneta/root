@@ -24,14 +24,23 @@ def _kwargs_to_tmva_cmdargs(*args, **kwargs):
 
         try:
             if isinstance(v, bool):
-                return "{k}" if v else "!".join(f"{k}")
+                return f"{k}" if v else "!" + f"{k}"
             else:
-                return ":".join(f"{k}={v}")
+                return f"{k}={v}"
         except:
             raise AttributeError("Unsupported Type passed")
 
     if kwargs:
-        args = args + tuple((getter(k, v) for k, v in kwargs.items()))
+        cmdOpt = ""
+        first = True
+        for  k, v in kwargs.items() :
+            if (not first) :
+                cmdOpt += ":"
+            cmdOpt += getter(k,v)
+            first = False
+
+        args = args + (cmdOpt,)
+
     return args, {}
 
 

@@ -30,7 +30,7 @@ r"""
 from ._utils import _kwargs_to_tmva_cmdargs, cpp_signature
 
 
-class Dataloader(object):
+class DataLoader(object):
     @cpp_signature(
         "TMVA::DataLoader::PrepareTrainingAndTestTree( const TCut& cut,"
         "Int_t NsigTrain, Int_t NbkgTrain, Int_t NsigTest, Int_t NbkgTest, const TString& otherOpt )"

@@ -291,10 +291,10 @@ if useDL:
     dnnMethodName = ROOT.TString("DNN_CPU")
 
     if useDLGPU:
-        training1 += ":Architecture=GPU"
+        arch = "GPU"
         dnnMethodName = "DNN_GPU"
     else:
-        training1 += ":Architecture=CPU"
+        arch = "CPU"
 
     factory.BookMethod(
         loader,
@@ -306,9 +306,10 @@ if useDL:
         VarTransform="G",
         WeightInitialization="XAVIER",
         InputLayout="1|1|7",
-        BatchLayout=1 | 128 | 7,
+        BatchLayout="1|128|7",
         Layout="DENSE|64|TANH,DENSE|64|TANH,DENSE|64|TANH,DENSE|64|TANH,DENSE|1|LINEAR",
         TrainingStrategy=training1,
+        Architecture=arch
     )
 
 ## Train Methods
