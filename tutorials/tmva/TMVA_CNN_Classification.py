@@ -116,7 +116,7 @@ useTMVACNN = opt[0] if ROOT.gSystem.GetFromPipe("root-config --has-tmva-gpu") ==
 
 
 if not useTMVACNN:
-    ROOT.Warning("TMVA is not build with GPU or CPU multi-thread support. Cannot use TMVA Deep Learning for CNN")
+    ROOT.Warning("TMVA_CNN_Classificaton","TMVA is not build with GPU or CPU multi-thread support. Cannot use TMVA Deep Learning for CNN")
 
 writeOutputFile = True
 
@@ -199,8 +199,8 @@ imgSize = 16 * 16
 inputFileName = "images_data_16x16.root"
 
 # if file does not exists create it
-inputFile = None
-MakeImagesTree(5000, 16, 16)
+if (ROOT.gSystem.AccessPathName(inputFileName)) :
+    MakeImagesTree(5000, 16, 16)
 
 try:
     inputFile = ROOT.TFile.Open(inputFileName)
@@ -261,7 +261,7 @@ loader.PrepareTrainingAndTestTree(
     SplitSeed=100,
     NormMode="NumEvents",
     V=False,
-    CalcCorrelation=False,
+    CalcCorrelations=False,
 )
 
 
@@ -424,7 +424,7 @@ if useKerasCNN:
 
     # from keras.callbacks import ReduceLROnPlateau
     model = Sequential()
-    model.add(Reshape((8, 8, 1), input_shape=(64,)))
+    model.add(Reshape((16, 16, 1), input_shape=(256,)))
     model.add(Conv2D(10, kernel_size=(3, 3), kernel_initializer="TruncatedNormal", activation="relu", padding="same"))
     model.add(Conv2D(10, kernel_size=(3, 3), kernel_initializer="TruncatedNormal", activation="relu", padding="same"))
     # stride for maxpool is equal to pool size
@@ -449,7 +449,7 @@ if useKerasCNN:
             H=True,
             V=False,
             VarTransform=None,
-            FilenameModel="model_cnn.h5:tf.keras",
+            FilenameModel="model_cnn.h5",
             FilenameTrainedModel="trained_model_cnn.h5",
             NumEpochs=20,
             BatchSize=100,

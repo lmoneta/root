@@ -60,21 +60,17 @@ factory = TMVA.Factory(
 inputFileName = "Higgs_data.root"
 inputFileLink = "http://root.cern.ch/files/" + inputFileName
 
-# inputFile = TFile(None)
 
 if ROOT.gSystem.AccessPathName(inputFileName):
     # file exists
-    inputFile = None
-    try:
-        inputFile = TFile.Open(inputFileName)
-    except:
-        # download file from Cernbox location
-        if inputFile is None:
-            ROOT.Info("TMVA_Higgs_Classification", "Download Higgs_data.root file")
-            TFile.SetCacheFileDir(".")
-            inputFile = TFile.Open(inputFileLink, "CACHEREAD")
-            if inputFile is None:
-                raise FileNotFoundError("Input file cannot be downloaded - exit")
+    ROOT.Info("TMVA_Higgs_Classification", "Download Higgs_data.root file")
+    TFile.SetCacheFileDir(".")
+    inputFile = TFile.Open(inputFileLink, "CACHEREAD")
+    if inputFile is None:
+        raise FileNotFoundError("Input file cannot be downloaded - exit")
+else:
+    inputFile = TFile.Open(inputFileName)
+
 
 # --- Register the training and test trees
 signalTree = inputFile.Get("sig_tree")

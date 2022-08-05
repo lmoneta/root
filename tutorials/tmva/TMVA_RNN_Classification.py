@@ -43,12 +43,12 @@ def MakeTimeData(n, ntime, ndim):
     # ndim = 30; // number of dim/time
 
     fname = "time_data_t" + str(ntime) + "_d" + str(ndim) + ".root"
-    v1 = ROOT.std.vector["TH1"](ntime)
-    v2 = ROOT.std.vector["TH1"](ntime)
+    v1 = []
+    v2 = []
 
     for i in range(ntime):
-        v1[i] = ROOT.TH1D(ROOT.TString.Format("h1_%d", i), "h1", ndim, 0, 10)
-        v2[i] = ROOT.TH1D(ROOT.TString.Format("h2_%d", i), "h2", ndim, 0, 10)
+        v1.append(ROOT.TH1D("h1_"+ str(i), "h1", ndim, 0, 10))
+        v2.append(ROOT.TH1D("h2_" + str(i), "h2", ndim, 0, 10))
 
     f1 = ROOT.TF1("f1", "gaus")
     f2 = ROOT.TF1("f2", "gaus")
@@ -57,16 +57,16 @@ def MakeTimeData(n, ntime, ndim):
     bkg = ROOT.TTree("bkg", "bkg")
     f = ROOT.TFile(fname, "RECREATE")
 
-    x1 = ROOT.std.vector["TH1"](ntime)
-    x2 = ROOT.std.vector["TH1"](ntime)
+    x1 = []
+    x2 = []
 
     for i in range(ntime):
-        x1[i] = ROOT.std.vector["float"](ndim)
-        x2[i] = ROOT.std.vector["float"](ndim)
+        x1.append(ROOT.std.vector["float"](ndim))
+        x2.append(ROOT.std.vector["float"](ndim))
 
     for i in range(ntime):
-        bkg.Branch(ROOT.Form("vars_time%d", i), "std::vector<float>", x1[i])
-        sgn.Branch(ROOT.Form("vars_time%d", i), "std::vector<float>", x2[i])
+        bkg.Branch("vars_time" + str(i), "std::vector<float>", x1[i])
+        sgn.Branch("vars_time" + str(i), "std::vector<float>", x2[i])
 
     sgn.SetDirectory(f)
     bkg.SetDirectory(f)
@@ -83,7 +83,7 @@ def MakeTimeData(n, ntime, ndim):
         sigma1[j] = 4 + 0.3 * ROOT.TMath.Sin(ROOT.TMath.Pi() * j / float(ntime))
         sigma2[j] = 4 + 0.3 * ROOT.TMath.Cos(ROOT.TMath.Pi() * j / float(ntime))
 
-    for i in range(ntime):
+    for i in range(n):
         if i % 1000 == 0:
             print("Generating  event ... %d", i)
 
@@ -149,8 +149,8 @@ useTMVA_RNN = True
 useTMVA_DNN = True
 useTMVA_BDT = False
 
-rnn_types = ROOT.std.vector["std::string"](["RNN", "LSTM", "GRU"])
-use_rnn_type = ROOT.std.vector["bool"]([1, 1, 1])
+rnn_types = ["RNN", "LSTM", "GRU"]
+use_rnn_type = [1, 1, 1]
 
 if 0 <= use_type < 3:
     use_rnn_type = [0, 0, 0]
@@ -192,10 +192,10 @@ print("Running with nthreads  = {}".format(ROOT.GetThreadPoolSize()))
 
 inputFileName = "time_data_t10_d30.root"
 
-fileExist = ROOT.gSystem.AccessPathName(inputFileName)
+fileDoesNotExist = ROOT.gSystem.AccessPathName(inputFileName)
 
 # if file does not exists create it
-if not fileExist:
+if fileDoesNotExist:
     MakeTimeData(nTotEvts, ntime, ninput)
 
 
@@ -207,7 +207,7 @@ if inputFile is None:
 print("--- RNNClassification  : Using input file: {}".format(inputFile.GetName()))
 
 # Create a ROOT output file where TMVA will store ntuples, histograms, etc.
-outfileName = "data_RNN_" + str(archString.Data()) + ".root"
+outfileName = "data_RNN_" + archString + ".root"
 outputFile = None
 
 
@@ -256,7 +256,7 @@ nvar = ninput * ntime
 
 ## add variables - use new AddVariablesArray function
 for i in range(ntime):
-    dataloader.AddVariablesArray(ROOT.Form("vars_time%d", i), ninput)
+    dataloader.AddVariablesArray("vars_time" + str(i), ninput)
 
 
 dataloader.AddSignalTree(signalTree, 1.0)
@@ -304,21 +304,16 @@ if useTMVA_RNN:
         if not use_rnn_type[i]:
             continue
 
-        rnn_type = rnn_types[i].c_str()
+        rnn_type = rnn_types[i]
 
         ## Define RNN layer layout
         ##  it should be   LayerType (RNN or LSTM or GRU) |  number of units | number of inputs | time steps | remember output (typically no=0 | return full sequence
-        rnnLayout = ROOT.TString.Format("%s|10|%d|%d|0|1,RESHAPE|FLAT,DENSE|64|TANH,LINEAR", rnn_type, ninput, ntime)
+        rnnLayout = str(rnn_type) + "|10|" + str(ninput) + "|" + str(ntime) + "|0|1,RESHAPE|FLAT,DENSE|64|TANH,LINEAR"
 
         ## Defining Training strategies. Different training strings can be concatenate. Use however only one
-        trainingString1 = ROOT.TString.Format(
-            "LearningRate=1e-3,Momentum=0.0,Repetitions=1,"
-            "ConvergenceSteps=5,BatchSize=%d,TestRepetitions=1,"
-            "WeightDecay=1e-2,Regularization=None,MaxEpochs=%d,"
-            "Optimizer=ADAM,DropConfig=0.0+0.+0.+0.",
-            batchSize,
-            maxepochs,
-        )  # + "|" + trainingString2
+        trainingString1 = "LearningRate=1e-3,Momentum=0.0,Repetitions=1,ConvergenceSteps=5,BatchSize=" + str(batchSize)
+        trainingString1 += ",TestRepetitions=1,WeightDecay=1e-2,Regularization=None,MaxEpochs=" + str(maxepochs)
+        trainingString1 += "Optimizer=ADAM,DropConfig=0.0+0.+0.+0."
 
         ## define the inputlayout string for RNN
         ## the input data should be organize as   following:
@@ -341,7 +336,7 @@ if useTMVA_RNN:
             InputLayout=str(ntime) + "|" + str(ninput),
             Layout=rnnLayout,
             TrainingStrategy=trainingString1,
-            Architecture=str(archString.Data()),
+            Architecture=archString
         )
 
 
@@ -368,7 +363,7 @@ if useTMVA_DNN:
         VarTransform=None,
         WeightInitialization="XAVIER",
         RandomSeed=0,
-        InputLayout=1 | 1 | +str(ntime * ninput),
+        InputLayout="1|1|" + str(ntime * ninput),
         Layout="DENSE|64|TANH,DENSE|TANH|64,DENSE|TANH|64,LINEAR",
         TrainingStrategy=trainingString1,
     )
@@ -382,9 +377,9 @@ if useTMVA_DNN:
 if useKeras:
     for i in range(3):
         if use_rnn_type[i]:
-            modelName = ROOT.TString.Format("model_%s.h5", rnn_types[i].c_str())
-            trainedModelName = ROOT.TString.Format("trained_model_%s.h5", rnn_types[i].c_str())
-            print("Building recurrent keras model using a %s layer {}".format(rnn_types[i].c_str()))
+            modelName = "model_" + rnn_types[i] + ".h5"
+            trainedModelName = "trained_" + modelName
+            print("Building recurrent keras model using a",rnn_types[i],"layer")
             # create python script which can be executed
             # create 2 conv2d layer + maxpool + dense
             from keras.models import Sequential
@@ -408,7 +403,6 @@ if useKeras:
                 model.add(Dense(64, activation="tanh"))
                 model.add(Dense(2, activation="sigmoid"))
                 model.compile(loss="binary_crossentropy", optimizer=Adam(lr=0.001), metrics=["accuracy"])
-                ROOT.TString.Format("modelName = '%s'", modelName.Data())
                 model.save(modelName)
                 model.summary()
 
@@ -417,20 +411,19 @@ if useKeras:
                 raise FileNotFoundError("Error creating Keras recurrent model file - Skip using Keras")
             else:
                 # book PyKeras method only if Keras model could be created
-                print("Booking Keras %s model {}".format(rnn_types[i].c_str()))
+                print("Booking Keras  model ",rnn_types[i])
                 factory.BookMethod(
                     dataloader,
                     TMVA.Types.kPyKeras,
-                    "PyKeras_" + str(rnn_types[i]),
-                    ROOT.TString.Format(
-                        "!H:!V:VarTransform=None:FilenameModel=%s:tf.keras:"
-                        "FilenameTrainedModel=%s:GpuOptions=allow_growth=True:"
-                        "NumEpochs=%d:BatchSize=%d",
-                        modelName.Data(),
-                        trainedModelName.Data(),
-                        maxepochs,
-                        batchSize,
-                    ),
+                    "PyKeras_" + rnn_types[i],
+                    H=True,
+                    V=False,
+                    VarTransform=None,
+                    FilenameModel=modelName,
+                    FilenameTrainedModel="trained_" + modelName,
+                    NumEpochs=maxepochs,
+                    BatchSize=batchSize,
+                    GpuOptions="allow_growth=True"
                 )
 
 
