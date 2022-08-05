@@ -10,7 +10,6 @@
 
 from . import pythonization
 
-
 # Multiplication by constant
 
 def _imul(self, c):
@@ -23,10 +22,17 @@ def _imul(self, c):
     return self
 
 
+def FromNumpy(x, w, name, title, nbins, xmin, xmax, size):
+    import ROOT
+    obj = ROOT.TH1D(name, title, nbins, xmin, xmax)
+    obj.FillN(size, x, w)
+    return obj
+
+
 @pythonization('TH1')
 def pythonize_th1(klass):
     # Parameters:
     # klass: class to be pythonized
-
     # Support hist *= scalar
     klass.__imul__ = _imul
+    klass.FromNumpy = FromNumpy
