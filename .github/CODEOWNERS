@@ -35,7 +35,7 @@ interpreter/cling/tools/packaging @vgvassilev
 /roofit/ @lmoneta @guitargeek @hageboeck
 /rootx/ @Axel-Naumann
 /sql/ @pcanal @linev
-/tmva/ @lmoneta @sitongan
+/tmva/ @lmoneta @sitongan @sanjibansg
 /tree/ @pcanal
 /tutorials/ @couet
 /tree/dataframe @eguiraud
