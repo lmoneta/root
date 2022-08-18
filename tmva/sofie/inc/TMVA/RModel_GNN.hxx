@@ -8,19 +8,28 @@ namespace TMVA{
 namespace Experimental{
 namespace SOFIE{
 
+struct GNN_Input {
+    RFunction edges_block;
+    RFunction nodes_block;
+    RFunction globals_block;
+    std::vector<std::string> nodes;
+    std::vector<std::pair<int,int>> edges;
+    std::vector<std::string> globals;
+};
+
 class RModel_GNN: public RModel{
 
 private:
    
-    std::unique_ptr<RFunction> edge_block;
+    std::unique_ptr<RFunction> edges_block;
     std::unique_ptr<RFunction> nodes_block;
     std::unique_ptr<RFunction> globals_block;
 
-    std::vector<std::pair<std::string>> edges;
+    std::vector<std::pair<int,int>> edges; // contains node indices
     std::vector<std::string> nodes;
     std::vector<std::string> globals;
-    std::vector<std::string> senders;
-    std::vector<std::string> receivers;
+    std::vector<int> senders;              // contains node indices
+    std::vector<int> receivers;            // contains node indices
 
 public:
 
@@ -33,6 +42,7 @@ public:
    RModel_GNN(const RModel_GNN& other) = delete;
    RModel_GNN& operator=(const RModel_GNN& other) = delete;
 
+   RModel_GNN(const GNN_Input& graph_input);
    RModel_GNN(){}
    RModel_GNN(std::string name, std::string parsedtime);
 
