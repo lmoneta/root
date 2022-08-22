@@ -24,6 +24,7 @@ enum class Options {
    kDefault = 0x0,
    kNoSession = 0x1,
    kNoWeightFile = 0x2,
+   kGNN = 0x3,
 };
 
 std::underlying_type_t<Options> operator|(Options opA, Options opB);
@@ -54,6 +55,7 @@ private:
    std::unordered_set<std::string> fCustomOpHeaders;
    bool fUseWeightFile = true;
    bool fUseSession = true;
+   bool fIsGNN = false;
 
 public:
 
