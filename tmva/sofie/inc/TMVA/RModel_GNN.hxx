@@ -46,6 +46,13 @@ public:
    RModel_GNN(){}
    RModel_GNN(std::string name, std::string parsedtime);
 
+   void AddFunction(std::unique_ptr<RFunction> func);
+   
+   void Initialize(int batchSize=1);
+   void Generate(std::underlying_type_t<Options> options, int batchSize = 1);
+   void Generate(Options options = Options::kDefault, int batchSize = 1) {
+      Generate(static_cast<std::underlying_type_t<Options>>(options), batchSize);
+   }
    
    ~RModel_GNN(){}}
    ClassDef(RModel_GNN,1);
