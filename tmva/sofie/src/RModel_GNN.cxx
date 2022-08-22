@@ -45,6 +45,24 @@ namespace SOFIE{
         }
    }
 
+    void RModel_GNN::AddFunction(std::unique_ptr<ROperator> func){
+        switch(func->fTarget){
+            case(FunctionTarget::NODES){
+                nodes_block.emplace_back(func);
+                break;
+            }
+            case(FunctionTarget::EDGES){
+                edges_block.emplace_back(func);
+                break;
+            }
+            case(FunctionTarget::GLOBALS){
+                globals_block.emplace_back(func);
+                break;
+            }
+        }
+   }
+
+
 
 
 }//SOFIE

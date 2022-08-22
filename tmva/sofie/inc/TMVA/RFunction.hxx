@@ -10,10 +10,15 @@ namespace SOFIE{
 
 class RModel;
 
+enum class FunctionType{
+        UPDATION=0, AGGREGATE=1
+};
+enum class FunctionTarget{
+        NODES=0, EDGES=1, GLOBALS=2
+};
 class RFunction: public ROperator{
-    enum class FunctionType{
-        UPDATION=0, AGGREGATE=2
-    };
+    FunctionType fType;
+    FunctionTarget fTarget;
     std::unique_ptr<RModel> function_block;
 };
 
