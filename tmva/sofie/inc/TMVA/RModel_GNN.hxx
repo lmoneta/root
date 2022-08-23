@@ -48,7 +48,7 @@ public:
 
    void AddFunction(std::unique_ptr<RFunction> func);
    
-   void Initialize(int batchSize=1);
+   void InitializeGNN(int batch_size=1);
    void Generate(std::underlying_type_t<Options> options, int batchSize = 1);
    void Generate(Options options = Options::kDefault, int batchSize = 1) {
       Generate(static_cast<std::underlying_type_t<Options>>(options), batchSize);
