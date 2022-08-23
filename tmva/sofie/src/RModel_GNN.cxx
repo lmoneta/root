@@ -19,7 +19,7 @@ namespace SOFIE{
       globals = std::move(other.globals);
       senders = std::move(other.senders);
       receivers = std::move(other.receivers);
-   }
+    }
 
    RModel_GNN& RModel_GNN::operator=(RModel_GNN&& other){
       edges_block = std::move(other.edges_block);
@@ -30,7 +30,7 @@ namespace SOFIE{
       globals = std::move(other.globals);
       senders = std::move(other.senders);
       receivers = std::move(other.receivers);
-   }
+    }
 
     RModel_GNN::RModel_GNN(const GNN_Input& graph_input){
         edges_block = std::make_unique<RFunction>(graph_input.edges_block);
@@ -43,9 +43,15 @@ namespace SOFIE{
             senders.emplace_back(it.first);
             receivers.emplace_back(it.second);
         }
-   }
+    }
 
-    void RModel_GNN::AddFunction(std::unique_ptr<ROperator> func){
+    void RModel_GNN::InitializeGNN(batch_size){
+        edges_block->function_block->Initialize(batch_size);
+        nodes_block->function_block->Initialize(batch_size);
+        globals_block->function_block->Initialize(batch_size);
+    }
+
+    void RModel_GNN::AddFunction(std::unique_ptr<RFunction> func){
         switch(func->fTarget){
             case(FunctionTarget::NODES){
                 nodes_block.emplace_back(func);
@@ -60,7 +66,7 @@ namespace SOFIE{
                 break;
             }
         }
-   }
+    }
 
 
 
