@@ -8,7 +8,7 @@ namespace TMVA{
 namespace Experimental{
 namespace SOFIE{
 
-struct GNN_Input {
+struct GNN_Init {
     RFunction edges_block;
     RFunction nodes_block;
     RFunction globals_block;
@@ -20,10 +20,16 @@ struct GNN_Input {
 class RModel_GNN: public RModel{
 
 private:
-   
-    std::unique_ptr<RFunction> edges_block;
-    std::unique_ptr<RFunction> nodes_block;
-    std::unique_ptr<RFunction> globals_block;
+    
+    // updation function for edges, nodes & global attributes
+    std::unique_ptr<RFunction> edges_updation_block;
+    std::unique_ptr<RFunction> nodes_updation_block;
+    std::unique_ptr<RFunction> globals_updation_block;
+
+    // aggregation function for edges, nodes & global attributes
+    std::unique_ptr<RFunction> edge_node_agg_block;
+    std::unique_ptr<RFunction> edge_global_agg_block;
+    std::unique_ptr<RFunction> node_global_agg_block;
 
     std::vector<std::pair<int,int>> edges; // contains node indices
     std::vector<std::string> nodes;
@@ -42,17 +48,14 @@ public:
    RModel_GNN(const RModel_GNN& other) = delete;
    RModel_GNN& operator=(const RModel_GNN& other) = delete;
 
-   RModel_GNN(const GNN_Input& graph_input);
+   RModel_GNN(const GNN_Init& graph_input_struct);
    RModel_GNN(){}
    RModel_GNN(std::string name, std::string parsedtime);
 
    void AddFunction(std::unique_ptr<RFunction> func);
    
    void InitializeGNN(int batch_size=1);
-   void Generate(std::underlying_type_t<Options> options, int batchSize = 1);
-   void Generate(Options options = Options::kDefault, int batchSize = 1) {
-      Generate(static_cast<std::underlying_type_t<Options>>(options), batchSize);
-   }
+   void GenerateGNN(int batchSize = 1);
    
    ~RModel_GNN(){}}
    ClassDef(RModel_GNN,1);
