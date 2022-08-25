@@ -9,9 +9,16 @@ namespace Experimental{
 namespace SOFIE{
 
 struct GNN_Init {
-    RFunction edges_block;
-    RFunction nodes_block;
-    RFunction globals_block;
+    // updation blocks
+    RFunction edges_updation_block;
+    RFunction nodes_updation_block;
+    RFunction globals_updation_block;
+    
+    // aggregation blocks
+    RFunction edge_node_agg_block;
+    RFunction edge_global_agg_block;
+    RFunction node_global_agg_block;
+   
     std::vector<std::string> nodes;
     std::vector<std::pair<int,int>> edges;
     std::vector<std::string> globals;
