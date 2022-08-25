@@ -73,7 +73,8 @@ namespace SOFIE{
         InitializeGNN(batchSize);
         Generate(Options::kGNN, batchSize);
         
-        fGC += "GNN_Data infer(GNN_Data input_graph){\n";
+        // computing inplace on input graph
+        fGC += "GNN::GNN_Data infer(GNN::GNN_Data input_graph){\n";
         
         // computing updated edge attributes
         for(int k=0; k<edges.size(); ++k){
