@@ -32,23 +32,59 @@ namespace SOFIE{
       receivers = std::move(other.receivers);
     }
 
-    RModel_GNN::RModel_GNN(const GNN_Input& graph_input){
-        edges_block = std::make_unique<RFunction>(graph_input.edges_block);
-        nodes_block = std::make_unique<RFunction>(graph_input.nodes_block);
-        globals_block = std::make_unique<RFunction>(graph_input.globals_block);
-        nodes = std::move(graph_input.nodes);
-        globals = std::move(graph_input.globals);
+    RModel_GNN::RModel_GNN(const GNN_Init& graph_input_struct){
+        edges_block = std::make_unique<RFunction>(graph_input_struct.edges_block);
+        nodes_block = std::make_unique<RFunction>(graph_input_struct.nodes_block);
+        globals_block = std::make_unique<RFunction>(graph_input_struct.globals_block);
+        nodes = std::move(graph_input_struct.nodes);
+        globals = std::move(graph_input_struct.globals);
         nodes = std::move(other.nodes);
-        for(auto& it:graph_input.edges){
+        for(auto& it:graph_input_struct.edges){
             senders.emplace_back(it.first);
             receivers.emplace_back(it.second);
         }
     }
 
-    void RModel_GNN::InitializeGNN(batch_size){
+    void RModel_GNN::InitializeGNN(int batch_size){
         edges_block->function_block->Initialize(batch_size);
         nodes_block->function_block->Initialize(batch_size);
         globals_block->function_block->Initialize(batch_size);
+    }
+
+    void RModel_GNN::GenerateGNN(int batchSize){
+        InitializeGNN(batch_size);
+        Generate(Options::kGNN, batch_size);
+        
+        fGC += "GNN_Data infer(GNN_Data input_graph){\n";
+        
+        // computing updated edge attributes
+        for(int k=0; k<edges.size(); ++k){
+            fGC+=edges_block->Generate(edges[k],nodes[edges[k].first], nodes[edges[k].second], globals);
+        }
+
+        for(int i=0; i<nodes.size(); ++i){
+            std::vector<GNN_Agg> agg_data_per_node;
+            for(int k=0; k<edges.size(); ++k){
+                agg_data_per_node.push_back({edges[k],nodes[i],nodes[edges[k].second]});
+            }
+            fGC+=edge_node_agg_block->Generate(agg_data_per_node);             // aggregating edge attributes per node
+            fGC+=nodes_updation_block->Generate(edges[i],nodes[i],globals);    // computing updated node attributes 
+        }
+
+        std::vector<GNN_Agg> agg_data;
+        for(int k=0; k<edges.size(); ++k){
+                agg_data.push_back({edges[k],nodes[i],nodes[edges[k].second]});
+        }
+        fGC+=edge_global_agg_block->Generate(agg_data);     // aggregating edge attributes globally
+        fGC+=node_global_agg_block->Generate(agg_data);     // aggregating node attributes globally
+        fGC+=globals_updation_block->Generate(edges,nodes,globals); // computing updated global attributes
+
+        fGC+="\nreturn input_graph;\n}";
+        if (fUseSession) {
+            fGC += "};\n";
+         }
+         fGC += ("} //TMVA_SOFIE_" + fName + "\n");
+         fGC += "\n#endif  // TMVA_SOFIE_" + fName + "\n";
     }
 
     void RModel_GNN::AddFunction(std::unique_ptr<RFunction> func){
