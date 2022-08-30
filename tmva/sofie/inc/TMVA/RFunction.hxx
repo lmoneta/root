@@ -11,7 +11,7 @@ namespace SOFIE{
 class RModel;
 
 enum class FunctionType{
-        UPDATION=0, AGGREGATE=1
+        UPDATE=0, AGGREGATE=1
 };
 enum class FunctionTarget{
         NODES=0, EDGES=1, GLOBALS=2
