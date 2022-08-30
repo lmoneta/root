@@ -10,7 +10,7 @@
 /// The two tags where used the THtml version to generate images from ROOT code.
 /// The generated picture is inlined exactly at the place where the macro is
 /// defined. The Macro can be defined in two way:
-///  - by direct in-lining of the the C++ code
+///  - by direct in-lining of the C++ code
 ///  - by a reference to a C++ file
 /// The tag `Begin_Macro` can have the parameter `(source)`. The directive becomes:
 /// `Begin_Macro(source)`. This parameter allows to show the macro's code in addition.
@@ -416,7 +416,7 @@ void FilterTutorial()
          else{
              gLineString = "/// ";
          }
-         gLineString += StringFormat( "\\htmlonly <a href=\"https://nbviewer.jupyter.org/url/root.cern/doc/master/notebooks/%s.nbconvert.ipynb\" target=\"_blank\"><img src= notebook.gif alt=\"View in nbviewer\" style=\"height:1em\" ></a> <a href=\"https://cern.ch/swanserver/cgi-bin/go?projurl=https://root.cern/doc/master/notebooks/%s.nbconvert.ipynb\" target=\"_blank\"><img src=\"https://swanserver.web.cern.ch/swanserver/images/badge_swan_white_150.png\"  alt=\"Open in SWAN\" style=\"height:1em\" ></a> \\endhtmlonly \n", gMacroName.c_str() , gMacroName.c_str());
+         gLineString += StringFormat( "\\htmlonly <a href=\"https://nbviewer.jupyter.org/url/root.cern/doc/master/notebooks/%s.nbconvert.ipynb\" target=\"_blank\"><img src= notebook.gif alt=\"View in nbviewer\" style=\"height:1.5em\" ></a> <a href=\"https://cern.ch/swanserver/cgi-bin/go?projurl=https://root.cern/doc/master/notebooks/%s.nbconvert.ipynb\" target=\"_blank\"><img src=\"https://swanserver.web.cern.ch/swanserver/images/badge_swan_white_150.png\"  alt=\"Open in SWAN\" style=\"height:1.5em\" ></a> <br/>\\endhtmlonly \n", gMacroName.c_str() , gMacroName.c_str());
       }
 
       // \macro_output found

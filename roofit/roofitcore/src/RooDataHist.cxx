@@ -1144,27 +1144,244 @@ RooPlot *RooDataHist::plotOn(RooPlot *frame, PlotOpt o) const
 
 
 ////////////////////////////////////////////////////////////////////////////////
-/// A vectorized version of RooDataHist::weight for one dimensional histograms 
-/// with no interpolation. 
+/// A vectorized version of interpolateDim for boundary safe quadratic
+/// interpolation of one dimensional histograms. 
+///
+/// \param[out] output An array of interpolated weights corresponding to the
+///                    values in xVals.
+/// \param[in] xVals An array of event coordinates for which the weights should be
+///                  calculated.
+/// \param[in] correctForBinSize Enable the inverse bin volume correction factor.
+/// \param[in] cdfBoundaries Enable the special boundary coundition for a cdf:
+///                          Underflow bins are assumed to have weight zero and
+///                          overflow bins have weight one. Otherwise, the
+///                          histogram is mirrored at the boundaries for the
+///                          interpolation.
+
+void RooDataHist::interpolateQuadratic(double* output, RooSpan<const double> xVals,
+                                       bool correctForBinSize, bool cdfBoundaries)
+{
+  const std::size_t nBins = numEntries();
+  const std::size_t nEvents = xVals.size();
+
+  RooAbsBinning const& binning = *_lvbins[0];
+  // Reuse the output buffer for bin indices and zero-initialize it
+  auto binIndices = reinterpret_cast<int*>(output + nEvents) - nEvents;
+  std::fill(binIndices, binIndices + nEvents, 0);
+  binning.binNumbers(xVals.data(), binIndices, nEvents);
+
+  // Extend coordinates and weights with one extra point before the first bin
+  // and one extra point after the last bin. This means the original histogram
+  // bins span elements 1 to nBins in coordsExt and weightsExt
+  std::vector<double> coordsExt(nBins+3);
+  double* binCoords = coordsExt.data() + 2;
+  binCoords[0] = binning.lowBound() + 0.5*_binv[0];
+  for (std::size_t binIdx = 1; binIdx < nBins ; ++binIdx) {
+    if (binning.isUniform()) {
+      double binWidth = _binv[0];
+      binCoords[binIdx] = binIdx*binWidth + binCoords[0];
+    }
+    else {
+      double binCentDiff = 0.5*_binv[binIdx-1] + 0.5*_binv[binIdx];
+      binCoords[binIdx] = binCoords[binIdx-1] + binCentDiff;
+    }
+  }
+
+  std::vector<double> weightsExt(nBins+3);
+  // Fill weights for bins that are inside histogram boundaries
+  for (std::size_t binIdx = 0; binIdx < nBins; ++binIdx) {
+    weightsExt[binIdx+2] = correctForBinSize ? _wgt[binIdx] / _binv[binIdx] : _wgt[binIdx];
+  }
+  
+  if (cdfBoundaries) {
+    coordsExt[0] = - 1e-10 + binning.lowBound();
+    weightsExt[0] = 0.;
+
+    coordsExt[1] = binning.lowBound();
+    weightsExt[1] = 0.;
+
+    coordsExt[nBins+2] = binning.highBound();
+    weightsExt[nBins+2] = 1.;
+  }
+  else {
+    // Mirror first two bins and last bin
+    coordsExt[0] = binCoords[1] - 2*_binv[0] - _binv[1];
+    weightsExt[0] = weightsExt[3];
+
+    coordsExt[1] = binCoords[0] - _binv[0];
+    weightsExt[1] = weightsExt[2];
+    
+    coordsExt[nBins+2] = binCoords[nBins-1] + _binv[nBins-1];
+    weightsExt[nBins+2] = weightsExt[nBins+1];
+  }
+
+  // We use the current bin center and two bin centers on the left for
+  // interpolation if xVal is to the left of the current bin center
+  for (std::size_t i = 0; i < nEvents ; ++i) {
+    double xVal = xVals[i];
+    std::size_t binIdx = binIndices[i] + 2;
+
+    // If xVal is to the right of the current bin center, shift all bin
+    // coordinates one step to the right and use that for the interpolation
+    if (xVal > coordsExt[binIdx]) {
+        binIdx += 1;
+    }
+
+    double x1 = coordsExt[binIdx-2];
+    double y1 = weightsExt[binIdx-2];
+
+    double x2 = coordsExt[binIdx-1];
+    double y2 = weightsExt[binIdx-1];
+
+    double x3 = coordsExt[binIdx];
+    double y3 = weightsExt[binIdx];
+
+    // Evaluate a few repeated factors
+    double quotient = (x3-x1) / (x2-x1);
+    double x1Sqrd = x1*x1;
+    double x3Sqrd = x3*x3;
+    // Solve coefficients in system of three quadratic equations!
+    double secondCoeff = (y3 - y1 - (y2-y1) * quotient) / (x3Sqrd - x1Sqrd - (x2*x2 - x1Sqrd) * quotient);
+    double firstCoeff = (y3 - y1 - secondCoeff*(x3Sqrd - x1Sqrd)) / (x3-x1);
+    double zerothCoeff = y1 - secondCoeff*x1Sqrd - firstCoeff*x1;
+    // Get the interpolated weight using the equation of a second degree polynomial
+    output[i] = secondCoeff * xVal * xVal + firstCoeff * xVal + zerothCoeff;
+  }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+/// A vectorized version of interpolateDim for boundary safe linear 
+/// interpolation of one dimensional histograms. 
+///
+/// \param[out] output An array of interpolated weights corresponding to the 
+///                    values in xVals.
+/// \param[in] xVals An array of event coordinates for which the weights should be
+///                  calculated.
+/// \param[in] correctForBinSize Enable the inverse bin volume correction factor.
+/// \param[in] cdfBoundaries Enable the special boundary coundition for a cdf:
+///                          Underflow bins are assumed to have weight zero and
+///                          overflow bins have weight one. Otherwise, the
+///                          histogram is mirrored at the boundaries for the
+///                          interpolation.
+
+void RooDataHist::interpolateLinear(double* output, RooSpan<const double> xVals,
+                                    bool correctForBinSize, bool cdfBoundaries)
+{
+  const std::size_t nBins = numEntries();
+  const std::size_t nEvents = xVals.size();
+
+  RooAbsBinning const& binning = *_lvbins[0];
+  // Reuse the output buffer for bin indices and zero-initialize it
+  auto binIndices = reinterpret_cast<int*>(output + nEvents) - nEvents;
+  std::fill(binIndices, binIndices + nEvents, 0);
+  binning.binNumbers(xVals.data(), binIndices, nEvents);
+
+  // Extend coordinates and weights with one extra point before the first bin
+  // and one extra point after the last bin. This means the original histogram
+  // bins span elements 1 to nBins in coordsExt and weightsExt
+  std::vector<double> coordsExt(nBins+2);
+  double* binCoords = coordsExt.data() + 1;
+  binCoords[0] = binning.lowBound() + 0.5*_binv[0];
+  for (std::size_t binIdx = 1; binIdx < nBins ; ++binIdx) {
+    if (binning.isUniform()) {
+      double binWidth = _binv[0];
+      binCoords[binIdx] = binIdx*binWidth + binCoords[0];
+    }
+    else {
+      double binCentDiff = 0.5*_binv[binIdx-1] + 0.5*_binv[binIdx];
+      binCoords[binIdx] = binCoords[binIdx-1] + binCentDiff;
+    }
+  }
+
+  std::vector<double> weightsExt(nBins+2);
+  // Fill weights for bins that are inside histogram boundaries
+  for (std::size_t binIdx = 0; binIdx < nBins; ++binIdx) {
+    weightsExt[binIdx+1] = correctForBinSize ? _wgt[binIdx] / _binv[binIdx] : _wgt[binIdx];
+  }
+
+  // Fill weights for bins that are outside histogram boundaries
+  if (cdfBoundaries) {
+    coordsExt[0] = binning.lowBound();
+    weightsExt[0] = 0.;
+    coordsExt[nBins+1] = binning.highBound();
+    weightsExt[nBins+1] = 1.;
+  }
+  else {
+    // Mirror first and last bins
+    coordsExt[0] = binCoords[0] - _binv[0];
+    weightsExt[0] = weightsExt[1];
+    coordsExt[nBins+1] = binCoords[nBins-1] + _binv[nBins-1];
+    weightsExt[nBins+1] = weightsExt[nBins];
+  }
+
+  // Interpolate between current bin center and one bin center to the left
+  // if xVal is to the left of the current bin center
+  for (std::size_t i = 0; i < nEvents ; ++i) {
+      double xVal = xVals[i];
+      std::size_t binIdx = binIndices[i] + 1;
+
+      // If xVal is to the right of the current bin center, interpolate between
+      // current bin center and one bin center to the right instead
+      if (xVal > coordsExt[binIdx]) { binIdx += 1; }
+
+      double x1 = coordsExt[binIdx-1];
+      double y1 = weightsExt[binIdx-1];
+      double x2 = coordsExt[binIdx];
+      double y2 = weightsExt[binIdx];
+
+      // Find coefficients by solving a system of two linear equations
+      double firstCoeff = (y2-y1) / (x2-x1);
+      double zerothCoeff = y1 - firstCoeff * x1;
+      // Get the interpolated weight using the equation of a straight line
+      output[i] = firstCoeff * xVal + zerothCoeff;
+  }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+/// A vectorized version of RooDataHist::weight() for one dimensional histograms
+/// with up to one dimensional interpolation. 
 /// \param[out] output An array of weights corresponding the values in xVals.
 /// \param[in] xVals An array of coordinates for which the weights should be
 ///                  calculated.
+/// \param[in] intOrder Interpolation order; 0th and 1st order are supported.
 /// \param[in] correctForBinSize Enable the inverse bin volume correction factor.
+/// \param[in] cdfBoundaries Enable the special boundary coundition for a cdf:
+///                          Underflow bins are assumed to have weight zero and
+///                          overflow bins have weight one. Otherwise, the
+///                          histogram is mirrored at the boundaries for the
+///                          interpolation.
 
-void RooDataHist::weights(double* output, RooSpan<double const> xVals, bool correctForBinSize) 
+void RooDataHist::weights(double* output, RooSpan<double const> xVals, int intOrder, bool correctForBinSize, bool cdfBoundaries)
 {
   auto const nEvents = xVals.size();
-  RooAbsBinning const& binning = *_lvbins[0];
 
-  // Reuse the output buffer for bin indices and zero-initialize it
-  auto binIndices = reinterpret_cast<int*>(output + nEvents) - nEvents; 
-  std::fill(binIndices, binIndices + nEvents, 0);
+  if (intOrder == 0) {
+    RooAbsBinning const& binning = *_lvbins[0];
 
-  binning.binNumbers(xVals.data(), binIndices, nEvents);
+    // Reuse the output buffer for bin indices and zero-initialize it
+    auto binIndices = reinterpret_cast<int*>(output + nEvents) - nEvents;
+    std::fill(binIndices, binIndices + nEvents, 0);
+    binning.binNumbers(xVals.data(), binIndices, nEvents);
 
-  for (std::size_t i=0; i < nEvents; ++i) {
-    auto binIdx = binIndices[i];
-    output[i] = correctForBinSize ? _wgt[binIdx] / _binv[binIdx] : _wgt[binIdx];
+    for (std::size_t i=0; i < nEvents; ++i) {
+      auto binIdx = binIndices[i];
+      output[i] = correctForBinSize ? _wgt[binIdx] / _binv[binIdx] : _wgt[binIdx];
+    }
+  }
+  else if (intOrder == 1) {
+    interpolateLinear(output, xVals, correctForBinSize, cdfBoundaries);
+  }
+    else if (intOrder == 2) {
+    interpolateQuadratic(output, xVals, correctForBinSize, cdfBoundaries);
+  }
+  else {
+    // Higher dimensional scenarios not yet implemented
+    coutE(InputArguments) << "RooDataHist::weights(" << GetName() << ") interpolation in "
+                          << intOrder << " dimensions not yet implemented" << std::endl ;
+    // Fall back to 1st order interpolation
+    weights(output, xVals, 1, correctForBinSize, cdfBoundaries);
   }
 }
 
@@ -1270,6 +1487,7 @@ double RooDataHist::weightInterpolated(const RooArgSet& bin, int intOrder, bool 
 
   double wInt{0} ;
   if (varInfo.nRealVars == 1) {
+
     // buffer needs to be 2 x (interpolation order + 1), with the factor 2 for x and y.
     _interpolationBuffer.resize(2 * intOrder + 2);
 
@@ -1466,7 +1684,7 @@ double RooDataHist::interpolateDim(int iDim, double xval, size_t centralIdx, int
       // Underflow: mirror
       ibin = -i - 1 ;
       if (cdfBoundaries) {
-        xarr[i-fbinLo] = binning.lowBound()-ibin*(1e-10) ; ;
+        xarr[i-fbinLo] = binning.lowBound()-ibin*(1e-10) ;
         yarr[i-fbinLo] = 0.0 ;
       } else {
         auto idx = offsetIdx + idxMult * ibin;
