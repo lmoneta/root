@@ -78,7 +78,7 @@ namespace SOFIE{
         
         // computing updated edge attributes
         for(int k=0; k<edges.size(); ++k){
-            fGC+=edges_block->Generate(edges[k],nodes[edges[k].first], nodes[edges[k].second], globals);
+            fGC+=edges_updation_block->Generate(edges[k],nodes[edges[k].first], nodes[edges[k].second], globals);
         }
 
         for(int i=0; i<nodes.size(); ++i){
