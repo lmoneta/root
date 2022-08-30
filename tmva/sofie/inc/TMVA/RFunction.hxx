@@ -17,8 +17,10 @@ enum class FunctionTarget{
         NODES=0, EDGES=1, GLOBALS=2
 };
 class RFunction: public ROperator{
+    std::string fFuncName;
     FunctionType fType;
     FunctionTarget fTarget;
+    std::unique_ptr<RModel_GNN> fGraph;
     std::unique_ptr<RModel> function_block;
 };
 
