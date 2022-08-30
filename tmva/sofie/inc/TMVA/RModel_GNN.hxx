@@ -10,9 +10,9 @@ namespace SOFIE{
 
 struct GNN_Init {
     // updation blocks
-    RFunction edges_updation_block;
-    RFunction nodes_updation_block;
-    RFunction globals_updation_block;
+    RFunction edges_update_block;
+    RFunction nodes_update_block;
+    RFunction globals_update_block;
     
     // aggregation blocks
     RFunction edge_node_agg_block;
@@ -29,9 +29,9 @@ class RModel_GNN: public RModel{
 private:
     
     // updation function for edges, nodes & global attributes
-    std::unique_ptr<RFunction> edges_updation_block;
-    std::unique_ptr<RFunction> nodes_updation_block;
-    std::unique_ptr<RFunction> globals_updation_block;
+    std::unique_ptr<RFunction> edges_update_block;
+    std::unique_ptr<RFunction> nodes_update_block;
+    std::unique_ptr<RFunction> globals_update_block;
 
     // aggregation function for edges, nodes & global attributes
     std::unique_ptr<RFunction> edge_node_agg_block;

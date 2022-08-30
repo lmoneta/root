@@ -11,9 +11,9 @@ namespace SOFIE{
 
 
     RModel_GNN::RModel_GNN(RModel_GNN&& other){
-      edges_updation_block = std::move(other.edges_block);
-      nodes_updation_block = std::move(other.nodes_block);
-      globals_updation_block = std::move(other.globals_block);
+      edges_update_block = std::move(other.edges_block);
+      nodes_update_block = std::move(other.nodes_block);
+      globals_update_block = std::move(other.globals_block);
 
       edge_node_agg_block = std::move(other.edge_node_agg_block);
       edge_global_agg_block = std::move(other.edge_global_agg_block);
@@ -27,9 +27,9 @@ namespace SOFIE{
     }
 
    RModel_GNN& RModel_GNN::operator=(RModel_GNN&& other){
-      edges_updation_block = std::move(other.edges_block);
-      nodes_updation_block = std::move(other.nodes_block);
-      globals_updation_block = std::move(other.globals_block);
+      edges_update_block = std::move(other.edges_block);
+      nodes_update_block = std::move(other.nodes_block);
+      globals_update_block = std::move(other.globals_block);
 
       edge_node_agg_block = std::move(other.edge_node_agg_block);
       edge_global_agg_block = std::move(other.edge_global_agg_block);
@@ -43,9 +43,9 @@ namespace SOFIE{
     }
 
     RModel_GNN::RModel_GNN(const GNN_Init& graph_input_struct){
-        edges_updation_block = std::make_unique<RFunction>(graph_input_struct.edges_block);
-        nodes_updation_block = std::make_unique<RFunction>(graph_input_struct.nodes_block);
-        globals_updation_block = std::make_unique<RFunction>(graph_input_struct.globals_block);
+        edges_update_block = std::make_unique<RFunction>(graph_input_struct.edges_block);
+        nodes_update_block = std::make_unique<RFunction>(graph_input_struct.nodes_block);
+        globals_update_block = std::make_unique<RFunction>(graph_input_struct.globals_block);
 
         edge_node_agg_block = std::make_unique<RFunction>(graph_input_struct.edge_node_agg_block);
         edge_global_agg_block = std::make_unique<RFunction>(graph_input_struct.edge_global_agg_block);
@@ -61,8 +61,8 @@ namespace SOFIE{
     }
 
     void RModel_GNN::InitializeGNN(int batch_size){
-        edges_updation_block->function_block->Initialize(batch_size);
-        nodes_updation_block->function_block->Initialize(batch_size);
+        edges_update_block->function_block->Initialize(batch_size);
+        nodes_update_block->function_block->Initialize(batch_size);
 
         edge_node_agg_block->function_block->Initialize(batch_size);
         edge_global_agg_block->function_block->Initialize(batch_size);
@@ -78,7 +78,7 @@ namespace SOFIE{
         
         // computing updated edge attributes
         for(int k=0; k<edges.size(); ++k){
-            fGC+=edges_updation_block->Generate(edges[k],nodes[edges[k].first], nodes[edges[k].second], globals);
+            fGC+=edges_update_block->Generate(edges[k],nodes[edges[k].first], nodes[edges[k].second], globals);
         }
 
         for(int i=0; i<nodes.size(); ++i){
@@ -87,7 +87,7 @@ namespace SOFIE{
                 agg_data_per_node.push_back({edges[k],nodes[i],nodes[edges[k].second]});
             }
             fGC+=edge_node_agg_block->Generate(agg_data_per_node);             // aggregating edge attributes per node
-            fGC+=nodes_updation_block->Generate(edges[i],nodes[i],globals);    // computing updated node attributes 
+            fGC+=nodes_update_block->Generate(edges[i],nodes[i],globals);    // computing updated node attributes 
         }
 
         std::vector<GNN::GNN_Agg> agg_data;
@@ -96,7 +96,7 @@ namespace SOFIE{
         }
         fGC+=edge_global_agg_block->Generate(agg_data);     // aggregating edge attributes globally
         fGC+=node_global_agg_block->Generate(agg_data);     // aggregating node attributes globally
-        fGC+=globals_updation_block->Generate(edges,nodes,globals); // computing updated global attributes
+        fGC+=globals_update_block->Generate(edges,nodes,globals); // computing updated global attributes
 
         fGC+="\nreturn input_graph;\n}";
         if (fUseSession) {
