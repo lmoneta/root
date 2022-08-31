@@ -10,6 +10,15 @@
 
 import cppyy
 
+
+def _init(*obj):
+    # Parameters:
+    # - obj: objects passed
+    graph = ROOT.TGraph(obj)
+    return graph
+    
+    
+
 def set_size(self, buf):
     # Parameters:
     # - self: graph object
@@ -40,3 +49,12 @@ comp = cppyy.py.compose_method('^TGraph(2D)?$|^TGraph.*Errors$', # class to matc
 
 # Add the composite to the list of pythonizors
 cppyy.py.add_pythonization(comp)
+
+@pythonization('TGraph')
+def pythonize_tgraph(klass):
+    # Parameters:
+    # klass: class to be pythonized
+    klass.__init__ = _init
+    klass.GetX = _GetX
+    klass.GetY = _GetY
+    klass.Get = _Get

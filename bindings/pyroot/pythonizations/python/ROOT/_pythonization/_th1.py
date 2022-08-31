@@ -11,90 +11,13 @@
 from . import pythonization
 
 
-def __init__(self, *binnings, counts=None):
-    if len(binnings) == 0:
-        raise TypeError("Histogram must not have zero dimensions")
-    if any(not isinstance(binning, Binning) for binning in binnings):
-        raise TypeError("non-keyword arguments to Histogram must all be binnings")
-    self.binnings = binnings
-
-    if counts is None:
-        counts = numpy.zeros([len(binning) for binning in self.binnings], int)
-    if isinstance(counts, numbers.Integral):
-        counts = numpy.full([len(binning) for binning in self.binnings], counts)
-    if not isinstance(counts, numpy.ndarray):
-        counts = numpy.array(counts)
-    self.counts = counts
-
-    assert len(binnings) == len(counts.shape)
-    assert all(len(binning) == length for binning, length in zip(binnings, counts.shape))
-
-def __repr__(self):
-    return "Histogram({0})".format(", ".join(repr(binning) for binning in self.binnings))
-
-def __getitem__(self, slices):
-    if not isinstance(slices, tuple):
-        slices = (slices,)
-    if len(slices) > len(self.binnings):
-        raise IndexError("too many slices for Histogram of dimension {0}".format(len(self.binnings)))
-    slices = slices + (slice(None),) * (len(self.binnings) - len(slices))
-
-    binnings = []
-    counts = self.counts
-    for item, binning in zip(slices, self.binnings):
-        if not isinstance(item, slice):
-            raise TypeError("only slices are allowed")
-        start, stop, step = item.start, item.stop, item.step
-
-        # the current axis depends on the dimensionality of the output
-        axis = len(binnings)
-
-        # slice the binning, creating under/overflows if necessary
-        if start is not None or stop is not None:
-            binning, counts = binning.sliced(start, stop, axis, counts, wantflows=getattr(step, "wantflows", True))
-
-        # apply the project/rebin function
-        if step is not None:
-            if not callable(step):
-                raise TypeError("when slicing a Histogram, the slice's third argument must be callable")
-            original_shape = counts.shape
-
-            # signature: (binning for axis=axis, axis number, whole counts array) → new binning (or None), new counts
-            binning, counts = step(binning, axis, counts)
-
-            # ensure that the (possibly user-supplied) function is sane
-            if binning is None:
-                assert original_shape[:axis] + original_shape[axis + 1:] == counts.shape
-            else:
-                assert original_shape[:axis] == counts.shape[:axis]
-                assert original_shape[axis + 1:] == counts.shape[axis + 1:]
-                assert len(binning) == counts.shape[axis]
-
-        # also determines whether the axis number will be increased in the next round
-        if binning is not None:
-            binnings.append(binning)
-
-    return Histogram(*binnings, counts=counts)
-
-def __eq__(self, other):
-    return isinstance(other, Histogram) and self.binnings == other.binnings and numpy.array_equal(self.counts, other.counts)
-
-def __ne__(self, other):
-    return not self.__eq__(other)
-
-def loc(x):
-    """When used in the start or stop of a Histogram's slice, x is taken to be the position in data coordinates."""
-    return lambda binning, isleft: binning.index(x, isleft=isleft, clip=True)
-
-def project(binning, axis, counts):
-    """When used in the step of a Histogram's slice, project sums over and eliminates what remains of the axis after slicing."""
-    return None, numpy.add.reduce(counts, axis=axis)
-
-project.wantflows = False
-
-def rebin(factor):
-    """When used in the step of a Histogram's slice, rebin(n) combines bins, scaling their widths by a factor of n. If the number of bins is not divisible by n, the remainder is added to the overflow bin."""
-    def impl(binning, axis, counts):
+class rebin:
+    "When used in the step of a Histogram's slice, rebin(n) combines bins, scaling their widths by a factor of n. If the number of bins is not divisible by n, the remainder is added to the overflow bin."
+    def __init__(self, factor):
+    	self.factor = factor
+    
+    def __call__(self, binning, axis, counts):
+        factor = self.factor
         if isinstance(binning, Regular):
             indexes = (numpy.arange(0, binning.num, factor),)
 
@@ -119,9 +42,9 @@ def rebin(factor):
         else:
             raise NotImplementedError(type(binning))
 
-    return impl
 
-rebin.wantflows = True
+    projection = False
+
 
 # Multiplication by constant
 
@@ -142,10 +65,90 @@ def FromNumpy(x, w, name, title, nbins, xmin, xmax, size):
     return obj
 
 
+class TH1:
+    def __init__(self, *binnings, counts=None):
+        if len(binnings) == 0:
+            raise TypeError("Histogram must not have zero dimensions")
+        if any(not isinstance(binning, Binning) for binning in binnings):
+            raise TypeError("non-keyword arguments to Histogram must all be binnings")
+        self.binnings = binnings
+
+        if counts is None:
+            counts = numpy.zeros([len(binning) for binning in self.binnings], int)
+        if isinstance(counts, numbers.Integral):
+            counts = numpy.full([len(binning) for binning in self.binnings], counts)
+        if not isinstance(counts, numpy.ndarray):
+            counts = numpy.array(counts)
+        self.counts = counts
+
+        assert len(binnings) == len(counts.shape)
+        assert all(len(binning) == length for binning, length in zip(binnings, counts.shape))
+
+    def __repr__(self):
+        return "Histogram({0})".format(", ".join(repr(binning) for binning in self.binnings))
+
+    def __getitem__(self, slices):
+        if not isinstance(slices, tuple):
+            slices = (slices,)
+        # TODO: turn Ellipsis into empty slices here...
+        if len(slices) > len(self.binnings):
+            raise IndexError("too many slices for Histogram of dimension {0}".format(len(self.binnings)))
+        slices = slices + (slice(None),) * (len(self.binnings) - len(slices))
+
+        binnings = []
+        counts = self.counts
+        for item, binning in zip(slices, self.binnings):
+            if not isinstance(item, slice):
+                raise TypeError("only slices are allowed")
+            start, stop, step = item.start, item.stop, item.step
+
+            # the current axis depends on the dimensionality of the output
+            axis = len(binnings)
+
+            # slice the binning, creating under/overflows if necessary
+            if start is not None or stop is not None:
+                binning, counts = binning.sliced(start, stop, axis, counts, projection=getattr(step, "projection", False))
+
+            # apply the project/rebin function
+            if step is not None:
+                if not callable(step):
+                    raise TypeError("when slicing a Histogram, the slice's third argument must be callable")
+                original_shape = counts.shape
+
+                # signature: (binning for axis=axis, axis number, whole counts array) → new binning (or None), new counts
+                binning, counts = step(binning, axis, counts)
+
+                # ensure that the (possibly user-supplied) function is sane
+                if binning is None:
+                    assert original_shape[:axis] + original_shape[axis + 1:] == counts.shape
+                else:
+                    assert original_shape[:axis] == counts.shape[:axis]
+                    assert original_shape[axis + 1:] == counts.shape[axis + 1:]
+                    assert len(binning) == counts.shape[axis]
+
+            # also determines whether the axis number will be increased in the next round
+            if binning is not None:
+                binnings.append(binning)
+
+        return Histogram(*binnings, counts=counts)
+
+    def __eq__(self, other):
+        return isinstance(other, Histogram) and self.binnings == other.binnings and numpy.array_equal(self.counts, other.counts)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+   
+
+python_funcs = [Fill, FromNumpy, GetAsNumpy, GetBinCenters, GetBinEdges, GetBinLowEdges, GetBinUpEdges, GetContent]
+
 @pythonization('TH1')
 def pythonize_th1(klass):
     # Parameters:
     # klass: class to be pythonized
     # Support hist *= scalar
     klass.__imul__ = _imul
-    klass.FromNumpy = FromNumpy
+    for python_func in python_funcs:
+        func_name = python_func.__name__
+        func_name_orig = "_" + func_name
+        setattr(klass, func_name_orig, getattr(klass, func_name))
+        setattr(klass, func_name, python_func)
