@@ -431,7 +431,6 @@ namespace GNN{
    };
 
    struct GNN_Agg {
-      std::pair<int,int> edge;
       std::string receiver;
       std::string sender;
    };

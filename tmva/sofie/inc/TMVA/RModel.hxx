@@ -119,6 +119,10 @@ public:
    void PrintGenerated(){
       std::cout << fGC;
    }
+
+   std::string ReturnGenerated(){
+      return fGC;
+   }
    void PrintIntermediateTensors();
    void OutputGenerated(std::string filename = "");
    std::vector<std::string> GetOutputTensorNames(){

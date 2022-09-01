@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <limits>
 #include <cassert>
+#include <any>
 
 namespace TMVA{
 namespace Experimental{
@@ -26,11 +27,25 @@ class RFunction_MLP: public RFunction{
     std::vector<std::string> fBiasTensors;
     std::string fOutputTensor;
 
-    void Initialize(){
-        function_block.reset(new RModel);
+    void Initialize(std::vector<std::any> InputTensors){
+        
+        function_block->reset(new RModel);
+        
+        if(fTarget == FunctionTarget::EDGES){
+            fInputTensors.emplace_back("Edge_"+std::any_cast<std::string>(InputTensors[0])+"_"+std::any_cast<std::string>(InputTensors[1]))
+        } else if(fTarget == FunctionTarget::NODES){
+            auto nodes_agg_data = std::any_cast<std::vector<GNN::GNN_Agg>>(InputTensors[0]);
+            for(auto& it:nodes_agg_data){
+                fInputTensors.emplace_back("Edge_"+it.receiver+"_"+it.sender);
+            }
+        }
+
+        for(int i=1; i<InputTensors.size();++i){
+            fInputTensors.emplace_back(std::any_cast<std::string>(InputTensors[i]));
+        }
 
         std::unique_ptr<ROperator> op_concat;
-        op_concat.reset(new ROperator_Concat<float>(fInputTensors,fFuncName+"InputConcat"));
+        op_concat.reset(new ROperator_Concat<float>(fInputTensors,0,fFuncName+"InputConcat"));
         function_block->AddOperator(std::move(op_concat));
         
         std::unique_ptr<ROperator> op_gemm;
@@ -62,9 +77,10 @@ class RFunction_MLP: public RFunction{
         function_block->AddOutputTensorNameList({fOutputTensor});
     }
 
-    void Generate(std::vector<std::string> InputTensorNames, int batchSize){
-        Initialize();
-        Generate(Options::kGNNComponent, batchSize);
+    std::string Generate(const std::vector<std::any>& InputTensors, int batchSize){
+        Initialize(InputTensors);
+        function_block->Generate(Options::kGNNComponent, batchSize);
+        return function_block->ReturnGenerated();
     }
 }
 

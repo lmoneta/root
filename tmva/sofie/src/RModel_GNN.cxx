@@ -78,16 +78,21 @@ namespace SOFIE{
         
         // computing updated edge attributes
         for(int k=0; k<edges.size(); ++k){
-            fGC+=edges_update_block->Generate(edges[k],nodes[edges[k].first], nodes[edges[k].second], globals);
+            fGC+=edges_update_block->Generate({nodes[edges[k].first], nodes[edges[k].second], globals});
         }
 
         for(int i=0; i<nodes.size(); ++i){
             std::vector<GNN::GNN_Agg> agg_data_per_node;
             for(int k=0; k<edges.size(); ++k){
-                agg_data_per_node.push_back({edges[k],nodes[i],nodes[edges[k].second]});
+                if(edges[k].first == i)
+                    agg_data_per_node.push_back({nodes[i],nodes[edges[k].second]});
+                else if(edges[k].second == i)
+                    agg_data_per_node.push_back({nodes[i],nodes[edges[k].first]});
+                else  
+                    continue;
             }
-            fGC+=edge_node_agg_block->Generate(agg_data_per_node);             // aggregating edge attributes per node
-            fGC+=nodes_update_block->Generate(edges[i],nodes[i],globals);    // computing updated node attributes 
+            fGC+=edge_node_agg_block->Generate(agg_data_per_node);                      // aggregating edge attributes per node
+            fGC+=nodes_update_block->Generate({agg_data_per_node,nodes[i],globals});    // computing updated node attributes 
         }
 
         std::vector<GNN::GNN_Agg> agg_data;
@@ -96,7 +101,7 @@ namespace SOFIE{
         }
         fGC+=edge_global_agg_block->Generate(agg_data);     // aggregating edge attributes globally
         fGC+=node_global_agg_block->Generate(agg_data);     // aggregating node attributes globally
-        fGC+=globals_update_block->Generate(edges,nodes,globals); // computing updated global attributes
+        fGC+=globals_update_block->Generate({edges,nodes,globals}); // computing updated global attributes
 
         fGC+="\nreturn input_graph;\n}";
         if (fUseSession) {

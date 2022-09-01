@@ -40,7 +40,7 @@ private:
 
     std::vector<std::pair<int,int>> edges; // contains node indices
     std::vector<std::string> nodes;
-    std::vector<std::string> globals;
+    std::string globals;
     std::vector<int> senders;              // contains node indices
     std::vector<int> receivers;            // contains node indices
 

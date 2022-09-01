@@ -22,6 +22,9 @@ class RFunction: public ROperator{
     FunctionTarget fTarget;
     std::unique_ptr<RModel_GNN> fGraph;
     std::unique_ptr<RModel> function_block;
+
+    virtual void Initialize(std::vector<std::any> InputTensors);
+    virtual std::string Generate(std::vector<std::any> InputTensors, int batchSize);
 };
 
 
