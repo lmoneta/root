@@ -1,7 +1,7 @@
 #ifndef TMVA_SOFIE_RFUNCTION
 #define TMVA_SOFIE_RFUNCTION
 
-
+#include <any>
 #include "TMVA/ROperator.hxx"
 
 namespace TMVA{
@@ -23,8 +23,9 @@ class RFunction: public ROperator{
     std::unique_ptr<RModel_GNN> fGraph;
     std::unique_ptr<RModel> function_block;
 
-    virtual void Initialize(std::vector<std::any> InputTensors);
-    virtual std::string Generate(std::vector<std::any> InputTensors, int batchSize);
+    virtual void Initialize(std::vector<std::any> InputTensors) = 0;
+    virtual std::string Generate(std::string funcName, std::vector<std::any> InputTensors, std::string outputTensor, int batchSize) = 0;
+    virtual ~ROperator(){}
 };
 
 
