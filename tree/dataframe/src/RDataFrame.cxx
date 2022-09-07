@@ -8,13 +8,23 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#include <algorithm>
-#include <stdexcept>
-
 #include "ROOT/RDataFrame.hxx"
 #include "ROOT/RDataSource.hxx"
+#include "ROOT/RDF/RDatasetSpec.hxx"
+#include "ROOT/RDF/RInterface.hxx"
+#include "ROOT/RDF/RLoopManager.hxx"
+#include "ROOT/RDF/Utils.hxx"
+#include "ROOT/RStringView.hxx"
 #include "TChain.h"
 #include "TDirectory.h"
+#include "RtypesCore.h" // for ULong64_t
+#include "TTree.h"
+
+#include <memory>  // for make_shared, allocator, shared_ptr
+#include <ostream> // ostringstream
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 // clang-format off
 /**
@@ -66,7 +76,7 @@ You can directly see RDataFrame in action in our [tutorials](https://root.cern.c
    - [User-defined custom actions](\ref generic-actions)
    - [Friend trees](\ref friends)
    - [Reading data formats other than ROOT trees](\ref other-file-formats)
-   - [Computation graphs (storing and reusing sets of transformations](\ref callgraphs)
+   - [Computation graphs (storing and reusing sets of transformations)](\ref callgraphs)
    - [Visualizing the computation graph](\ref representgraph)
    - [Activating RDataFrame execution logs](\ref rdf-logging)
 - [Efficient analysis in Python](\ref python)

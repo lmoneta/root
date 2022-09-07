@@ -22,9 +22,10 @@
 #include "TNotifyLink.h"
 #include "TObjArray.h"
 
+#include <memory>
+#include <string>
 #include <utility> // std::pair
 #include <vector>
-#include <string>
 
 class TTree;
 
@@ -69,6 +70,7 @@ struct RFriendInfo {
                   const std::string &alias = "");
 };
 
+std::vector<std::string> GetTopLevelBranchNames(TTree &t);
 std::vector<std::string> GetFileNamesFromTree(const TTree &tree);
 RFriendInfo GetFriendInfo(const TTree &tree);
 std::vector<std::string> GetTreeFullPaths(const TTree &tree);
@@ -104,6 +106,8 @@ public:
 
    ClassDef(RNoCleanupNotifier, 0);
 };
+
+std::unique_ptr<TChain> MakeChainForMT(const std::string &name = "", const std::string &title = "");
 
 } // namespace TreeUtils
 } // namespace Internal

@@ -29,6 +29,8 @@
 #include <list>
 #include <utility>
 
+class AddCacheElem;
+
 class RooAddPdf : public RooAbsPdf {
 public:
 
@@ -99,30 +101,16 @@ protected:
   mutable TNamed* _refCoefRangeName = nullptr ;  ///< Reference range name for coefficient interpreation
 
   bool _projectCoefs = false;     ///< If true coefficients need to be projected for use in evaluate()
-  std::vector<double> _coefCache; ///<! Transient cache with transformed values of coefficients
+  mutable std::vector<double> _coefCache; ///<! Transient cache with transformed values of coefficients
 
 
-  class CacheElem : public RooAbsCacheElement {
-  public:
-    ~CacheElem() override {} ;
-
-    RooArgList _suppNormList ; ///< Supplemental normalization list
-    bool    _needSupNorm ;     ///< Does the above list contain any non-unit entries?
-
-    RooArgList _projList ;     ///< Projection integrals to be multiplied with coefficients
-    RooArgList _suppProjList ; ///< Projection integrals to be multiplied with coefficients for supplemental normalization terms
-    RooArgList _refRangeProjList ; ///< Range integrals to be multiplied with coefficients (reference range)
-    RooArgList _rangeProjList ;    ///< Range integrals to be multiplied with coefficients (target range)
-
-    RooArgList containedArgs(Action) override ;
-
-  } ;
   mutable RooObjCacheManager _projCacheMgr ;  //! Manager of cache with coefficient projections and transformations
-  CacheElem* getProjCache(const RooArgSet* nset, const RooArgSet* iset=nullptr, const char* rangeName=nullptr) const ;
-  void updateCoefficients(CacheElem& cache, const RooArgSet* nset) const ;
+  AddCacheElem* getProjCache(const RooArgSet* nset, const RooArgSet* iset=nullptr, const char* rangeName=nullptr) const ;
+  void updateCoefficients(AddCacheElem& cache, const RooArgSet* nset, bool syncCoefValues=true) const ;
 
 
   friend class RooAddGenContext ;
+  friend class RooAddModel ;
   RooAbsGenContext* genContext(const RooArgSet &vars, const RooDataSet *prototype=nullptr,
                                const RooArgSet* auxProto=nullptr, bool verbose= false) const override;
 
@@ -147,15 +135,10 @@ protected:
 
   mutable Int_t _coefErrCount ; ///<! Coefficient error counter
 
-  bool redirectServersHook(const RooAbsCollection&, bool, bool, bool) override {
-    // If a server is redirected, the cached normalization set might not point
-    // to the right observables anymore. We need to reset it.
-    _copyOfLastNormSet.reset();
-    return false;
-  }
+  bool redirectServersHook(const RooAbsCollection&, bool, bool, bool) override;
 
 private:
-  std::pair<const RooArgSet*, CacheElem*> getNormAndCache(const RooArgSet* nset) const;
+  std::pair<const RooArgSet*, AddCacheElem*> getNormAndCache(const RooArgSet* nset) const;
   mutable RooFit::UniqueId<RooArgSet>::Value_t _idOfLastUsedNormSet = RooFit::UniqueId<RooArgSet>::nullval; ///<!
   mutable std::unique_ptr<const RooArgSet> _copyOfLastNormSet = nullptr; ///<!
 

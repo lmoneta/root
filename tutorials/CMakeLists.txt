@@ -253,6 +253,10 @@ if(ROOT_CLASSIC_BUILD)
   set(classic_veto multicore/mp104_*.C multicore/mp105_*.C)
 endif()
 
+if(NOT gdml)
+  set(gdml_veto geom/gdml/testoptical.C)
+endif()
+
 #---These ones requires a display to run-----------------------------
 set(gui_veto fit/fitpanel_playback.C
              cocoa/*.C
@@ -384,6 +388,7 @@ set(extra_veto
 set(all_veto hsimple.C
              geom/geometry.C
              ${extra_veto}
+             ${gdml_veto}
              ${gui_veto}
              ${minuit2_veto}
              ${roofit_veto}
@@ -512,9 +517,11 @@ set (tmva-pytorch-ApplicationClassificationPyTorch-depends tutorial-tmva-pytorch
 set (tmva-pytorch-ApplicationRegressionPyTorch-depends tutorial-tmva-pytorch-RegressionPyTorch-py)
 if (PY_KERAS_FOUND)
 set (tmva-TMVA_SOFIE_Keras_HiggsModel-depends tutorial-tmva-TMVA_Higgs_Classification)
-set (tmva-TMVA_SOFIE_RDataFrame-depends tutorial-tmva-TMVA_Keras_HiggsModel)
-set (tmva-TMVA_SOFIE_RDataFrame_JIT-depends tutorial-tmva-TMVA_Keras_HiggsModel)
+set (tmva-TMVA_SOFIE_RDataFrame-depends tutorial-tmva-TMVA_SOFIE_Keras_HiggsModel)
+set (tmva-TMVA_SOFIE_RDataFrame_JIT-depends tutorial-tmva-TMVA_SOFIE_Keras_HiggsModel)
 set (tmva-TMVA_SOFIE_Inference-depends tutorial-tmva-TMVA_Higgs_Classification)
+set (tmva-keras-ApplicationRegressionKeras-depends tutorial-tmva-keras-RegressionKeras-py)
+set (tmva-keras-ApplicationClassificationKeras-depends tutorial-tmva-keras-ClassificationKeras-py)
 endif()
 
 #--List long-running tutorials to label them as "longtest"
@@ -691,6 +698,9 @@ if(ROOT_pyroot_FOUND)
   if(NOT PY_KERAS_FOUND)
     file(GLOB tmva_veto_py RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} tmva/keras/*.py)
     list(APPEND pyveto ${tmva_veto_py})
+  else()
+  list(APPEND pyveto tmva/keras/RegressionKeras.py)
+  list(APPEND pyveto tmva/keras/ApplicationRegressionKeras.py)
   endif()
 
   find_python_module(torch QUIET)

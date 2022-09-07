@@ -2845,11 +2845,8 @@ TString TBranchElement::GetFullName() const
       // The parent's name is already included in the name for split TClonesArray and STL collections
       return fName;
    }
-   TString motherName(mother->GetName());
-   if (motherName.Length() && (motherName[motherName.Length()-1] == '.')) {
-      return fName;
-   }
-   return motherName + "." + fName;
+
+   return TBranch::GetFullName();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -4335,7 +4332,7 @@ void TBranchElement::ReadLeavesCollection(TBuffer& b)
          break;
    }
    //------------------------------------------------------------------------
-   // We have split this stuff, so we need to create the the pointers
+   // We have split this stuff, so we need to create the pointers
    /////////////////////////////////////////////////////////////////////////////
 
    if( proxy->HasPointers() && fSplitLevel > TTree::kSplitCollectionOfPointers )

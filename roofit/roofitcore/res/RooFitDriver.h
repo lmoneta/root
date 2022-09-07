@@ -50,7 +50,7 @@ public:
                 RooFit::BatchModeOption batchMode = RooFit::BatchModeOption::Cpu);
 
    void setData(RooAbsData const &data, std::string_view rangeName = "",
-                RooAbsCategory const *indexCatForSplitting = nullptr);
+                RooAbsCategory const *indexCatForSplitting = nullptr, bool skipZeroWeights = false);
    void setData(DataSpansMap const &dataSpans);
 
    ~RooFitDriver();
@@ -63,8 +63,6 @@ private:
    // Private member functions
 
    double getValHeterogeneous();
-   std::chrono::microseconds simulateFit(std::chrono::microseconds h2dTime, std::chrono::microseconds d2hTime,
-                                         std::chrono::microseconds diffThreshold);
    void markGPUNodes();
    void assignToGPU(NodeInfo &info);
    void computeCPUNode(const RooAbsArg *node, NodeInfo &info);

@@ -51,5 +51,15 @@ int main(){
    modelReshape.Generate();
    modelReshape.OutputGenerated("KerasReshapeModel.hxx");
 
+   //Emitting header file for Keras model with Concatenate layer
+   RModel modelConcatenate = TMVA::Experimental::SOFIE::PyKeras::Parse("KerasModelConcatenate.h5");
+   modelConcatenate.Generate();
+   modelConcatenate.OutputGenerated("KerasConcatenateModel.hxx");
+
+   // Emitting header file for Keras Binary Op Model
+   RModel modelBinaryOp = TMVA::Experimental::SOFIE::PyKeras::Parse("KerasModelBinaryOp.h5");
+   modelBinaryOp.Generate();
+   modelBinaryOp.OutputGenerated("KerasBinaryOpModel.hxx");
+
    return 0;
 }

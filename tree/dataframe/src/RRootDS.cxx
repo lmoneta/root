@@ -10,9 +10,6 @@
 #include <ROOT/RRootDS.hxx>
 #include <ROOT/TSeq.hxx>
 #include <TClass.h>
-#include <TError.h>
-#include <TROOT.h>         // For the gROOTMutex
-#include <TVirtualMutex.h> // For the R__LOCKGUARD
 
 #include <algorithm>
 #include <vector>
@@ -166,11 +163,6 @@ void RRootDS::Initialize()
 std::string RRootDS::GetLabel()
 {
    return "Root";
-}
-
-RDataFrame MakeRootDataFrame(std::string_view treeName, std::string_view fileNameGlob)
-{
-   return ROOT::RDataFrame(treeName, fileNameGlob);
 }
 
 } // ns RDF

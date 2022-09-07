@@ -13,14 +13,12 @@
 #ifndef ROOT_RDF_HELPERS
 #define ROOT_RDF_HELPERS
 
-#include <ROOT/RDataFrame.hxx>
 #include <ROOT/RDF/GraphUtils.hxx>
 #include <ROOT/RDF/RActionBase.hxx>
 #include <ROOT/RDF/RResultMap.hxx>
-#include <ROOT/RResultHandle.hxx>
+#include <ROOT/RResultHandle.hxx> // users of RunGraphs might rely on this transitive include
 #include <ROOT/TypeTraits.hxx>
 
-#include <algorithm> // std::transform
 #include <fstream>
 #include <functional>
 #include <memory>
@@ -68,7 +66,6 @@ auto PassAsVec(F &&f) -> PassAsVecHelper<std::make_index_sequence<N>, T, F>
 
 namespace RDF {
 namespace RDFInternal = ROOT::Internal::RDF;
-
 
 // clag-format off
 /// Given a callable with signature bool(T1, T2, ...) return a callable with same signature that returns the negated result

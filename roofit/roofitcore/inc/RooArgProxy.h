@@ -36,6 +36,13 @@ public:
   RooArgProxy(const char* name, RooAbsArg* owner, const RooArgProxy& other) ;
   ~RooArgProxy() override ;
 
+  // Delete copy/move construction and assignment, because it will always
+  // result in invalid proxies.
+  RooArgProxy(RooArgProxy const& other) = delete;
+  RooArgProxy(RooArgProxy && other) = delete;
+  RooArgProxy& operator=(RooArgProxy const& other) = delete;
+  RooArgProxy& operator=(RooArgProxy && other) = delete;
+
   /// Return pointer to contained argument
   inline RooAbsArg* absArg() const {
     return _arg ;
@@ -50,19 +57,6 @@ public:
   /// Returns the owner of this proxy.
   RooAbsArg* owner() const { return _owner; }
 
-protected:
-
-  friend class RooSimultaneous ;
-  RooAbsArg* _owner ;       ///< Pointer to owner of proxy
-  RooAbsArg* _arg ;         ///< Pointer to content of proxy
-
-  bool _valueServer ;     ///< If true contents is value server of owner
-  bool _shapeServer ;     ///< If true contents is shape server of owner
-  bool _isFund ;          ///< If true proxy contains an lvalue
-  bool _ownArg ;          ///< If true proxy owns contents
-
-  friend class RooAbsArg ;
-
   /// Returns true of contents is value server of owner
   inline bool isValueServer() const {
     return _valueServer ;
@@ -71,9 +65,22 @@ protected:
   inline bool isShapeServer() const {
     return _shapeServer ;
   }
+
+protected:
+
+  friend class RooRealIntegral;
+
   bool changePointer(const RooAbsCollection& newServerSet, bool nameChange=false, bool factoryInitMode=false) override ;
 
   virtual void changeDataSet(const RooArgSet* newNormSet) ;
+
+  RooAbsArg* _owner = nullptr;  ///< Pointer to owner of proxy
+  RooAbsArg* _arg = nullptr;    ///< Pointer to content of proxy
+
+  bool _valueServer = false;    ///< If true contents is value server of owner
+  bool _shapeServer = false;    ///< If true contents is shape server of owner
+  bool _isFund = true;          ///< If true proxy contains an lvalue
+  bool _ownArg = false;         ///< If true proxy owns contents
 
   ClassDefOverride(RooArgProxy,1) // Abstract proxy for RooAbsArg objects
 };

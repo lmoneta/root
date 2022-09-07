@@ -1074,15 +1074,14 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 
   list<string> rangeComps ;
   {
-    char* buf = new char[strlen(_normRange.Data()) + 1] ;
-    strcpy(buf,_normRange.Data()) ;
+    std::vector<char> buf(strlen(_normRange.Data()) + 1);
+    strcpy(buf.data(),_normRange.Data()) ;
     char* save(0) ;
-    char* token = R__STRTOK_R(buf,",",&save) ;
+    char* token = R__STRTOK_R(buf.data(),",",&save) ;
     while(token) {
       rangeComps.push_back(token) ;
       token = R__STRTOK_R(0,",",&save) ;
     }
-    delete[] buf;
   }
 
 
@@ -2203,7 +2202,7 @@ void RooProdPdf::printMetaArgs(ostream& os) const
 ////////////////////////////////////////////////////////////////////////////////
 /// Implement support for node removal
 
-bool RooProdPdf::redirectServersHook(const RooAbsCollection& newServerList, bool /*mustReplaceAll*/, bool nameChange, bool /*isRecursive*/)
+bool RooProdPdf::redirectServersHook(const RooAbsCollection& newServerList, bool mustReplaceAll, bool nameChange, bool isRecursive)
 {
   if (nameChange && _pdfList.find("REMOVAL_DUMMY")) {
 
@@ -2235,7 +2234,7 @@ bool RooProdPdf::redirectServersHook(const RooAbsCollection& newServerList, bool
     }
   }
 
-  return false ;
+  return RooAbsPdf::redirectServersHook(newServerList, mustReplaceAll, nameChange, isRecursive);
 }
 
 void RooProdPdf::CacheElem::writeToStream(std::ostream& os) const {

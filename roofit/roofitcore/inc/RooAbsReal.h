@@ -542,9 +542,12 @@ private:
 
 protected:
 
+  bool redirectServersHook(const RooAbsCollection & newServerList, bool mustReplaceAll,
+                                   bool nameChange, bool isRecursiveStep) override;
 
   friend class RooRealSumPdf ;
   friend class RooRealSumFunc;
+  friend class RooAddHelpers ;
   friend class RooAddPdf ;
   friend class RooAddModel ;
   void selectComp(bool flag) {

@@ -807,6 +807,12 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    TStyle::BuildStyles();
    SetStyle(gEnv->GetValue("Canvas.Style", "Modern"));
 
+   const char *webdisplay = gSystem->Getenv("ROOT_WEBDISPLAY");
+   if (!webdisplay || !*webdisplay)
+      webdisplay = gEnv->GetValue("WebGui.Display", "");
+   if (webdisplay && *webdisplay)
+      SetWebDisplay(webdisplay);
+
    // Setup default (batch) graphics and GUI environment
    gBatchGuiFactory = new TGuiFactory;
    gGuiFactory      = gBatchGuiFactory;

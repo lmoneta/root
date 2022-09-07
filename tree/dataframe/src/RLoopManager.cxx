@@ -15,7 +15,6 @@
 #include "ROOT/RDF/RFilterBase.hxx"
 #include "ROOT/RDF/RLoopManager.hxx"
 #include "ROOT/RDF/RRangeBase.hxx"
-#include "ROOT/RDF/RSlotStack.hxx"
 #include "ROOT/RDF/RVariationBase.hxx"
 #include "ROOT/RLogger.hxx"
 #include "RtypesCore.h" // Long64_t
@@ -26,7 +25,6 @@
 #include "TEntryList.h"
 #include "TFile.h"
 #include "TFriendElement.h"
-#include "TInterpreter.h"
 #include "TROOT.h" // IsImplicitMTEnabled
 #include "TTreeReader.h"
 #include "TTree.h" // For MaxTreeSizeRAII. Revert when #6640 will be solved.
@@ -34,12 +32,12 @@
 #ifdef R__USE_IMT
 #include "ROOT/TThreadExecutor.hxx"
 #include "ROOT/TTreeProcessorMT.hxx"
+#include "ROOT/RSlotStack.hxx"
 #endif
 
 #include <algorithm>
 #include <atomic>
 #include <cassert>
-#include <exception>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -425,18 +423,20 @@ RLoopManager::RLoopManager(ROOT::RDF::Experimental::RDatasetSpec &&spec)
    }
 }
 
+#ifdef R__USE_IMT
 struct RSlotRAII {
-   RSlotStack &fSlotStack;
+   ROOT::Internal::RSlotStack &fSlotStack;
    unsigned int fSlot;
-   RSlotRAII(RSlotStack &slotStack) : fSlotStack(slotStack), fSlot(slotStack.GetSlot()) {}
+   RSlotRAII(ROOT::Internal::RSlotStack &slotStack) : fSlotStack(slotStack), fSlot(slotStack.GetSlot()) {}
    ~RSlotRAII() { fSlotStack.ReturnSlot(fSlot); }
 };
+#endif
 
 /// Run event loop with no source files, in parallel.
 void RLoopManager::RunEmptySourceMT()
 {
 #ifdef R__USE_IMT
-   RSlotStack slotStack(fNSlots);
+   ROOT::Internal::RSlotStack slotStack(fNSlots);
    // Working with an empty tree.
    // Evenly partition the entries according to fNSlots. Produce around 2 tasks per slot.
    const auto nEntriesPerSlot = fNEmptyEntries / (fNSlots * 2);
@@ -501,7 +501,7 @@ void RLoopManager::RunTreeProcessorMT()
 #ifdef R__USE_IMT
    if (fEndEntry == fBeginEntry) // empty range => no work needed
       return;
-   RSlotStack slotStack(fNSlots);
+   ROOT::Internal::RSlotStack slotStack(fNSlots);
    const auto &entryList = fTree->GetEntryList() ? *fTree->GetEntryList() : TEntryList();
    auto tp = (fBeginEntry != 0 || fEndEntry != std::numeric_limits<Long64_t>::max())
                 ? std::make_unique<ROOT::TTreeProcessorMT>(*fTree, fNSlots, std::make_pair(fBeginEntry, fEndEntry))
@@ -614,7 +614,7 @@ void RLoopManager::RunDataSourceMT()
 {
 #ifdef R__USE_IMT
    assert(fDataSource != nullptr);
-   RSlotStack slotStack(fNSlots);
+   ROOT::Internal::RSlotStack slotStack(fNSlots);
    ROOT::TThreadExecutor pool;
 
    // Each task works on a subrange of entries
@@ -656,9 +656,8 @@ void RLoopManager::RunAndCheckFilters(unsigned int slot, Long64_t entry)
 {
    // data-block callbacks run before the rest of the graph
    if (fNewSampleNotifier.CheckFlag(slot)) {
-      for (auto &callback : fSampleCallbacks) {
-         callback(slot, fSampleInfos[slot]);
-      }
+      for (auto &callback : fSampleCallbacks)
+         callback.second(slot, fSampleInfos[slot]);
       fNewSampleNotifier.UnsetFlag(slot);
    }
 
@@ -870,12 +869,14 @@ TTree *RLoopManager::GetTree() const
 void RLoopManager::Register(RDFInternal::RActionBase *actionPtr)
 {
    fBookedActions.emplace_back(actionPtr);
+   AddSampleCallback(actionPtr, actionPtr->GetSampleCallback());
 }
 
 void RLoopManager::Deregister(RDFInternal::RActionBase *actionPtr)
 {
    RDFInternal::Erase(actionPtr, fRunActions);
    RDFInternal::Erase(actionPtr, fBookedActions);
+   fSampleCallbacks.erase(actionPtr);
 }
 
 void RLoopManager::Register(RFilterBase *filterPtr)
@@ -911,6 +912,7 @@ void RLoopManager::Register(RDefineBase *ptr)
 void RLoopManager::Deregister(RDefineBase *ptr)
 {
    RDFInternal::Erase(ptr, fBookedDefines);
+   fSampleCallbacks.erase(ptr);
 }
 
 void RLoopManager::Register(RDFInternal::RVariationBase *v)
@@ -999,7 +1001,7 @@ std::shared_ptr<ROOT::Internal::RDF::GraphDrawing::GraphNode> RLoopManager::GetG
    } else if (fTree) {
       name = fTree->GetName();
    } else {
-      name = "Empty source<BR/>Entries: " + std::to_string(fNEmptyEntries);
+      name = "Empty source\\nEntries: " + std::to_string(fNEmptyEntries);
    }
    auto thisNode = std::make_shared<ROOT::Internal::RDF::GraphDrawing::GraphNode>(
       name, visitedMap.size(), ROOT::Internal::RDF::GraphDrawing::ENodeType::kRoot);
@@ -1066,8 +1068,8 @@ RLoopManager::GetDatasetColumnReader(unsigned int slot, const std::string &col, 
       return nullptr;
 }
 
-void RLoopManager::AddSampleCallback(SampleCallback_t &&callback)
+void RLoopManager::AddSampleCallback(void *nodePtr, SampleCallback_t &&callback)
 {
    if (callback)
-      fSampleCallbacks.emplace_back(std::move(callback));
+      fSampleCallbacks.insert({nodePtr, std::move(callback)});
 }

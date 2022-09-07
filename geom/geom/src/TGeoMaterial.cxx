@@ -961,14 +961,21 @@ void TGeoMixture::AddElement(TGeoElement *elem, Double_t weight)
    for (Int_t i=0; i<fNelements; i++) {
       elemold = (TGeoElement*)fElements->At(i);
       if (!elemold)  {
-        fElements->AddAt(elemold = table->GetElement((Int_t)fZmixture[i]), i);
+         // Add element with corresponding Z in the list
+         fElements->AddAt(elemold = table->GetElement((Int_t)fZmixture[i]), i);
+         elemold->SetDefined();
       }
-      if (elemold == elem) exist = kTRUE;
+      if (elemold == elem) {
+         fWeights[i] += weight;
+         exist = kTRUE;
+      }
    }
    if (!exist)   {
-     fElements->AddAtAndExpand(elem, fNelements);
+      fElements->AddAtAndExpand(elem, fNelements);
+      AddElement(elem->A(), elem->Z(), weight);
+   } else {
+      AverageProperties();
    }
-   AddElement(elem->A(), elem->Z(), weight);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1121,7 +1128,8 @@ void TGeoMixture::Print(const Option_t * /*option*/) const
           fA,fZ,fDensity, fRadLen, fIntLen, fIndex);
    for (Int_t i=0; i<fNelements; i++) {
       if (fElements && fElements->At(i)) {
-         fElements->At(i)->Print();
+         printf("   Element #%i : %s  Z=%6.2f A=%6.2f w=%6.3f\n", i, GetElement(i)->GetName(), fZmixture[i],
+                fAmixture[i], fWeights[i]);
          continue;
       }
       if (fNatoms) printf("   Element #%i : %s  Z=%6.2f A=%6.2f w=%6.3f natoms=%d\n", i, GetElement(i)->GetName(),fZmixture[i],
@@ -1280,9 +1288,13 @@ void TGeoMixture::ComputeDerivedQuantities()
    fVecNbOfAtomsPerVolume = new Double_t[fNelements];
 
    // Formula taken from G4Material.cxx L312
+   double sumweights = 0;
    for (Int_t i=0; i<fNelements; ++i) {
+      sumweights += fWeights[i];
       fVecNbOfAtomsPerVolume[i] = Na*fDensity*fWeights[i]/((TGeoElement*)fElements->At(i))->A();
    }
+   if (TMath::Abs(sumweights - 1) > 0.001)
+      Warning("ComputeDerivedQuantities", "Mixture %s: sum of weights is: %g", GetName(), sumweights);
    ComputeRadiationLength();
    ComputeNuclearInterLength();
 }
@@ -1295,9 +1307,10 @@ void TGeoMixture::ComputeRadiationLength()
 {
    // Formula taken from G4Material.cxx L556
    Double_t radinv = 0.0 ;
+   // GetfRadTsai is in units of cm2 due to <unit>::alpha_rcl2. Correction must be applied to end up in TGeo cm.
+   Double_t denom = (TGeoManager::GetDefaultUnits() == TGeoManager::kRootUnits) ? TGeoUnit::cm2 : TGeant4Unit::cm2;
    for (Int_t i=0;i<fNelements;++i) {
-      //                                                                      GetfRadTsai is in units of cm2
-      radinv += fVecNbOfAtomsPerVolume[i] * ((TGeoElement *)fElements->At(i))->GetfRadTsai() / TGeoUnit::cm2;
+      radinv += fVecNbOfAtomsPerVolume[i] * ((TGeoElement *)fElements->At(i))->GetfRadTsai() / denom;
    }
    fRadLen = (radinv <= 0.0 ? DBL_MAX : 1.0 / radinv);
    // fRadLen is in TGeo units. Apply conversion factor in requested length-units

@@ -61,7 +61,7 @@ or an instance. For instance to draw an extra scale on a plot.
 - [Blank axis](\ref GA03)
 - [Tick marks' orientation](\ref GA04)
 - [Tick marks' size](\ref GA05)
-- [Labels' positionning](\ref GA06)
+- [Labels' positioning](\ref GA06)
 - [Labels' orientation](\ref GA07)
 - [Labels' position on tick marks](\ref GA08)
 - [Labels' format](\ref GA09)
@@ -208,6 +208,8 @@ Begin_Macro(source)
 }
 End_Macro
 
+Note that this functionality has some limitations and does not follow all the TGaxis setting.
+In particular he number of divisions or the maximum number digits do not apply.
 
 \anchor GA02
 ## Logarithmic axis
@@ -258,7 +260,7 @@ A good way to remove tick marks on an axis is to set the tick length to 0:
 `h->GetXaxis()->SetTickLength(0.);`
 
 \anchor GA06
-## Labels' positionning
+## Labels' positioning
 
 Labels are normally drawn on side opposite to tick marks. However the option
 `"="` allows to draw them on the same side. The distance between the labels and
@@ -398,7 +400,7 @@ For example, to accept 6 digits number like 900000 on an axis call
 Warning: even when called on a particular TGaxis* instance, this static function
 changes globally the number of digits for all axes (X, Y, ...) in the canvas.
 If you want to change the maximum number of digits N only of the current TGaxis*,
-and not all the others, use axis->SetNdivisions(N*1000000 + (A1->GetNdiv()%1000000))
+and not all the others, use axis->SetNdivisions(N*1000000 + (axis->GetNdiv()%1000000))
 instead of axis->SetMaxDigits(N).
 
 \anchor GA13
@@ -2736,7 +2738,7 @@ void TGaxis::ResetLabelAttributes(TLatex* t)
 /// `fgMaxDigits` must be greater than 0.
 /// Warning: this static function changes the max number of digits in all axes.
 /// If you only want to change the digits of the current TGaxis instance, use
-/// axis->SetNdivisions(N*1000000 + (A1->GetNdiv()%1000000))
+/// axis->SetNdivisions(N*1000000 + (axis->GetNdiv()%1000000))
 /// instead of axis->SetMaxDigits(N).
 
 void TGaxis::SetMaxDigits(Int_t maxd)

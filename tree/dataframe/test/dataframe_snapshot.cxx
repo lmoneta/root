@@ -7,9 +7,7 @@
 #include "TSystem.h"
 #include <TInterpreter.h>
 #include "TTree.h"
-#include "TChain.h"
 #include "gtest/gtest.h"
-#include <limits>
 #include <memory>
 #include <thread>
 using namespace ROOT;         // RDataFrame
@@ -897,7 +895,7 @@ TEST(RDFSnapshotMore, MissingSizeBranch)
    ROOT::RDataFrame df("t", inFile);
 
    // fully typed Snapshot call throws
-   EXPECT_THROW(df.Snapshot<ROOT::RVecF>("t", "NeverWrittenOut.root", {"vec"}), std::runtime_error);
+   EXPECT_THROW(df.Snapshot<ROOT::RVecF>("t", outFile, {"vec"}), std::runtime_error);
 
    // jitted Snapshot works anyway
    auto out = df.Snapshot("t", outFile, {"vec"});
@@ -913,6 +911,7 @@ TEST(RDFSnapshotMore, MissingSizeBranch)
    EXPECT_TRUE(All(vecs->at(2) == ROOT::RVecF{1, 2, 3}));
 
    gSystem->Unlink(inFile);
+   gSystem->Unlink(outFile);
 }
 
 TEST(RDFSnapshotMore, OutOfOrderSizeBranch)
@@ -1184,14 +1183,14 @@ TEST(RDFSnapshotMore, TreeWithFriendsMT)
 TEST(RDFSnapshotMore, JittedSnapshotAndAliasedColumns)
 {
    ROOT::RDataFrame df(1);
-   const auto fname = "out_aliasedcustomcolumn.root";
+   const auto fname = "out_aliaseddefine.root";
    // aliasing a custom column
    auto df2 = df.Define("x", [] { return 42; }).Alias("y", "x").Snapshot("t", fname, "y"); // must be jitted!
    EXPECT_EQ(df2->GetColumnNames(), std::vector<std::string>({"y"}));
    EXPECT_EQ(df2->Take<int>("y")->at(0), 42);
 
    // aliasing a column from a file
-   const auto fname2 = "out_aliasedcustomcolumn2.root";
+   const auto fname2 = "out_aliaseddefine2.root";
    auto df3 = df2->Alias("z", "y").Snapshot("t", fname2, "z");
    EXPECT_EQ(df3->GetColumnNames(), std::vector<std::string>({"z"}));
    EXPECT_EQ(df3->Max<int>("z").GetValue(), 42);

@@ -43,6 +43,7 @@ import multiprocessing
 import stat
 import json
 from urllib.request import urlopen
+import operator
 
 ###############################################################################
 #              Platform independent functions (formerly indep.py)             #
@@ -1808,6 +1809,11 @@ def make_dmg(CPT_SRC_DIR):
 ###############################################################################
 
 parser = argparse.ArgumentParser(description='Cling Packaging Tool')
+parser.add_argument('--last-stable-build', help='Build the last stable snapshot in one of these formats: tar | deb | nsis | rpm | dmg | pkg')
+parser.add_argument('--current-dev-build', 
+                    help=('--current-dev:<tar | deb | nsis | rpm | dmg | pkg> will build the latest development snapshot in the given format'
+                          + '\n--current-dev:branch:<branch> will build <branch> on llvm, clang, and cling'
+                          + '\n--current-dev:branches:<a,b,c> will build branch <a> on llvm, <b> on clang, and <c> on cling'))
 parser.add_argument('-c', '--check-requirements', help='Check if packages required by the script are installed',
                     action='store_true')
 parser.add_argument('--current-dev',
@@ -2037,6 +2043,11 @@ if args['nsis_tag'] and args['nsis_tag_build']:
 if args['dmg_tag'] and args['dmg_tag_build']:
     raise Exception('You cannot specify both the dmg_tag and dmg_tag_build flags')
 
+if args['current_dev'] and args['current_dev_build']:
+    raise Exception('You cannot specify both the current_dev and current_dev_build flags')
+
+if args['last_stable'] and args['last_stable_build']:
+    raise Exception('You cannot specify both the last_stable and last_stable_build flags')
 
 if args['with_llvm_tar']:
     tar_required = True
@@ -2195,8 +2206,10 @@ on setting up your Windows environment.
 if args["with_llvm_tar"] or args["with_llvm_binary"]:
     download_llvm_binary()
 
-if args['current_dev']:
+
+if bool(args['current_dev']) or bool(args['current_dev_build']):
     travis_fold_start("git-clone")
+    current_packaging_mode = args['current_dev'] if args['current_dev'] else args['current_dev_build']
     llvm_revision = urlopen(
         "https://raw.githubusercontent.com/root-project/" +
         "cling/master/LastKnownGoodLLVMSVNRevision.txt").readline().strip().decode(
@@ -2257,42 +2270,46 @@ if args['current_dev']:
             if args['with_llvm_binary']:
                 setup_tests()
             test_cling()
-        tarball()
+        if args['current_dev']:
+            tarball()
         cleanup()
 
-    elif args['current_dev'] == 'deb' or (args['current_dev'] == 'pkg' and DIST == 'Ubuntu'):
+    elif current_packaging_mode == 'deb' or (current_packaging_mode == 'pkg' and DIST == 'Ubuntu'):
         compile(os.path.join(workdir, 'cling-' + VERSION))
         install_prefix()
         if not args['no_test']:
             if args['with_llvm_binary']:
                 setup_tests()
             test_cling()
-        tarball_deb()
-        debianize()
+        if args['current_dev']:
+            tarball_deb()
+            debianize()
         cleanup()
 
-    elif args['current_dev'] == 'rpm' or (args['current_dev'] == 'pkg' and platform.dist()[0] == 'redhat'):
+    elif current_packaging_mode == 'rpm' or (current_packaging_mode == 'pkg' and platform.dist()[0] == 'redhat'):
         compile(os.path.join(workdir, 'cling-' +
                              VERSION.replace('-' + revision[:7], '')))
         install_prefix()
         if not args['no_test']:
             test_cling()
-        tarball()
-        rpm_build(revision)
+        if args['current_dev']:
+            tarball()
+            rpm_build()
         cleanup()
 
-    elif args['current_dev'] == 'nsis' or (args['current_dev'] == 'pkg' and OS == 'Windows'):
+    elif current_packaging_mode == 'nsis' or (current_packaging_mode == 'pkg' and OS == 'Windows'):
         get_win_dep()
         compile(os.path.join(workdir, 'cling-' + RELEASE + '-'
                              + platform.machine().lower() + '-' + VERSION))
         CPT_SRC_DIR = install_prefix()
         if not args['no_test']:
             test_cling()
-        make_nsi(CPT_SRC_DIR)
-        build_nsis()
+        if args['current_dev']:
+            make_nsi(CPT_SRC_DIR)
+            build_nsis()
         cleanup()
 
-    elif args['current_dev'] == 'dmg' or (args['current_dev'] == 'pkg' and OS == 'Darwin'):
+    elif current_packaging_mode == 'dmg' or (current_packaging_mode == 'pkg' and OS == 'Darwin'):
         compile(os.path.join(workdir, 'cling-' + DIST + '-' + REV + '-'
                              + platform.machine().lower() + '-' + VERSION))
         CPT_SRC_DIR = install_prefix()
@@ -2300,10 +2317,11 @@ if args['current_dev']:
             if args['with_llvm_binary']:
                 setup_tests()
             test_cling()
-        make_dmg(CPT_SRC_DIR)
+        if args['current_dev']:
+            make_dmg(CPT_SRC_DIR)
         cleanup()
 
-    elif args['current_dev'] == 'pkg':
+    elif current_packaging_mode == 'pkg':
         compile(os.path.join(workdir, 'cling-' + DIST + '-' + REV + '-'
                              + platform.machine().lower() + '-' + VERSION))
         install_prefix()
@@ -2311,12 +2329,13 @@ if args['current_dev']:
             if args['with_llvm_binary']:
                 setup_tests()
             test_cling()
-        tarball()
+        if args['current_dev']:
+            tarball()
         cleanup()
 
-if args['last_stable']:
-    tag = json.loads(urlopen
-                     ("https://api.github.com/repos/vgvassilev/cling/tags")
+if bool(args['last_stable']) or bool(args['last_stable_build']):
+    stable_packaging_mode = args['last_stable'] if args['last_stable'] else args['last_stable_build']
+    tag = json.loads(urlopen("https://api.github.com/repos/vgvassilev/cling/tags")
                      .read().decode('utf-8'))[0]['name'].encode('ascii', 'ignore').decode("utf-8")
 
     tag = str(tag)
@@ -2331,7 +2350,7 @@ if args['last_stable']:
 
     args["with_llvm_binary"] = True
 
-    if args["with_llvm_binary"]:
+    if args["with_binary_llvm"]:
         download_llvm_binary()
         compile = compile_for_binary
         install_prefix = install_prefix_for_binary
@@ -2344,7 +2363,7 @@ if args['last_stable']:
     print("Last stable Cling release detected: ", tag)
     fetch_cling(tag)
 
-    if args['last_stable'] == 'tar':
+    if stable_packaging_mode == 'tar':
         set_version()
         if OS == 'Windows':
             get_win_dep()
@@ -2365,10 +2384,11 @@ if args['last_stable']:
             if args['with_llvm_binary']:
                 setup_tests()
             test_cling()
-        tarball()
+        if args['last_stable']:
+            tarball()
         cleanup()
 
-    elif args['last_stable'] == 'deb' or (args['last_stable'] == 'pkg' and DIST == 'Ubuntu'):
+    elif stable_packaging_mode == 'deb' or (stable_packaging_mode == 'pkg' and DIST == 'Ubuntu'):
         set_version()
         compile(os.path.join(workdir, 'cling-' + VERSION))
         install_prefix()
@@ -2376,21 +2396,23 @@ if args['last_stable']:
             if args['with_llvm_binary']:
                 setup_tests()
             test_cling()
-        tarball_deb()
-        debianize()
+        if args['last_stable']:
+            tarball_deb()
+            debianize()
         cleanup()
 
-    elif args['last_stable'] == 'rpm' or (args['last_stable'] == 'pkg' and platform.dist()[0] == 'redhat'):
+    elif stable_packaging_mode == 'rpm' or (stable_packaging_mode == 'pkg' and platform.dist()[0] == 'redhat'):
         set_version()
         compile(os.path.join(workdir, 'cling-' + VERSION))
         install_prefix()
         if not args['no_test']:
             test_cling()
-        tarball()
-        rpm_build()
+        if args['last_stable']:
+            tarball()
+            rpm_build()
         cleanup()
 
-    elif args['last_stable'] == 'nsis' or (args['last_stable'] == 'pkg' and OS == 'Windows'):
+    elif stable_packaging_mode == 'nsis' or (stable_packaging_mode == 'pkg' and OS == 'Windows'):
         set_version()
         get_win_dep()
         compile(os.path.join(workdir, 'cling-' + DIST + '-' + REV + '-'
@@ -2398,11 +2420,12 @@ if args['last_stable']:
         CPT_SRC_DIR = install_prefix()
         if not args['no_test']:
             test_cling()
-        make_nsi(CPT_SRC_DIR)
-        build_nsis()
+        if args['last_stable']:
+            make_nsi(CPT_SRC_DIR)
+            build_nsis()
         cleanup()
 
-    elif args['last_stable'] == 'dmg' or (args['last_stable'] == 'pkg' and OS == 'Darwin'):
+    elif stable_packaging_mode == 'dmg' or (stable_packaging_mode == 'pkg' and OS == 'Darwin'):
         set_version()
         compile(os.path.join(workdir, 'cling-' + DIST + '-' + REV + '-'
                              + platform.machine().lower() + '-' + VERSION))
@@ -2411,10 +2434,11 @@ if args['last_stable']:
             if args['with_llvm_binary']:
                 setup_tests()
             test_cling()
-        make_dmg(CPT_SRC_DIR)
+        if args['last_stable']:
+            make_dmg(CPT_SRC_DIR)
         cleanup()
 
-    elif args['last_stable'] == 'pkg':
+    elif stable_packaging_mode == 'pkg':
         set_version()
         compile(os.path.join(workdir, 'cling-' + DIST + '-' + REV + '-'
                              + platform.machine().lower() + '-' + VERSION))
@@ -2423,7 +2447,8 @@ if args['last_stable']:
             if args['with_llvm_binary']:
                 setup_tests()
             test_cling()
-        tarball()
+        if args['last_stable']:
+            tarball()
         cleanup()
 
 if args['tarball_tag'] or args['tarball_tag_build']:

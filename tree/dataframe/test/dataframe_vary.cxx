@@ -135,7 +135,7 @@ TEST(RDFVary, RequireVariationsHaveConsistentTypeJitted)
       // before starting the event loop, we jit and notice the mismatch in types
       EXPECT_THROW(
          try { ss["nominal"]; } catch (const std::runtime_error &err) {
-            const auto msg = "RVariationReader: type mismatch: column \"x\" is being used as float but the "
+            const auto msg = "RDataFrame: type mismatch: column \"x\" is being used as float but the "
                              "Define or Vary node advertises it as double";
             EXPECT_STREQ(err.what(), msg);
             throw;
@@ -152,7 +152,7 @@ TEST(RDFVary, RequireVariationsHaveConsistentTypeJitted)
       // before starting the event loop, we jit and notice the mismatch in types
       EXPECT_THROW(
          try { ss2["nominal"]; } catch (const std::runtime_error &err) {
-            const auto msg = "RVariationReader: type mismatch: column \"y\" is being used as int but the Define "
+            const auto msg = "RDataFrame: type mismatch: column \"y\" is being used as int but the Define "
                              "or Vary node advertises it as double";
             EXPECT_STREQ(err.what(), msg);
             throw;
@@ -185,7 +185,7 @@ TEST(RDFVary, RequireVariationsHaveConsistentTypeJitted)
       auto ss = ROOT::RDF::Experimental::VariationsFor(s);
       EXPECT_THROW(
          try { ss["broken:0"]; } catch (const std::runtime_error &err) {
-            const auto expected = "RVariationReader: type mismatch: column \"z\" is being used as int but the Define "
+            const auto expected = "RDataFrame: type mismatch: column \"z\" is being used as int but the Define "
                                   "or Vary node advertises it as float";
             EXPECT_STREQ(err.what(), expected);
             throw;
@@ -316,6 +316,29 @@ TEST(RDFVary, ResultMapIteration)
    EXPECT_EQ(values, expected_values);
 }
 
+TEST(RDFVary, VaryAnAlias)
+{
+   // it's forbidden to explicitly vary an alias
+   auto df = ROOT::RDataFrame(10).Define("x", [] { return 42; }).Alias("y", "x");
+
+   EXPECT_THROW(
+      try {
+         df.Vary(
+            {"x", "y"},
+            [] {
+               return ROOT::RVec<ROOT::RVecI>{{0}, {0}};
+            },
+            {}, 1, "xyvariation");
+      } catch (const std::runtime_error &err) {
+         const auto msg = "RDataFrame::Vary: cannot redefine or vary column \"y\". An alias with that name, pointing "
+                          "to column \"x\", already exists. Aliases cannot be Redefined or Varied.";
+         EXPECT_STREQ(err.what(), msg);
+         throw;
+      },
+
+      std::runtime_error);
+}
+
 TEST_P(RDFVary, VaryDefinePerSample)
 {
    auto df = ROOT::RDataFrame(10).DefinePerSample("x", [](unsigned int, const ROOT::RDF::RSampleInfo &) { return 1; });
@@ -344,9 +367,9 @@ TEST(RDFVary, SaveGraph)
    // (at the moment, `Vary` calls are not displayed)
    EXPECT_EQ(
       s,
-      "digraph {\n\t1 [label=<Count>, style=\"filled\", fillcolor=\"#e47c7e\", shape=\"box\"];\n\t2 "
-      "[label=<Define<BR/>x>, style=\"filled\", fillcolor=\"#4285f4\", shape=\"ellipse\"];\n\t0 [label=<Empty "
-      "source<BR/>Entries: 1>, style=\"filled\", fillcolor=\"#f4b400\", shape=\"ellipse\"];\n\t2 -> 1;\n\t0 -> 2;\n}");
+      "digraph {\n\t1 [label=\"Count\", style=\"filled\", fillcolor=\"#e47c7e\", shape=\"box\"];\n\t2 "
+      "[label=\"Define\\nx\", style=\"filled\", fillcolor=\"#4285f4\", shape=\"ellipse\"];\n\t0 [label=\"Empty "
+      "source\\nEntries: 1\", style=\"filled\", fillcolor=\"#f4b400\", shape=\"ellipse\"];\n\t2 -> 1;\n\t0 -> 2;\n}");
 }
 
 TEST_P(RDFVary, SimpleSum)

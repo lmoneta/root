@@ -365,13 +365,13 @@ double RooAbsPdf::getValV(const RooArgSet* nset) const
 
 
   // Process change in last data set used
-  bool nsetChanged(false) ;
-  if (RooFit::getUniqueId(nset) != RooFit::getUniqueId(_normSet) || _norm==0) {
-    nsetChanged = syncNormalization(nset) ;
+  bool nintChanged(false) ;
+  if (!isActiveNormSet(nset) || _norm==0) {
+    nintChanged = syncNormalization(nset) ;
   }
 
   // Return value of object. Calculated if dirty, otherwise cached value is returned.
-  if (isValueDirty() || nsetChanged || _norm->isValueDirty()) {
+  if (isValueDirty() || nintChanged || _norm->isValueDirty()) {
 
     // Evaluate numerator
     const double rawVal = evaluate();
@@ -537,24 +537,28 @@ const RooAbsReal* RooAbsPdf::getNormObj(const RooArgSet* nset, const RooArgSet* 
 
 bool RooAbsPdf::syncNormalization(const RooArgSet* nset, bool adjustProxies) const
 {
-  _normSet = nset;
+  setActiveNormSet(nset);
 
   // Check if data sets are identical
   CacheElem* cache = (CacheElem*) _normMgr.getObj(nset) ;
   if (cache) {
 
-    bool nsetChanged = (_norm!=cache->_norm) ;
+    bool nintChanged = (_norm!=cache->_norm) ;
     _norm = cache->_norm ;
 
-
-//      cout << "returning existing object " << _norm->GetName() << endl ;
-
-    if (nsetChanged && adjustProxies) {
+    // In the past, this condition read `if (nintChanged && adjustProxies)`.
+    // However, the cache checks if the nset was already cached **by content**,
+    // and not by RooArgSet instance! So it can happen that the normalization
+    // set object is different, but the integral object is the same, in which
+    // case it would be wrong to not adjust the proxies. They always have to be
+    // adjusted when the nset changed, which is always the case when
+    // `syncNormalization()` is called.
+    if (adjustProxies) {
       // Update dataset pointers of proxies
       ((RooAbsPdf*) this)->setProxyNormSet(nset) ;
     }
 
-    return nsetChanged ;
+    return nintChanged ;
   }
 
   // Update dataset pointers of proxies
@@ -1249,7 +1253,7 @@ int RooAbsPdf::calcAsymptoticCorrectedCovariance(RooMinimizer &minimizer, RooAbs
       double prob = getVal(&obs);
       for (int k = 0; k < floated.getSize(); k++) {
          for (int l = 0; l < floated.getSize(); l++) {
-            num(k, l) += data.weight() * data.weight() * diffs[k] * diffs[l] / (prob * prob);
+            num(k, l) += data.weightSquared() * diffs[k] * diffs[l] / (prob * prob);
          }
       }
    }
@@ -2755,7 +2759,7 @@ RooPlot* RooAbsPdf::plotOn(RooPlot* frame, RooLinkedList& cmdList) const
   }
 
   // Remove PDF-only commands from command list
-  pc.stripCmdList(cmdList,"SelectCompSet,SelectCompSpec") ;
+  RooCmdConfig::stripCmdList(cmdList,"SelectCompSet,SelectCompSpec") ;
 
   // Adjust normalization, if so requested
   if (asymCat) {
@@ -3518,4 +3522,27 @@ void RooAbsPdf::setNormRangeOverride(const char* rangeName)
     _normMgr.sterilize() ;
     _norm = 0 ;
   }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+/// Hook function intercepting redirectServer calls. Discard current
+/// normalization object if any server is redirected
+
+bool RooAbsPdf::redirectServersHook(const RooAbsCollection & newServerList, bool mustReplaceAll,
+                                    bool nameChange, bool isRecursiveStep)
+{
+  // If servers are redirected, the cached normalization integrals and
+  // normalization sets are most likely invalid.
+  _normMgr.sterilize();
+
+  // Object is own by _normCacheManager that will delete object as soon as cache
+  // is sterilized by server redirect
+  _norm = nullptr ;
+
+  // Similar to the situation with the normalization integral above: if a
+  // server is redirected, the cached normalization set might not point to
+  // the right observables anymore. We need to reset it.
+  setActiveNormSet(nullptr);
+  return RooAbsReal::redirectServersHook(newServerList, mustReplaceAll, nameChange, isRecursiveStep);
 }

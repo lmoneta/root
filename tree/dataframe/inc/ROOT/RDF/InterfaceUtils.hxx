@@ -69,8 +69,6 @@ using namespace ROOT::Detail::RDF;
 using namespace ROOT::RDF;
 namespace TTraits = ROOT::TypeTraits;
 
-ColumnNames_t GetTopLevelBranchNames(TTree &t);
-
 std::string DemangleTypeIdName(const std::type_info &typeInfo);
 
 ColumnNames_t
@@ -316,33 +314,34 @@ ColumnNames_t FilterArraySizeColNames(const ColumnNames_t &columnNames, const st
 
 void CheckValidCppVarName(std::string_view var, const std::string &where);
 
-void CheckForRedefinition(const std::string &where, std::string_view definedCol, const RColumnRegister &customCols,
+void CheckForRedefinition(const std::string &where, std::string_view definedCol, const RColumnRegister &colRegister,
                           const ColumnNames_t &treeColumns, const ColumnNames_t &dataSourceColumns);
 
-void CheckForDefinition(const std::string &where, std::string_view definedColView, const RColumnRegister &customCols,
+void CheckForDefinition(const std::string &where, std::string_view definedColView, const RColumnRegister &colRegister,
                         const ColumnNames_t &treeColumns, const ColumnNames_t &dataSourceColumns);
 
-void CheckForNoVariations(const std::string &where, std::string_view definedColView, const RColumnRegister &customCols);
+void CheckForNoVariations(const std::string &where, std::string_view definedColView,
+                          const RColumnRegister &colRegister);
 
 std::string PrettyPrintAddr(const void *const addr);
 
 std::shared_ptr<RJittedFilter> BookFilterJit(std::shared_ptr<RNodeBase> *prevNodeOnHeap, std::string_view name,
                                              std::string_view expression, const ColumnNames_t &branches,
-                                             const RColumnRegister &customCols, TTree *tree, RDataSource *ds);
+                                             const RColumnRegister &colRegister, TTree *tree, RDataSource *ds);
 
 std::shared_ptr<RJittedDefine> BookDefineJit(std::string_view name, std::string_view expression, RLoopManager &lm,
-                                             RDataSource *ds, const RColumnRegister &customCols,
+                                             RDataSource *ds, const RColumnRegister &colRegister,
                                              const ColumnNames_t &branches, std::shared_ptr<RNodeBase> *prevNodeOnHeap);
 
 std::shared_ptr<RJittedDefine> BookDefinePerSampleJit(std::string_view name, std::string_view expression,
-                                                      RLoopManager &lm, const RColumnRegister &customCols,
+                                                      RLoopManager &lm, const RColumnRegister &colRegister,
                                                       std::shared_ptr<RNodeBase> *upcastNodeOnHeap);
 
 std::shared_ptr<RJittedVariation>
 BookVariationJit(const std::vector<std::string> &colNames, std::string_view variationName,
                  const std::vector<std::string> &variationTags, std::string_view expression, RLoopManager &lm,
                  RDataSource *ds, const RColumnRegister &colRegister, const ColumnNames_t &branches,
-                 std::shared_ptr<RNodeBase> *upcastNodeOnHeap);
+                 std::shared_ptr<RNodeBase> *upcastNodeOnHeap, bool isSingleColumn);
 
 std::string JitBuildAction(const ColumnNames_t &bl, std::shared_ptr<RDFDetail::RNodeBase> *prevNode,
                            const std::type_info &art, const std::type_info &at, void *rOnHeap, TTree *tree,
@@ -471,7 +470,7 @@ template <typename F>
 auto MakeDefineNode(DefineTypes::RDefineTag, std::string_view name, std::string_view dummyType, F &&f,
                     const ColumnNames_t &cols, RColumnRegister &colRegister, RLoopManager &lm)
 {
-   return std::unique_ptr<RDefineBase>(new RDefine<std::decay_t<F>, CustomColExtraArgs::None>(
+   return std::unique_ptr<RDefineBase>(new RDefine<std::decay_t<F>, ExtraArgsForDefine::None>(
       name, dummyType, std::forward<F>(f), cols, colRegister, lm));
 }
 
@@ -528,7 +527,7 @@ void JitDefineHelper(F &&f, const char **colsPtr, std::size_t colsSize, std::str
    doDeletes();
 }
 
-template <typename F>
+template <bool IsSingleColumn, typename F>
 void JitVariationHelper(F &&f, const char **colsPtr, std::size_t colsSize, const char **variedCols,
                         std::size_t variedColsSize, const char **variationTags, std::size_t variationTagsSize,
                         std::string_view variationName, RLoopManager *lm,
@@ -567,9 +566,9 @@ void JitVariationHelper(F &&f, const char **colsPtr, std::size_t colsSize, const
       AddDSColumns(inputColNames, *lm, *ds, ColTypes_t(), *colRegister);
 
    // use unique_ptr<RDefineBase> instead of make_unique<NewCol_t> to reduce jit/compile-times
-   std::unique_ptr<RVariationBase> newVariation{
-      new RVariation<std::decay_t<F>>(std::move(variedColNames), variationName, std::forward<F>(f), std::move(tags),
-                                      jittedVariation->GetTypeName(), *colRegister, *lm, std::move(inputColNames))};
+   std::unique_ptr<RVariationBase> newVariation{new RVariation<std::decay_t<F>, IsSingleColumn>(
+      std::move(variedColNames), variationName, std::forward<F>(f), std::move(tags), jittedVariation->GetTypeName(),
+      *colRegister, *lm, std::move(inputColNames))};
    jittedVariation->SetVariation(std::move(newVariation));
 
    doDeletes();
@@ -614,7 +613,6 @@ void CallBuildAction(std::shared_ptr<PrevNodeType> *prevNodeOnHeap, const char *
 
    auto actionPtr = BuildAction<ColTypes...>(cols, std::move(*helperArgOnHeap), nSlots, std::move(prevNodePtr),
                                              ActionTag{}, *colRegister);
-   loopManager.AddSampleCallback(actionPtr->GetSampleCallback());
    jittedActionOnHeap->SetAction(std::move(actionPtr));
 
    doDeletes();
@@ -779,6 +777,8 @@ using InnerValueType_t = typename InnerValueType<T>::type;
 std::pair<std::vector<std::string>, std::vector<std::string>>
 AddSizeBranches(const std::vector<std::string> &branches, TTree *tree, std::vector<std::string> &&colsWithoutAliases,
                 std::vector<std::string> &&colsWithAliases);
+
+void RemoveDuplicates(ColumnNames_t &columnNames);
 
 } // namespace RDF
 } // namespace Internal

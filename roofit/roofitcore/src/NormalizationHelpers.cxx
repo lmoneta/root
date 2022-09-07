@@ -170,8 +170,9 @@ void treeNodeServerListAndNormSets(const RooAbsArg &arg, RooAbsCollection &list,
          }
 
          auto differentSet = arg.fillNormSetForServer(normSet, *server);
-         if (differentSet)
+         if (differentSet) {
             differentSet->sort();
+         }
 
          auto &serverNormSet = differentSet ? *differentSet : normSet;
 
@@ -202,7 +203,7 @@ void treeNodeServerListAndNormSets(const RooAbsArg &arg, RooAbsCollection &list,
 
 std::vector<std::unique_ptr<RooAbsArg>> unfoldIntegrals(RooAbsArg const &topNode, RooArgSet const &normSet,
                                                         std::unordered_map<DataKey, RooArgSet *> &normSets,
-                                                        RooArgSet &replacedArgs)
+                                                        RooArgSet &replacedArgs, RooArgSet &newArgs)
 {
    std::vector<std::unique_ptr<RooAbsArg>> newNodes;
 
@@ -219,14 +220,17 @@ std::vector<std::unique_ptr<RooAbsArg>> unfoldIntegrals(RooAbsArg const &topNode
    treeNodeServerListAndNormSets(topNode, nodes, normSetSorted, normSets, checker);
 
    // Clean normsets of the variables that the arg does not depend on
-   // std::unordered_map<std::pair<RooAbsArg const*,RooAbsArg const*>,bool> dependsResults;
    for (auto &item : normSets) {
       if (!item.second || item.second->empty())
          continue;
       auto actualNormSet = new RooArgSet{};
       for (auto *narg : *item.second) {
          if (checker.dependsOn(item.first, narg))
-            actualNormSet->add(*narg);
+            // Add the arg from the actual node list in the computation graph.
+            // Like this, we don't accidentally add internal variable clones
+            // that the client args returned. Looking this up is fast because
+            // of the name pointer hash map optimization.
+            actualNormSet->add(*nodes.find(*narg));
       }
       delete item.second;
       item.second = actualNormSet;
@@ -237,22 +241,23 @@ std::vector<std::unique_ptr<RooAbsArg>> unfoldIntegrals(RooAbsArg const &topNode
       const std::string attrib = std::string("ORIGNAME:") + oldArg.GetName();
 
       newArg.setAttribute(attrib.c_str());
-      newArg.setStringAttribute("_replaced_arg", oldArg.GetName());
 
       RooArgList newServerList{newArg};
 
       RooArgList originalClients;
       for (auto *client : oldArg.clients()) {
-         originalClients.add(*client);
+         if (nodes.containsInstance(*client)) {
+            originalClients.add(*client);
+         }
       }
       for (auto *client : originalClients) {
-         if (!nodes.containsInstance(*client))
-            continue;
          if (dynamic_cast<RooAbsCachedPdf *>(client))
             continue;
          client->redirectServers(newServerList, false, true);
       }
+
       replacedArgs.add(oldArg);
+      newArgs.add(newArg);
 
       newArg.setAttribute(attrib.c_str(), false);
    };
@@ -296,28 +301,18 @@ std::vector<std::unique_ptr<RooAbsArg>> unfoldIntegrals(RooAbsArg const &topNode
    return newNodes;
 }
 
-void foldIntegrals(RooAbsArg const &topNode, RooArgSet &replacedArgs)
+void foldIntegrals(RooAbsArg &topNode, RooArgSet &replacedArgs, RooArgSet &newArgs)
 {
-   RooArgSet nodes;
-   topNode.treeNodeServerList(&nodes);
+   assert(replacedArgs.size() == newArgs.size());
 
-   for (RooAbsArg *normalizedPdf : nodes) {
+   for (std::size_t i = 0; i < replacedArgs.size(); ++i) {
+      replacedArgs[i]->setAttribute((std::string("ORIGNAME:") + newArgs[i]->GetName()).c_str());
+   }
 
-      if (auto const &replacedArgName = normalizedPdf->getStringAttribute("_replaced_arg")) {
+   topNode.recursiveRedirectServers(replacedArgs, false, true);
 
-         auto pdf = &replacedArgs[replacedArgName];
-
-         pdf->setAttribute((std::string("ORIGNAME:") + normalizedPdf->GetName()).c_str());
-
-         RooArgList newServerList{*pdf};
-         for (auto *client : normalizedPdf->clients()) {
-            client->redirectServers(newServerList, false, true);
-         }
-
-         pdf->setAttribute((std::string("ORIGNAME:") + normalizedPdf->GetName()).c_str(), false);
-
-         normalizedPdf->removeStringAttribute("_replaced_arg");
-      }
+   for (std::size_t i = 0; i < replacedArgs.size(); ++i) {
+      replacedArgs[i]->setAttribute((std::string("ORIGNAME:") + newArgs[i]->GetName()).c_str(), false);
    }
 }
 
@@ -347,7 +342,7 @@ RooFit::NormalizationIntegralUnfolder::NormalizationIntegralUnfolder(RooAbsArg c
    : _topNodeWrapper{std::make_unique<RooAddition>("_dummy", "_dummy", RooArgList{topNode})}, _normSetWasEmpty{
                                                                                                  normSet.empty()}
 {
-   auto ownedArgs = unfoldIntegrals(*_topNodeWrapper, normSet, _normSets, _replacedArgs);
+   auto ownedArgs = unfoldIntegrals(*_topNodeWrapper, normSet, _normSets, _replacedArgs, _newArgs);
    for (std::unique_ptr<RooAbsArg> &arg : ownedArgs) {
       _topNodeWrapper->addOwnedComponents(std::move(arg));
    }
@@ -361,7 +356,7 @@ RooFit::NormalizationIntegralUnfolder::~NormalizationIntegralUnfolder()
    if (_normSetWasEmpty)
       return;
 
-   foldIntegrals(*_topNodeWrapper, _replacedArgs);
+   foldIntegrals(*_topNodeWrapper, _replacedArgs, _newArgs);
 
    for (auto &item : _normSets) {
       delete item.second;

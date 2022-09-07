@@ -8,8 +8,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_RJITTEDCUSTOMCOLUMN
-#define ROOT_RJITTEDCUSTOMCOLUMN
+#ifndef ROOT_RJITTEDDEFINE
+#define ROOT_RJITTEDDEFINE
 
 #include "ROOT/RDF/RDefineBase.hxx"
 #include "ROOT/RDF/RSampleInfo.hxx"
@@ -18,7 +18,10 @@
 #include "RtypesCore.h"
 
 #include <memory>
-#include <type_traits>
+#include <stdexcept>
+#include <string>
+#include <typeinfo>
+#include <vector>
 
 class TTreeReader;
 
@@ -66,4 +69,4 @@ public:
 } // ns Detail
 } // ns ROOT
 
-#endif // ROOT_RJITTEDCUSTOMCOLUMN
+#endif // ROOT_RJITTEDDEFINE

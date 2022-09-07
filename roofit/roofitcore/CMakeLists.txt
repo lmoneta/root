@@ -288,6 +288,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(RooFitCore
     src/RooAcceptReject.cxx
     src/RooAdaptiveIntegratorND.cxx
     src/RooAddGenContext.cxx
+    src/RooAddHelpers.cxx
     src/RooAddition.cxx
     src/RooAddModel.cxx
     src/RooAddPdf.cxx
@@ -461,7 +462,6 @@ ROOT_STANDARD_LIBRARY_PACKAGE(RooFitCore
     src/RooBinWidthFunction.cxx
     src/RooFitLegacy/RooCatTypeLegacy.cxx
     src/RooFitLegacy/RooMinuit.cxx
-    src/RooFitLegacy/RooMultiCatIter.cxx
     src/RunContext.cxx
     src/TestStatistics/ConstantTermsOptimizer.cxx
     src/TestStatistics/LikelihoodGradientWrapper.cxx
