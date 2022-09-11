@@ -24,8 +24,8 @@ enum class Options {
    kDefault = 0x0,
    kNoSession = 0x1,
    kNoWeightFile = 0x2,
-   kGNN = 0x3,
-   kGNNComponent = 0x4,
+   kGNN = 0x4,
+   kGNNComponent = 0x8,
 };
 
 std::underlying_type_t<Options> operator|(Options opA, Options opB);
@@ -105,7 +105,7 @@ public:
 
 
    void Initialize(int batchSize=1);
-   void GenerateHeaderInfo();
+   void GenerateHeaderInfo(std::string& hgname);
    void GenerateIntermediateTensorInfo();
    void GenerateOutput();
    void Generate(std::underlying_type_t<Options> options, int batchSize = 1);
