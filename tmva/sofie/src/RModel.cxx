@@ -1,7 +1,7 @@
 #include <limits>
 #include <algorithm>
 #include <cctype>
-
+#include <iostream>
 #include "TMVA/RModel.hxx"
 #include "TMVA/SOFIE_common.hxx"
 
@@ -240,7 +240,7 @@ namespace SOFIE{
    void RModel::GenerateHeaderInfo(std::string& hgname){
       fGC += ("//Code generated automatically by TMVA for Inference of Model file [" + fFileName + "] at [" + fParseTime.substr(0, fParseTime.length()-1) +"] \n");
       // add header guards
-      std::string hgname = fName;
+      hgname = fName;
       std::transform(hgname.begin(), hgname.end(), hgname.begin(), [](unsigned char c){ return std::toupper(c);} );
       hgname = "TMVA_SOFIE_" + hgname;
       fGC += "\n#ifndef " + hgname + "\n";
@@ -467,7 +467,7 @@ namespace SOFIE{
       if(!fIsGNN)
          GenerateOutput();
 
-      if(!fIsGNN && !fIsGNNComponent){
+      if(!fIsGNNComponent){
       if (fUseSession) {
          fGC += "};\n";
       }
