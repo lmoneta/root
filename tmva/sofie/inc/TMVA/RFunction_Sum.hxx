@@ -1,5 +1,5 @@
-#ifndef TMVA_SOFIE_RFUNCTION_MEAN
-#define TMVA_SOFIE_RFUNCTION_MEAN
+#ifndef TMVA_SOFIE_RFUNCTION_SUM
+#define TMVA_SOFIE_RFUNCTION_SUM
 
 
 #include "TMVA/SOFIE_common.hxx"
@@ -17,14 +17,14 @@ namespace TMVA{
 namespace Experimental{
 namespace SOFIE{
 
-class RFunction_Mean: public RFunction{
+class RFunction_Sum: public RFunction{
     
     private:
         std::vector<std::string> fInputTensors;
         std::string fOutputTensor;
 
     public:
-        RFunction_Mean(){}
+        RFunction_Sum(){}
         void Initialize(std::vector<std::any> InputTensors){
             fInputTensors = std::any_cast<std::vector<GNN_Agg>>(InputTensors);
             function_block->reset(new RModel);
@@ -38,9 +38,9 @@ class RFunction_Mean: public RFunction{
             op_concat.reset(new ROperator_Concat<float>(fInputTensors,1,fFuncName+"InputConcat"));
             function_block->AddOperator(std::move(op_concat));
 
-            std::unique_ptr<ROperator> op_reduce_mean;
-            op_reduce_mean.reset(new ROperator_Reduce<float,EReduceOpMode::ReduceMean>(1,0,fFuncName+"InputConcat",fOutputTensor));
-            function_block->AddOperator(std::move(op_reduce_mean));
+            std::unique_ptr<ROperator> op_reduce_sum;
+            op_reduce_sum.reset(new ROperator_Reduce<float,EReduceOpMode::ReduceSum>(1,0,fFuncName+"InputConcat",fOutputTensor));
+            function_block->AddOperator(std::move(op_reduce_sum));
 
             for(int i=0; i<fInputTensors.size(); ++i){
                 function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fGraph->GetTensorShape(fInputTensors[i]));
@@ -54,7 +54,7 @@ class RFunction_Mean: public RFunction{
             fOutputTensor = OutputTensor;
             Initialize(InputTensors);
             function_block->Generate(Options::kGNNComponent, batchSize);
-            return "\n//--------- GNN_Mean_Agg"+fFuncName+function_block->ReturnGenerated();
+            return "\n//--------- GNN_Sum_Agg"+fFuncName+function_block->ReturnGenerated();
         }
 }
 
