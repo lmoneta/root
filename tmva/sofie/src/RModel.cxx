@@ -1,7 +1,6 @@
 #include <limits>
 #include <algorithm>
 #include <cctype>
-#include <iostream>
 #include "TMVA/RModel.hxx"
 #include "TMVA/SOFIE_common.hxx"
 

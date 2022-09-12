@@ -43,8 +43,16 @@ ROOT_STANDARD_LIBRARY_PACKAGE(ROOTTMVASofie
    TMVA/ROperator_Expand.hxx
    TMVA/SOFIE_common.hxx
    TMVA/SOFIEHelpers.hxx
+
+   TMVA/FunctionList.hxx
+   TMVA/RModel_GNN.hxx
+   TMVA/RFunction.hxx
+   TMVA/RFunction_MLP.hxx
+   TMVA/RFunction_Sum.hxx
+   TMVA/RFunction_Mean.hxx
   SOURCES
     src/RModel.cxx
+    src/RModel_GNN.cxx
     src/SOFIE_common.cxx
   DEPENDENCIES
     TMVA
