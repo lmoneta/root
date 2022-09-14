@@ -55,9 +55,6 @@ namespace SOFIE{
       fName = fFileName.substr(0, fFileName.rfind("."));
    }
 
-   // For GNN Functions usage
-   RModel::RModel(std::string function_name):fName(function_name){}
-
    const std::vector<size_t>& RModel::GetTensorShape(std::string name){
       auto f = fReadyInputTensorInfos.find(name);
       if (f != fReadyInputTensorInfos.end()){

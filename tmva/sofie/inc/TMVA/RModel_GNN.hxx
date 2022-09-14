@@ -21,9 +21,8 @@ struct GNN_Init {
     std::unique_ptr<RFunction> edge_global_agg_block;
     std::unique_ptr<RFunction> node_global_agg_block;
    
-    int nodes;
+    int num_nodes;
     std::vector<std::pair<int,int>> edges;
-    std::string globals;
 };
 
 class RModel_GNN: public RModel{

@@ -30,7 +30,7 @@ class RFunction: public ROperator{
         FunctionTarget fTarget;
         FunctionRelation fRelation;
     public:
-        virtual void Initialize(std::vector<std::any> InputTensors) = 0;
+        virtual void Initialize() = 0;
         virtual ~RFunction(){}
         FunctionType GetFunctionType(){
                 return fType;
@@ -42,33 +42,11 @@ class RFunction: public ROperator{
                 return fRelation;
         }
 
-        void AddInputTensors(std::any){
-                if(fType == FunctionType::UPDATE){
-                        std::vector<std::size_t> fInputShape = std::any_cast<std::vector<std::size_t>>(inputShape);
-                        for(int i=0; i<fInputShape.size(); ++i){
-                                function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fInputShape[i]);
-                                function_block->AddInputTensorName(fInputTensors[i]);
-                        }
-                } else {
-                        std::vector<std::vector<std::size_t>> fInputShape = std::any_cast<std::vector<std::vector<std::size_t>>>(inputShape); 
-                        for(int i=0; i<fInputShape.size(); ++i){
-                                for(int j=0;j<fInputShape[0].size();++j){
-                                        function_block->AddInputTensorInfo(fInputTensors[i][j],ETensorType::FLOAT, fInputShape[i][j]);
-                                        function_block->AddInputTensorName(fInputTensors[i][j]);
-                                }
-                        }
-                }
-        }
+        virtual void AddInputTensors(std::any inputShape) = 0;
         
-        void GenerateModel(const std::string& funcName, std::any inputShape){
+        std::string GenerateModel(const std::string& funcName, std::any inputShape){
             fFuncName = UTILITY::Clean_name(funcName);
             Initialize();
-            if(inputShape.size() != fInputTensors.size()){
-                if(fType == FunctionType::UPDATE)
-                        throw std::runtime_error("Passed input shape for GNN Update Function" + fFuncName + "doesn't matches with the input tensor list size");
-                else
-                        throw std::runtime_error("Passed input shape for GNN Aggregate Function" + fFuncName + "doesn't matches with the input tensor list size");
-            }
             AddInputTensors(inputShape);
             function_block->Generate(Options::kGNNComponent);
             std::string modelGenerationString;
@@ -85,7 +63,7 @@ class RFunction: public ROperator{
                 inferFunc+=it;
                 inferFunc+=",";
             }
-            inferFunc+=").begin());";
+            inferFunc+=");";
             return inferFunc;
         }
 };

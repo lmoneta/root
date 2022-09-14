@@ -22,7 +22,6 @@ namespace SOFIE{
 
 class RFunction_MLP: public RFunction{
     private:
-        std::string fFuncName;
         Int_t fNumLayers;          // Number of Layers in MLP
         bool fUseActivation;       // if True, ReLU is used as activation for every layer of the MLP
 
@@ -41,6 +40,7 @@ class RFunction_MLP: public RFunction{
                 fBiasTensors.emplace_back(UTILITY::Clean_name(it));
             }
         }
+
         void Initialize(){
             
             function_block.reset(new RModel(fFuncName));
@@ -71,7 +71,7 @@ class RFunction_MLP: public RFunction{
             function_block->AddBlasRoutines({"Gemm", "Gemv"});  // for Gemm operation
 
             // assuming all the linear layers has a kernel and a bias initialized tensors
-            for(int i=0;i<fKernelTensors.size();++i){
+            for(long unsigned int i=0;i<fKernelTensors.size();++i){
                 function_block->AddInitializedTensor(fKernelTensors[i],ETensorType::FLOAT,fGraph->GetTensorShape(fKernelTensors[i]),fGraph->GetInitializedTensorData(fKernelTensors[i]));
                 function_block->AddInitializedTensor(fBiasTensors[i],ETensorType::FLOAT,fGraph->GetTensorShape(fBiasTensors[i]),fGraph->GetInitializedTensorData(fBiasTensors[i]));
             }
@@ -79,6 +79,14 @@ class RFunction_MLP: public RFunction{
                 function_block->AddOutputTensorNameList({fFuncName+"Relu"+std::to_string(fNumLayers-1)});
             } else{
                 function_block->AddOutputTensorNameList({fFuncName+"Gemm"+std::to_string(fNumLayers-1)});
+            }
+        }
+
+        void AddInputTensors(std::any inputShape){
+            std::vector<std::vector<std::size_t>> fInputShape = std::any_cast<std::vector<std::vector<std::size_t>>>(inputShape);
+            for(long unsigned int i=0; i<fInputShape.size(); ++i){
+                    function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fInputShape[i]);
+                    function_block->AddInputTensorName(fInputTensors[i]);
             }
         }
 };
