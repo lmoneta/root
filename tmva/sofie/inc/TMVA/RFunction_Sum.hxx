@@ -3,6 +3,8 @@
 
 
 #include "TMVA/SOFIE_common.hxx"
+#include "TMVA/ROperator_Concat.hxx"
+#include "TMVA/ROperator_Reduce.hxx"
 #include "TMVA/RFunction.hxx"
 #include "TMVA/RModel_GNN.hxx"
 
@@ -20,44 +22,61 @@ namespace SOFIE{
 class RFunction_Sum: public RFunction{
     
     private:
-        std::vector<std::string> fInputTensors;
-        std::string fOutputTensor;
-
+        std::vector<std::vector<std::string>>> fInputTensors;
+        int num_elements;
     public:
         RFunction_Sum(){}
-        void Initialize(std::vector<std::any> InputTensors){
-            fInputTensors = std::any_cast<std::vector<GNN_Agg>>(InputTensors);
-            function_block->reset(new RModel);
-            if(fTarget != FunctionTarget::GLOBALS){
-                for(auto& it:InputTensors){
-                    fInputTensors.emplace_back("Edge_"+UTILITY::Clean_name(it.receiver)+"_"+UTILITY::Clean_name(it.sender));
+        void Initialize(){
+            function_block.reset(new RModel(fFuncName));
+            if(fRelation == FunctionRelation::EDGES_NODES){
+                for(int i=0; i<num_elements; ++i){
+                    fInputTensors[i].emplace_back("Edge_"+std::to_string(i));
+                    fInputTensors[i].emplace_back("Receiver_"+std::to_string(i));
+                    fInputTensors[i].emplace_back("Sender_"+std::to_string(i));
+                    fInputTensors[i].emplace_back("Global");
                 }
+            } else if(fRelation == FunctionRelation::EDGES_GLOBALS){
+                fInputTensors[i].emplace_back("Edge_"+std::to_string(i));
+                fInputTensors[i].emplace_back("Receiver_"+std::to_string(i));
+                fInputTensors[i].emplace_back("Sender_"+std::to_string(i));
+            } else if(fRelation == FunctionRelation::NODES_GLOBALS){
+                fInputTensors[i].emplace_back("Node_"+std::to_string(i));
+            } else{
+                throw std::runtime_error("Invalid relation for Aggregate function");
             }
             
             std::unique_ptr<ROperator> op_concat;
-            op_concat.reset(new ROperator_Concat<float>(fInputTensors,1,fFuncName+"InputConcat"));
+            for(long unsigned int=0; i<num_elements;++i){
+                op_concat.reset(new ROperator_Concat<float>(fInputTensors[i],0,fFuncName+"InputConcatFeature"+std::to_string(i)));
+                function_block->AddOperator(std::move(op_concat));
+            }
+            std::vector<std::string> Input_Stack;
+            for(long unsigned int i=0; i<num_elements; ++i){
+                Input_Stack.emplace_back(fFuncName+"InputConcatFeature"+std::to_string(i));
+            }
+            op_concat.reset(new ROperator_Concat<float>(Input_Stack,1,fFuncName+"InputStack"));
             function_block->AddOperator(std::move(op_concat));
 
             std::unique_ptr<ROperator> op_reduce_sum;
-            op_reduce_sum.reset(new ROperator_Reduce<float,EReduceOpMode::ReduceSum>(1,0,fFuncName+"InputConcat",fOutputTensor));
+            op_reduce_sum.reset(new ROperator_Reduce<float,EReduceOpMode::ReduceSum>(1,0,fFuncName+"InputStack","OutputTensor"));
             function_block->AddOperator(std::move(op_reduce_sum));
 
-            for(int i=0; i<fInputTensors.size(); ++i){
-                function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fGraph->GetTensorShape(fInputTensors[i]));
-                function_block->AddInputTensorName(fInputTensors[i]);
-            }
-            function_block->AddOutputTensorNameList({fOutputTensor});
+            function_block->AddOutputTensorNameList({"OutputTensor"});
         }
 
-        std::string Generate(const std::string& funcName, const std::vector<std::any>& InputTensors, const std::string& OutputTensor, int batchSize):
-        fFuncName(UTILITY::Clean_name(funcName)),fOutputTensor(UTILITY::Clean_name(outputTensor)){
-            fOutputTensor = OutputTensor;
-            Initialize(InputTensors);
-            function_block->Generate(Options::kGNNComponent, batchSize);
-            return "\n//--------- GNN_Sum_Agg"+fFuncName+function_block->ReturnGenerated();
+        void AddInputTensors(std::any inputShape){
+            std::vector<std::vector<std::size_t>> fInputShape = std::any_cast<std::vector<std::vector<std::size_t>>>(inputShape); 
+                for(int i=0; i<fInputShape.size(); ++i){
+                        for(int j=0;j<fInputShape[0].size();++j)
+                                function_block->AddInputTensorInfo(fInputTensors[i][j],ETensorType::FLOAT, fInputShape[i][j]);
+                                function_block->AddInputTensorName(fInputTensors[i][j]);
+                }
         }
-}
+
+};
 
 } //SOFIE
 } //Experimental
 } //TMVA
+
+#endif //TMVA_SOFIE_RFUNCTION_SUM

@@ -8,20 +8,22 @@ namespace TMVA{
 namespace Experimental{
 namespace SOFIE{
 
+class RFunction;
+
 struct GNN_Init {
     // updation blocks
-    RFunction edges_update_block;
-    RFunction nodes_update_block;
-    RFunction globals_update_block;
+    std::unique_ptr<RFunction> edges_update_block;
+    std::unique_ptr<RFunction> nodes_update_block;
+    std::unique_ptr<RFunction> globals_update_block;
     
     // aggregation blocks
-    RFunction edge_node_agg_block;
-    RFunction edge_global_agg_block;
-    RFunction node_global_agg_block;
+    std::unique_ptr<RFunction> edge_node_agg_block;
+    std::unique_ptr<RFunction> edge_global_agg_block;
+    std::unique_ptr<RFunction> node_global_agg_block;
    
-    std::vector<std::string> nodes;
+    int nodes;
     std::vector<std::pair<int,int>> edges;
-    std::vector<std::string> globals;
+    std::string globals;
 };
 
 class RModel_GNN: public RModel{
@@ -38,11 +40,16 @@ private:
     std::unique_ptr<RFunction> edge_global_agg_block;
     std::unique_ptr<RFunction> node_global_agg_block;
 
-    std::vector<std::pair<int,int>> edges; // contains node indices
-    std::vector<std::string> nodes;
+    int num_nodes;
+    int num_edges;
     std::string globals;
     std::vector<int> senders;              // contains node indices
     std::vector<int> receivers;            // contains node indices
+
+    int num_node_features;
+    int num_edge_features;
+    int num_global_features;
+
 
 public:
 
@@ -64,8 +71,8 @@ public:
    void InitializeGNN(int batch_size=1);
    void GenerateGNN(int batchSize = 1);
    
-   ~RModel_GNN(){}}
-   ClassDef(RModel_GNN,1);
+   ~RModel_GNN(){}
+//    ClassDef(RModel_GNN,1);
 };
 
 }//SOFIE

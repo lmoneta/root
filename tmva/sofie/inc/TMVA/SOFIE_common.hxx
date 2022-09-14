@@ -425,14 +425,15 @@ extern "C" void sgemm_(const char * transa, const char * transb, const int * m, 
 
 namespace GNN{
    struct GNN_Data {
-      std::unordered_map<std::string,std::vector<float>> nodes;
-      std::unordered_map<std::pair<int,int>,std::vector<float>> edges;
-      std::unordered_map<std::string, std::vector<float>> globals; 
+      std::vector<float> node_data;
+      std::vector<std::pair<int,int>> edges;  // pair of [receiver,sender]
+      std::vector<float> edge_data;
+      std::vector<float> global_data; 
    };
 
    struct GNN_Agg {
-      std::string receiver;
-      std::string sender;
+      int receiver;
+      int sender;
    };
 }
 }//SOFIE

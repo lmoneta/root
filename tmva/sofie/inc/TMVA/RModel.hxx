@@ -43,17 +43,18 @@ private:
 
    std::vector<std::unique_ptr<ROperator>> fOperators;
 
-   std::string fName="UnnamedModel";
    std::string fFileName; //file name of original model file for identification
    std::string fParseTime; //UTC date and time string at parsing
 
-
-   std::string fGC; //generated code
    std::unordered_set<std::string> fNeededBlasRoutines;
 
    const std::unordered_set<std::string> fAllowedStdLib = {"vector", "algorithm", "cmath"};
    std::unordered_set<std::string> fNeededStdLib = {"vector"};
    std::unordered_set<std::string> fCustomOpHeaders;
+
+protected:
+   std::string fName="UnnamedModel";
+   std::string fGC; //generated code
    bool fUseWeightFile = true;
    bool fUseSession = true;
    bool fIsGNN = false;

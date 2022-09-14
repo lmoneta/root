@@ -3,6 +3,9 @@
 
 
 #include "TMVA/SOFIE_common.hxx"
+#include "TMVA/ROperator_Concat.hxx"
+#include "TMVA/ROperator_Gemm.hxx"
+#include "TMVA/ROperator_Relu.hxx"
 #include "TMVA/RFunction.hxx"
 #include "TMVA/RModel_GNN.hxx"
 
@@ -26,34 +29,26 @@ class RFunction_MLP: public RFunction{
         std::vector<std::string> fInputTensors;
         std::vector<std::string> fKernelTensors;
         std::vector<std::string> fBiasTensors;
-        std::string fOutputTensor;
 
     public:
         RFunction_MLP(){}
         RFunction_MLP(Int_t numLayers, bool useActivation, std::vector<std::string> kernelTensors, std::vector<std::string> biasTensors):
         fNumLayers(numLayers), fUseActivation(useActivation){
             for(auto& it:kernelTensors){
-                fKernelTensors.emplace_back(UTILITY::Clean_name(it))
+                fKernelTensors.emplace_back(UTILITY::Clean_name(it));
             }
             for(auto& it:biasTensors){
-                fBiasTensors.emplace_back(UTILITY::Clean_name(it))
+                fBiasTensors.emplace_back(UTILITY::Clean_name(it));
             }
         }
-        void Initialize(std::vector<std::any> InputTensors){
+        void Initialize(){
             
-            function_block->reset(new RModel);
+            function_block.reset(new RModel(fFuncName));
             
             if(fTarget == FunctionTarget::EDGES){
-                fInputTensors.emplace_back("Edge_"+UTILITY::Clean_name((std::any_cast<std::string>(InputTensors[0])))+"_"+UTILITY::Clean_name((std::any_cast<std::string>(InputTensors[1]))))
-            } else if(fTarget == FunctionTarget::NODES){
-                auto nodes_agg_data = std::any_cast<std::vector<GNN::GNN_Agg>>(InputTensors[0]);
-                for(auto& it:nodes_agg_data){
-                    fInputTensors.emplace_back("Edge_"+it.receiver+"_"+it.sender);
-                }
-            }
-
-            for(int i=1; i<InputTensors.size();++i){
-                fInputTensors.emplace_back(UTILITY::Clean_name(std::any_cast<std::string>(InputTensors[i])));
+                fInputTensors = {"edge","receiver","sender","global"};
+            } else if(fTarget == FunctionTarget::NODES || fTarget == FunctionTarget::GLOBALS){
+                fInputTensors = {"edge","node","global"}; 
             }
 
             std::unique_ptr<ROperator> op_concat;
@@ -63,12 +58,12 @@ class RFunction_MLP: public RFunction{
             std::unique_ptr<ROperator> op_gemm;
             std::string fGemmInput = fFuncName+"InputConcat";
             for(int i=0; i<fNumLayers; ++i){
-                op_gemm.reset(new ROperator_Gemm<float>(1.0,1.0,0,0,fGemmInput,fKernelTensors[i],fBiasTensors[i],fFuncName+"Gemm"+i));
+                op_gemm.reset(new ROperator_Gemm<float>(1.0,1.0,0,0,fGemmInput,fKernelTensors[i],fBiasTensors[i],fFuncName+"Gemm"+std::to_string(i)));
                 function_block->AddOperator(std::move(op_gemm));
                 fGemmInput = fFuncName+"Gemm"+i;
                 if(fUseActivation){
                     std::unique_ptr<ROperator> op_relu;
-                    op_relu.reset(new ROperator_Relu<float>(fFuncName+"Gemm"+i, fFuncName+"Relu"+i));
+                    op_relu.reset(new ROperator_Relu<float>(fFuncName+"Gemm"+std::to_string(i), fFuncName+"Relu"+std::to_string(i)));
                     function_block->AddOperator(std::move(op_relu));
                     fGemmInput = fFuncName+"Relu"+i;
                 }
@@ -77,25 +72,16 @@ class RFunction_MLP: public RFunction{
 
             // assuming all the linear layers has a kernel and a bias initialized tensors
             for(int i=0;i<fKernelTensors.size();++i){
-                function_block->AddInitializedTensor(fKernelTensors[i],ETensorType::FLOAT,fGraph->GetTensorShape(fKernelTensors[i]),fGraph->GetInitializedTensorData(fKernalTensors[i]));
+                function_block->AddInitializedTensor(fKernelTensors[i],ETensorType::FLOAT,fGraph->GetTensorShape(fKernelTensors[i]),fGraph->GetInitializedTensorData(fKernelTensors[i]));
                 function_block->AddInitializedTensor(fBiasTensors[i],ETensorType::FLOAT,fGraph->GetTensorShape(fBiasTensors[i]),fGraph->GetInitializedTensorData(fBiasTensors[i]));
             }
-            
-            for(int i=0; i<fInputTensors.size(); ++i){
-                function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fGraph->GetTensorShape(fInputTensors[i]));
-                function_block->AddInputTensorName(fInputTensors[i]);
+            if(fUseActivation){
+                function_block->AddOutputTensorNameList({fFuncName+"Relu"+std::to_string(fNumLayers-1)});
+            } else{
+                function_block->AddOutputTensorNameList({fFuncName+"Gemm"+std::to_string(fNumLayers-1)});
             }
-
-            function_block->AddOutputTensorNameList({fOutputTensor});
         }
-
-        std::string Generate(const std::string& funcName, const std::vector<std::any>& InputTensors, std::string outputTensor, int batchSize):
-        fFuncName(UTILITY::Clean_name(funcName)),fOutputTensor(UTILITY::Clean_name(outputTensor)){
-            Initialize(InputTensors);
-            function_block->Generate(Options::kGNNComponent, batchSize);
-            return "\n//--------- GNN_MLP+Update"+fFuncName+"\n"function_block->ReturnGenerated();
-        }
-}
+};
 
 } // SOFIE
 } // Experimental
