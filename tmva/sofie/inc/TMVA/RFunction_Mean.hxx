@@ -22,31 +22,32 @@ namespace SOFIE{
 class RFunction_Sum: public RFunction{
     
     private:
-        std::vector<std::vector<std::string>>> fInputTensors;
         int num_elements;
+        std::vector<std::vector<std::string>>> fInputTensors;
+
     public:
         RFunction_Sum(){}
         void Initialize(){
             function_block.reset(new RModel(fFuncName));
-            if(fRelation == FunctionRelation::EDGES_NODES){
-                for(int i=0; i<num_elements; ++i){
+            for(int i=0; i<num_elements; ++i){
+                if(fRelation == FunctionRelation::EDGES_NODES){
+                        fInputTensors[i].emplace_back("Edge_"+std::to_string(i));
+                        fInputTensors[i].emplace_back("Receiver_"+std::to_string(i));
+                        fInputTensors[i].emplace_back("Sender_"+std::to_string(i));
+                        fInputTensors[i].emplace_back("Global");
+                } else if(fRelation == FunctionRelation::EDGES_GLOBALS){
                     fInputTensors[i].emplace_back("Edge_"+std::to_string(i));
                     fInputTensors[i].emplace_back("Receiver_"+std::to_string(i));
                     fInputTensors[i].emplace_back("Sender_"+std::to_string(i));
-                    fInputTensors[i].emplace_back("Global");
+                } else if(fRelation == FunctionRelation::NODES_GLOBALS){
+                    fInputTensors[i].emplace_back("Node_"+std::to_string(i));
+                } else{
+                    throw std::runtime_error("Invalid relation for Aggregate function");
                 }
-            } else if(fRelation == FunctionRelation::EDGES_GLOBALS){
-                fInputTensors[i].emplace_back("Edge_"+std::to_string(i));
-                fInputTensors[i].emplace_back("Receiver_"+std::to_string(i));
-                fInputTensors[i].emplace_back("Sender_"+std::to_string(i));
-            } else if(fRelation == FunctionRelation::EDGES_NODES){
-                fInputTensors[i].emplace_back("Node_"+std::to_string(i));
-            } else{
-                throw std::runtime_error("Invalid relation for Aggregate function");
             }
             
             std::unique_ptr<ROperator> op_concat;
-            for(long unsigned int=0; i<num_elements;++i){
+            for(long unsigned int i=0; i<num_elements;++i){
                 op_concat.reset(new ROperator_Concat<float>(fInputTensors[i],0,fFuncName+"InputConcatFeature"+std::to_string(i)));
                 function_block->AddOperator(std::move(op_concat));
             }
@@ -63,6 +64,18 @@ class RFunction_Sum: public RFunction{
 
             function_block->AddOutputTensorNameList({"OutputTensor"});
         }
+
+
+        void AddInputTensors(std::any inputShape){
+            std::vector<std::vector<std::size_t>> fInputShape = std::any_cast<std::vector<std::vector<std::size_t>>>(inputShape); 
+                for(long unsigned int i=0; i<fInputShape.size(); ++i){
+                    for(long unsigned int j=0;j<fInputShape[0].size();++j){
+                                function_block->AddInputTensorInfo(fInputTensors[i][j],ETensorType::FLOAT, fInputShape[i][j]);
+                                function_block->AddInputTensorName(fInputTensors[i][j]);
+                    }
+                }
+        }
+                
 };
 
 } //SOFIE

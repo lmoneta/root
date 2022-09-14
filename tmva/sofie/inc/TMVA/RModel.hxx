@@ -73,6 +73,9 @@ public:
 
    RModel(){}
    RModel(std::string name, std::string parsedtime);
+   
+   // For GNN Functions usage
+   RModel(std::string function_name):fName(function_name){}
 
    const std::vector<size_t>& GetTensorShape(std::string name);
    const ETensorType& GetTensorType(std::string name);
