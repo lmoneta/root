@@ -55,6 +55,9 @@ namespace SOFIE{
       fName = fFileName.substr(0, fFileName.rfind("."));
    }
 
+   // For GNN Functions usage
+   RModel::RModel(std::string function_name):fName(function_name){}
+
    const std::vector<size_t>& RModel::GetTensorShape(std::string name){
       auto f = fReadyInputTensorInfos.find(name);
       if (f != fReadyInputTensorInfos.end()){
@@ -353,7 +356,12 @@ namespace SOFIE{
          fGC += "std::vector<std::vector<" + outputType + ">> ";
       }
 
-      fGC += "infer(";
+      if(fIsGNNComponent){
+         fGC+=fName+"::infer(";
+      } else{
+         fGC += "infer(";
+      }
+      
       for(size_t i = 0; i<fInputTensorNames.size(); ++i){
          switch((fReadyInputTensorInfos[fInputTensorNames[i]]).type){
             case  ETensorType::FLOAT :{
@@ -374,9 +382,10 @@ namespace SOFIE{
             }
             default: {
                throw std::runtime_error("TMVA-SOFIE: input tensor " + fInputTensorNames[i] + " is of a data type which is not yet supported.");
-            }
+            }        
          }
       }
+      
       fGC.pop_back(); //remove last ","
       fGC += "){\n";
 
