@@ -25,7 +25,9 @@ class RFunction_Sum: public RFunction{
         std::vector<std::vector<std::string>> fInputTensors;
         int num_elements;
     public:
-        RFunction_Sum(){}
+        RFunction_Sum(FunctionType Type, FunctionTarget target, FunctionRelation relation,int NumElements):
+        RFunction(Type,target, relation), num_elements(NumElements){}
+
         void Initialize(){
             function_block.reset(new RModel(fFuncName));
             for(int i=0; i<num_elements; ++i){

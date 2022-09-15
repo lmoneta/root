@@ -263,6 +263,9 @@ namespace SOFIE{
       if (fUseSession) {
          fGC += "struct Session {\n";
       }
+   }
+
+   void RModel::GenerateInitializedTensorInfo(){
       for (auto& i: fInitializedTensors){
          if (i.second.fType == ETensorType::FLOAT){
             size_t length = 1;
@@ -425,8 +428,10 @@ namespace SOFIE{
       if(!fIsGNNComponent)
          GenerateHeaderInfo(hgname);
 
-      if(!fIsGNN)
+      if(!fIsGNN){
+         GenerateInitializedTensorInfo();
          GenerateIntermediateTensorInfo();
+      }
 
       if (fUseSession) {
          // add here specific operator code that needs to define session data members
