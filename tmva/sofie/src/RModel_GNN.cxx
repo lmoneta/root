@@ -53,8 +53,8 @@ namespace SOFIE{
         num_nodes = std::move(graph_input_struct.num_nodes);
         num_edges = std::move(graph_input_struct.edges.size());
         for(auto& it:graph_input_struct.edges){
-            senders.emplace_back(it.first);
-            receivers.emplace_back(it.second);
+            receivers.emplace_back(it.first); 
+            senders.emplace_back(it.second);
         }
     }
 
