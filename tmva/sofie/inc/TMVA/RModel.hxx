@@ -110,6 +110,7 @@ public:
 
    void Initialize(int batchSize=1);
    void GenerateHeaderInfo(std::string& hgname);
+   void GenerateInitializedTensorInfo();
    void GenerateIntermediateTensorInfo();
    void GenerateOutput();
    void Generate(std::underlying_type_t<Options> options, int batchSize = 1);

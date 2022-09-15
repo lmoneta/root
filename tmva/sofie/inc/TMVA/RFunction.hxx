@@ -25,7 +25,6 @@ class RFunction: public ROperator{
     protected:
         std::string fFuncName;
         FunctionType fType;
-        std::unique_ptr<RModel_GNN> fGraph;
         std::unique_ptr<RModel> function_block;
         FunctionTarget fTarget;
         FunctionRelation fRelation;
@@ -41,6 +40,12 @@ class RFunction: public ROperator{
         FunctionRelation GetFunctionRelation(){
                 return fRelation;
         }
+        std::unique_ptr<RModel> GetFunctionBlock(){
+                return std::move(function_block);
+        }
+
+        RFunction(FunctionType Type,FunctionTarget target, FunctionRelation relation):
+                fType(Type), fTarget(target), fRelation(relation){}
 
         virtual void AddInputTensors(std::any inputShape) = 0;
         

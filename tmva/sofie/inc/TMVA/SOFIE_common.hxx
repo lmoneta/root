@@ -430,11 +430,6 @@ namespace GNN{
       std::vector<float> edge_data;
       std::vector<float> global_data; 
    };
-
-   struct GNN_Agg {
-      int receiver;
-      int sender;
-   };
 }
 }//SOFIE
 }//Experimental

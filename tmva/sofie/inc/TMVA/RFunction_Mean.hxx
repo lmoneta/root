@@ -1,5 +1,5 @@
-#ifndef TMVA_SOFIE_RFUNCTION_SUM
-#define TMVA_SOFIE_RFUNCTION_SUM
+#ifndef TMVA_SOFIE_RFUNCTION_MEAN
+#define TMVA_SOFIE_RFUNCTION_MEAN
 
 
 #include "TMVA/SOFIE_common.hxx"
@@ -19,14 +19,16 @@ namespace TMVA{
 namespace Experimental{
 namespace SOFIE{
 
-class RFunction_Sum: public RFunction{
+class RFunction_Mean: public RFunction{
     
     private:
         int num_elements;
-        std::vector<std::vector<std::string>>> fInputTensors;
+        std::vector<std::vector<std::string>> fInputTensors;
 
     public:
-        RFunction_Sum(){}
+        RFunction_Mean(FunctionType Type, FunctionTarget target, FunctionRelation relation,int NumElements):
+        RFunction(Type, target, relation),num_elements(NumElements){}
+
         void Initialize(){
             function_block.reset(new RModel(fFuncName));
             for(int i=0; i<num_elements; ++i){
@@ -58,21 +60,21 @@ class RFunction_Sum: public RFunction{
             op_concat.reset(new ROperator_Concat<float>(Input_Stack,1,fFuncName+"InputStack"));
             function_block->AddOperator(std::move(op_concat));
 
-            std::unique_ptr<ROperator> op_reduce_sum;
-            op_reduce_sum.reset(new ROperator_Reduce<float,EReduceOpMode::ReduceMean>(1,0,fFuncName+"InputStack","OutputTensor"));
-            function_block->AddOperator(std::move(op_reduce_sum));
+            std::unique_ptr<ROperator> op_reduce_mean;
+            op_reduce_mean.reset(new ROperator_Reduce<float,EReduceOpMode::ReduceMean>(1,0,fFuncName+"InputStack","OutputTensor"));
+            function_block->AddOperator(std::move(op_reduce_mean));
 
             function_block->AddOutputTensorNameList({"OutputTensor"});
         }
 
 
         void AddInputTensors(std::any inputShape){
-            std::vector<std::vector<std::size_t>> fInputShape = std::any_cast<std::vector<std::vector<std::size_t>>>(inputShape); 
+            std::vector<std::vector<std::vector<std::size_t>>> fInputShape = std::any_cast<std::vector<std::vector<std::vector<std::size_t>>>>(inputShape); 
                 for(long unsigned int i=0; i<fInputShape.size(); ++i){
-                    for(long unsigned int j=0;j<fInputShape[0].size();++j){
+                        for(long unsigned int j=0;j<fInputShape[0].size();++j){
                                 function_block->AddInputTensorInfo(fInputTensors[i][j],ETensorType::FLOAT, fInputShape[i][j]);
                                 function_block->AddInputTensorName(fInputTensors[i][j]);
-                    }
+                        }
                 }
         }
                 
@@ -82,4 +84,4 @@ class RFunction_Sum: public RFunction{
 } //Experimental
 } //TMVA
 
-#endif //TMVA_SOFIE_RFUNCTION_SUM
+#endif //TMVA_SOFIE_RFUNCTION_MEAN

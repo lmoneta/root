@@ -30,16 +30,8 @@ class RFunction_MLP: public RFunction{
         std::vector<std::string> fBiasTensors;
 
     public:
-        RFunction_MLP(){}
-        RFunction_MLP(Int_t numLayers, bool useActivation, std::vector<std::string> kernelTensors, std::vector<std::string> biasTensors):
-        fNumLayers(numLayers), fUseActivation(useActivation){
-            for(auto& it:kernelTensors){
-                fKernelTensors.emplace_back(UTILITY::Clean_name(it));
-            }
-            for(auto& it:biasTensors){
-                fBiasTensors.emplace_back(UTILITY::Clean_name(it));
-            }
-        }
+        RFunction_MLP(FunctionType Type, FunctionTarget target, FunctionRelation relation, Int_t numLayers, bool useActivation):
+        RFunction(Type, target, relation), fNumLayers(numLayers), fUseActivation(useActivation){}
 
         void Initialize(){
             
@@ -71,14 +63,19 @@ class RFunction_MLP: public RFunction{
             function_block->AddBlasRoutines({"Gemm", "Gemv"});  // for Gemm operation
 
             // assuming all the linear layers has a kernel and a bias initialized tensors
-            for(long unsigned int i=0;i<fKernelTensors.size();++i){
-                function_block->AddInitializedTensor(fKernelTensors[i],ETensorType::FLOAT,fGraph->GetTensorShape(fKernelTensors[i]),fGraph->GetInitializedTensorData(fKernelTensors[i]));
-                function_block->AddInitializedTensor(fBiasTensors[i],ETensorType::FLOAT,fGraph->GetTensorShape(fBiasTensors[i]),fGraph->GetInitializedTensorData(fBiasTensors[i]));
-            }
             if(fUseActivation){
                 function_block->AddOutputTensorNameList({fFuncName+"Relu"+std::to_string(fNumLayers-1)});
             } else{
                 function_block->AddOutputTensorNameList({fFuncName+"Gemm"+std::to_string(fNumLayers-1)});
+            }
+        }
+
+        void AddInitializedTensors(std::vector<std::string> kernel_tensors, std::vector<std::string> bias_tensors){
+            for(auto& it:kernel_tensors){
+                fKernelTensors.emplace_back(UTILITY::Clean_name(it));
+            }
+            for(auto& it:bias_tensors){
+                fBiasTensors.emplace_back(UTILITY::Clean_name(it));
             }
         }
 
