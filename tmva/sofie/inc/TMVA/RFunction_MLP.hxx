@@ -30,9 +30,9 @@ class RFunction_MLP: public RFunction_Update{
         std::vector<std::string> fBiasTensors;
 
     public:
-        RFunction_MLP(std::string funcName, FunctionTarget target, Int_t numLayers, bool useActivation):
-        RFunction_Update(funcName,target), fNumLayers(numLayers), fUseActivation(useActivation){}
-
+        RFunction_MLP(FunctionTarget target, Int_t numLayers, bool useActivation):
+        RFunction_Update(target), fNumLayers(numLayers), fUseActivation(useActivation){}
+        
         void Initialize(){
                         
             if(fTarget == FunctionTarget::EDGES){
@@ -69,9 +69,9 @@ class RFunction_MLP: public RFunction_Update{
         }
 
         void AddInitializedTensors(std::any initialized_tensors){
-            std::vector<std::vector<std::string>> weight_tensors = std::any_cast<std::vector<std::vector<std::string>>(initialized_tensors);
-            fKernelTensors = weight_tensors[0];
-            fBiasTensors   = weight_tensors[1];
+                std::vector<std::vector<std::string>> weight_tensors = std::any_cast<std::vector<std::vector<std::string>>>(initialized_tensors);
+                fKernelTensors = weight_tensors[0];
+                fBiasTensors   = weight_tensors[1];
         }
 };
 

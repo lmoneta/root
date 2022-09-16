@@ -24,9 +24,8 @@ class RFunction_Mean: public RFunction_Aggregate{
     private:
         int num_elements;
     public:
-        RFunction_Mean(std::string funcName, FunctionRelation relation,int NumElements):
-        RFunction_Aggregate(funcName, relation),num_elements(NumElements){}
-
+        RFunction_Mean(FunctionRelation relation,int NumElements):
+        RFunction_Aggregate(relation),num_elements(NumElements){}
         void Initialize(){
             function_block.reset(new RModel(fFuncName));
             for(int i=0; i<num_elements; ++i){
