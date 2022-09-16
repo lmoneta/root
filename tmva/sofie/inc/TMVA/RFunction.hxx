@@ -3,7 +3,6 @@
 
 #include <any>
 #include "TMVA/RModel_GNN.hxx"
-#include "TMVA/ROperator.hxx"
 
 namespace TMVA{
 namespace Experimental{
@@ -21,36 +20,32 @@ enum class FunctionTarget{
 enum class FunctionRelation{
         INVALID=0, NODES_GLOBALS=1, EDGES_GLOBALS=2, EDGES_NODES=3
 };
-class RFunction: public ROperator{
+class RFunction{
     protected:
         std::string fFuncName;
         FunctionType fType;
         std::unique_ptr<RModel> function_block;
-        FunctionTarget fTarget;
-        FunctionRelation fRelation;
     public:
         virtual void Initialize() = 0;
         virtual ~RFunction(){}
+        
         FunctionType GetFunctionType(){
                 return fType;
-        }
-        FunctionTarget GetFunctionTarget(){
-                return fTarget;
-        }
-        FunctionRelation GetFunctionRelation(){
-                return fRelation;
         }
         std::unique_ptr<RModel> GetFunctionBlock(){
                 return std::move(function_block);
         }
 
-        RFunction(FunctionType Type,FunctionTarget target, FunctionRelation relation):
-                fType(Type), fTarget(target), fRelation(relation){}
+        RFunction(std::string funcName, FunctionType type):
+                fFuncName( UTILITY::Clean_name(funcName)),fType(type){
+                        function_block.reset(new RModel(fFuncName));   
+        }
 
         virtual void AddInputTensors(std::any inputShape) = 0;
+
+        virtual void AddInitializedTensor(std::any);
         
-        std::string GenerateModel(const std::string& funcName, std::any inputShape){
-            fFuncName = UTILITY::Clean_name(funcName);
+        std::string GenerateModel(std::any inputShape){
             Initialize();
             AddInputTensors(inputShape);
             function_block->Generate(Options::kGNNComponent);
@@ -71,6 +66,39 @@ class RFunction: public ROperator{
             inferFunc+=");";
             return inferFunc;
         }
+};
+
+class RFunction_Update: public RFunction{
+        protected:
+                FunctionTarget fTarget;
+                std::vector<std::string> fInputTensors;
+        public:
+                RFunction_Update(std::string funcName, FunctionTarget target):RFunction(funcName,FunctionType::UPDATE), fTarget(target){}
+
+                void AddInputTensors(std::any inputShape){
+                        std::vector<std::vector<std::size_t>> fInputShape = std::any_cast<std::vector<std::vector<std::size_t>>>(inputShape);
+                        for(long unsigned int i=0; i<fInputShape.size(); ++i){
+                                function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fInputShape[i]);
+                                function_block->AddInputTensorName(fInputTensors[i]);
+                        }
+                }
+};
+
+class RFunction_Aggregate: public RFunction{
+        protected:
+                FunctionRelation fRelation;
+                std::vector<std::vector<std::string>> fInputTensors;
+        public:
+                RFunction_Aggregate(std::string funcName, FunctionRelation relation):RFunction(funcName,FunctionType::AGGREGATE), fRelation(relation){}
+                void AddInputTensors(std::any inputShape){
+                        std::vector<std::vector<std::vector<std::size_t>>> fInputShape = std::any_cast<std::vector<std::vector<std::vector<std::size_t>>>>(inputShape); 
+                                for(long unsigned int i=0; i<fInputShape.size(); ++i){
+                                        for(long unsigned int j=0;j<fInputShape[0].size();++j){
+                                                function_block->AddInputTensorInfo(fInputTensors[i][j],ETensorType::FLOAT, fInputShape[i][j]);
+                                                function_block->AddInputTensorName(fInputTensors[i][j]);
+                                        }
+                                }
+                }
 };
 
 

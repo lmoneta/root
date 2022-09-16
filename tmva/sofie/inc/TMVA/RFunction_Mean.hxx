@@ -19,15 +19,13 @@ namespace TMVA{
 namespace Experimental{
 namespace SOFIE{
 
-class RFunction_Mean: public RFunction{
+class RFunction_Mean: public RFunction_Aggregate{
     
     private:
         int num_elements;
-        std::vector<std::vector<std::string>> fInputTensors;
-
     public:
-        RFunction_Mean(FunctionType Type, FunctionTarget target, FunctionRelation relation,int NumElements):
-        RFunction(Type, target, relation),num_elements(NumElements){}
+        RFunction_Mean(std::string funcName, FunctionRelation relation,int NumElements):
+        RFunction_Aggregate(funcName, relation),num_elements(NumElements){}
 
         void Initialize(){
             function_block.reset(new RModel(fFuncName));
@@ -65,17 +63,6 @@ class RFunction_Mean: public RFunction{
             function_block->AddOperator(std::move(op_reduce_mean));
 
             function_block->AddOutputTensorNameList({"OutputTensor"});
-        }
-
-
-        void AddInputTensors(std::any inputShape){
-            std::vector<std::vector<std::vector<std::size_t>>> fInputShape = std::any_cast<std::vector<std::vector<std::vector<std::size_t>>>>(inputShape); 
-                for(long unsigned int i=0; i<fInputShape.size(); ++i){
-                        for(long unsigned int j=0;j<fInputShape[0].size();++j){
-                                function_block->AddInputTensorInfo(fInputTensors[i][j],ETensorType::FLOAT, fInputShape[i][j]);
-                                function_block->AddInputTensorName(fInputTensors[i][j]);
-                        }
-                }
         }
                 
 };

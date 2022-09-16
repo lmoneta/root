@@ -9,6 +9,7 @@
 #include "TMVA/RFunction.hxx"
 #include "TMVA/RModel_GNN.hxx"
 
+#include <any>
 #include <sstream>
 #include <algorithm>
 #include <iterator>
@@ -20,23 +21,20 @@ namespace TMVA{
 namespace Experimental{
 namespace SOFIE{
 
-class RFunction_MLP: public RFunction{
+class RFunction_MLP: public RFunction_Update{
     private:
         Int_t fNumLayers;          // Number of Layers in MLP
         bool fUseActivation;       // if True, ReLU is used as activation for every layer of the MLP
 
-        std::vector<std::string> fInputTensors;
         std::vector<std::string> fKernelTensors;
         std::vector<std::string> fBiasTensors;
 
     public:
-        RFunction_MLP(FunctionType Type, FunctionTarget target, FunctionRelation relation, Int_t numLayers, bool useActivation):
-        RFunction(Type, target, relation), fNumLayers(numLayers), fUseActivation(useActivation){}
+        RFunction_MLP(std::string funcName, FunctionTarget target, Int_t numLayers, bool useActivation):
+        RFunction_Update(funcName,target), fNumLayers(numLayers), fUseActivation(useActivation){}
 
         void Initialize(){
-            
-            function_block.reset(new RModel(fFuncName));
-            
+                        
             if(fTarget == FunctionTarget::EDGES){
                 fInputTensors = {"edge","receiver","sender","global"};
             } else if(fTarget == FunctionTarget::NODES || fTarget == FunctionTarget::GLOBALS){
@@ -70,21 +68,10 @@ class RFunction_MLP: public RFunction{
             }
         }
 
-        void AddInitializedTensors(std::vector<std::string> kernel_tensors, std::vector<std::string> bias_tensors){
-            for(auto& it:kernel_tensors){
-                fKernelTensors.emplace_back(UTILITY::Clean_name(it));
-            }
-            for(auto& it:bias_tensors){
-                fBiasTensors.emplace_back(UTILITY::Clean_name(it));
-            }
-        }
-
-        void AddInputTensors(std::any inputShape){
-            std::vector<std::vector<std::size_t>> fInputShape = std::any_cast<std::vector<std::vector<std::size_t>>>(inputShape);
-            for(long unsigned int i=0; i<fInputShape.size(); ++i){
-                    function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fInputShape[i]);
-                    function_block->AddInputTensorName(fInputTensors[i]);
-            }
+        void AddInitializedTensors(std::any initialized_tensors){
+            std::vector<std::vector<std::string>> weight_tensors = std::any_cast<std::vector<std::vector<std::string>>(initialized_tensors);
+            fKernelTensors = weight_tensors[0];
+            fBiasTensors   = weight_tensors[1];
         }
 };
 
