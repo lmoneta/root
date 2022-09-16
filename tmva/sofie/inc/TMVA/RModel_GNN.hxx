@@ -41,7 +41,6 @@ private:
 
     int num_nodes;
     int num_edges;
-    std::string globals;
     std::vector<int> senders;              // contains node indices
     std::vector<int> receivers;            // contains node indices
 

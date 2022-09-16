@@ -19,14 +19,19 @@ namespace TMVA{
 namespace Experimental{
 namespace SOFIE{
 
-class RFunction_Sum: public RFunction{
+class RFunction_Sum: public RFunction_Aggregate{
     
     private:
-        std::vector<std::vector<std::string>> fInputTensors;
-        int num_elements;
+        /*
+        num_elements represents the number of collections used for aggregation in different aggregate relation
+        For Edge_Node relation, it is number of edges
+        For Edge_Globals relation, it is number of edges
+        For Node_Globals relation, it is number of nodes
+        */
+        int num_elements; 
     public:
-        RFunction_Sum(FunctionType Type, FunctionTarget target, FunctionRelation relation,int NumElements):
-        RFunction(Type,target, relation), num_elements(NumElements){}
+        RFunction_Sum(std::string funcName, FunctionRelation relation,int NumElements):
+        RFunction_Aggregate(funcName, relation), num_elements(NumElements){}
 
         void Initialize(){
             function_block.reset(new RModel(fFuncName));
