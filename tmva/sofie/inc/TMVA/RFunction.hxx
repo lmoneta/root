@@ -26,9 +26,8 @@ class RFunction{
         FunctionType fType;
         std::unique_ptr<RModel> function_block;
     public:
-        virtual void Initialize() = 0;
+        RFunction(){}
         virtual ~RFunction(){}
-        
         FunctionType GetFunctionType(){
                 return fType;
         }
@@ -38,16 +37,10 @@ class RFunction{
 
         RFunction(std::string funcName, FunctionType type):
                 fFuncName( UTILITY::Clean_name(funcName)),fType(type){
-                        function_block.reset(new RModel(fFuncName));   
+                function_block.reset(new RModel(fFuncName));   
         }
-
-        virtual void AddInputTensors(std::any inputShape) = 0;
-
-        virtual void AddInitializedTensor(std::any);
         
-        std::string GenerateModel(std::any inputShape){
-            Initialize();
-            AddInputTensors(inputShape);
+        std::string GenerateModel(){
             function_block->Generate(Options::kGNNComponent);
             std::string modelGenerationString;
             if(fType == FunctionType::UPDATE)
@@ -73,10 +66,29 @@ class RFunction_Update: public RFunction{
                 FunctionTarget fTarget;
                 std::vector<std::string> fInputTensors;
         public:
-                RFunction_Update(std::string funcName, FunctionTarget target):RFunction(funcName,FunctionType::UPDATE), fTarget(target){}
-
-                void AddInputTensors(std::any inputShape){
-                        std::vector<std::vector<std::size_t>> fInputShape = std::any_cast<std::vector<std::vector<std::size_t>>>(inputShape);
+        virtual ~RFunction_Update(){}
+                RFunction_Update(FunctionTarget target): fTarget(target){
+                        switch(target){
+                                case FunctionTarget::EDGES:{
+                                        fFuncName = "Edge_Update";
+                                        break;
+                                } 
+                                case FunctionTarget::NODES: {
+                                        fFuncName = "Node_Update";
+                                        break;
+                                }
+                                case FunctionTarget::GLOBALS: {
+                                        fFuncName = "Global_Update";
+                                        break;
+                                }
+                                default:
+                                        throw std::runtime_error("Invalid target for Update function");
+                        }
+                        fType = FunctionType::UPDATE;
+                }
+                virtual void AddInitializedTensors(std::any);
+                virtual void Initialize();
+                void AddInputTensors(std::vector<std::vector<std::size_t>> fInputShape){
                         for(long unsigned int i=0; i<fInputShape.size(); ++i){
                                 function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fInputShape[i]);
                                 function_block->AddInputTensorName(fInputTensors[i]);
@@ -89,10 +101,31 @@ class RFunction_Aggregate: public RFunction{
                 FunctionRelation fRelation;
                 std::vector<std::vector<std::string>> fInputTensors;
         public:
-                RFunction_Aggregate(std::string funcName, FunctionRelation relation):RFunction(funcName,FunctionType::AGGREGATE), fRelation(relation){}
-                void AddInputTensors(std::any inputShape){
-                        std::vector<std::vector<std::vector<std::size_t>>> fInputShape = std::any_cast<std::vector<std::vector<std::vector<std::size_t>>>>(inputShape); 
-                                for(long unsigned int i=0; i<fInputShape.size(); ++i){
+        virtual ~RFunction_Aggregate(){}
+                RFunction_Aggregate(FunctionRelation relation):fRelation(relation){
+                        switch (relation)
+                        {
+                                case FunctionRelation::NODES_GLOBALS:{
+                                        fFuncName = "Nodes_Global_Aggregate";
+                                        break;
+                                }
+                                case FunctionRelation::EDGES_GLOBALS:{
+                                        fFuncName = "Edges_Global_Aggregate";
+                                        break;
+                                }
+                                case FunctionRelation::EDGES_NODES:{
+                                        fFuncName = "Edges_Nodes_Aggregate";
+                                        break;
+                                }
+                                default:
+                                        throw std::runtime_error("Invalid relation for Aggregate function");
+
+                        }
+                }
+                virtual void AddInitializedTensors(std::any);
+                virtual void Initialize();
+                void AddInputTensors(std::vector<std::vector<std::vector<std::size_t>>> fInputShape){
+                        for(long unsigned int i=0; i<fInputShape.size(); ++i){
                                         for(long unsigned int j=0;j<fInputShape[0].size();++j){
                                                 function_block->AddInputTensorInfo(fInputTensors[i][j],ETensorType::FLOAT, fInputShape[i][j]);
                                                 function_block->AddInputTensorName(fInputTensors[i][j]);

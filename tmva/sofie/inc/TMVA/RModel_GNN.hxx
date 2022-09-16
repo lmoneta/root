@@ -8,18 +8,19 @@ namespace TMVA{
 namespace Experimental{
 namespace SOFIE{
 
-class RFunction;
+class RFunction_Update;
+class RFunction_Aggregate;
 
 struct GNN_Init {
     // updation blocks
-    std::unique_ptr<RFunction> edges_update_block;
-    std::unique_ptr<RFunction> nodes_update_block;
-    std::unique_ptr<RFunction> globals_update_block;
+    std::unique_ptr<RFunction_Update> edges_update_block;
+    std::unique_ptr<RFunction_Update> nodes_update_block;
+    std::unique_ptr<RFunction_Update> globals_update_block;
     
     // aggregation blocks
-    std::unique_ptr<RFunction> edge_node_agg_block;
-    std::unique_ptr<RFunction> edge_global_agg_block;
-    std::unique_ptr<RFunction> node_global_agg_block;
+    std::unique_ptr<RFunction_Aggregate> edge_node_agg_block;
+    std::unique_ptr<RFunction_Aggregate> edge_global_agg_block;
+    std::unique_ptr<RFunction_Aggregate> node_global_agg_block;
    
     int num_nodes;
     std::vector<std::pair<int,int>> edges;
@@ -30,14 +31,14 @@ class RModel_GNN: public RModel{
 private:
     
     // updation function for edges, nodes & global attributes
-    std::unique_ptr<RFunction> edges_update_block;
-    std::unique_ptr<RFunction> nodes_update_block;
-    std::unique_ptr<RFunction> globals_update_block;
+    std::unique_ptr<RFunction_Update> edges_update_block;
+    std::unique_ptr<RFunction_Update> nodes_update_block;
+    std::unique_ptr<RFunction_Update> globals_update_block;
 
     // aggregation function for edges, nodes & global attributes
-    std::unique_ptr<RFunction> edge_node_agg_block;
-    std::unique_ptr<RFunction> edge_global_agg_block;
-    std::unique_ptr<RFunction> node_global_agg_block;
+    std::unique_ptr<RFunction_Aggregate> edge_node_agg_block;
+    std::unique_ptr<RFunction_Aggregate> edge_global_agg_block;
+    std::unique_ptr<RFunction_Aggregate> node_global_agg_block;
 
     int num_nodes;
     int num_edges;
@@ -64,7 +65,7 @@ public:
    RModel_GNN(){}
    RModel_GNN(std::string name, std::string parsedtime);
 
-   void AddFunction(std::unique_ptr<RFunction> func);
+//    void AddFunction(std::unique_ptr<RFunction> func);
    
    void InitializeGNN(int batch_size=1);
    void GenerateGNN(int batchSize = 1);

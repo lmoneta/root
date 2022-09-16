@@ -30,8 +30,8 @@ class RFunction_Sum: public RFunction_Aggregate{
         */
         int num_elements; 
     public:
-        RFunction_Sum(std::string funcName, FunctionRelation relation,int NumElements):
-        RFunction_Aggregate(funcName, relation), num_elements(NumElements){}
+        RFunction_Sum(FunctionRelation relation,int NumElements):
+        RFunction_Aggregate(relation), num_elements(NumElements){}
 
         void Initialize(){
             function_block.reset(new RModel(fFuncName));

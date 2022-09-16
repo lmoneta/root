@@ -66,28 +66,41 @@ namespace SOFIE{
         
         // Generating Infer function definition for Edge Update function
         std::vector<std::vector<std::size_t>> Update_Input = {{num_edge_features},{num_node_features},{num_node_features},{num_global_features}};
-        fGC+=edges_update_block->GenerateModel("Edge_Update", Update_Input);
+        edges_update_block->Initialize();
+        edges_update_block->AddInputTensors(Update_Input);
+        fGC+=edges_update_block->GenerateModel();
 
         // Generating Infer function definition for Node Update function
         Update_Input = {{num_edge_features+num_node_features+num_node_features},{num_node_features},{num_global_features}};
-        fGC+=nodes_update_block->GenerateModel("Node_Update", Update_Input);
+        nodes_update_block->Initialize();
+        nodes_update_block->AddInputTensors(Update_Input);
+        fGC+=nodes_update_block->GenerateModel();
 
         // Generating Infer function definition for Global Update function
         Update_Input = {{num_edge_features+num_node_features+num_node_features},{num_node_features},{num_global_features}};
-        fGC+=globals_update_block->GenerateModel("Global_Update",Update_Input);
+        globals_update_block->Initialize();
+        globals_update_block->AddInputTensors(Update_Input);
+        fGC+=globals_update_block->GenerateModel();
         
         std::vector<std::vector<std::vector<std::size_t>>> AggregateInputShapes;
         for(int i=0; i<num_edges;++i){
             AggregateInputShapes[i] = {{num_edge_features},{num_node_features},{num_node_features}};
         }
-        fGC+=edge_node_agg_block->GenerateModel("Edge_Node_Aggregate",AggregateInputShapes);
-        fGC+=edge_global_agg_block->GenerateModel("Edge_Global_Aggregate",AggregateInputShapes);
+        edge_node_agg_block->Initialize();
+        edge_node_agg_block->AddInputTensors(AggregateInputShapes);
+        fGC+=edge_node_agg_block->GenerateModel();
+
+        edge_global_agg_block->Initialize();
+        edge_global_agg_block->AddInputTensors(AggregateInputShapes);
+        fGC+=edge_global_agg_block->GenerateModel();
 
         AggregateInputShapes.clear();
         for(int i=0; i<num_nodes;++i){
             AggregateInputShapes[i] = {{num_node_features}};
         }
-        fGC+=node_global_agg_block->GenerateModel("Node_Global_Aggregate",AggregateInputShapes);
+        node_global_agg_block->Initialize();
+        node_global_agg_block->AddInputTensors(AggregateInputShapes);
+        fGC+=node_global_agg_block->GenerateModel();
 
         // computing updated edge attributes
         for(int k=0; k<num_edges; ++k){
@@ -142,39 +155,39 @@ namespace SOFIE{
          fGC += "\n#endif  // TMVA_SOFIE_" + fName + "\n";
     }
 
-    void RModel_GNN::AddFunction(std::unique_ptr<RFunction> func){
-        if(func->GetFunctionType() == FunctionType::UPDATE){
-            switch(func->GetFunctionTarget()){
-                case(FunctionTarget::NODES): {
-                    nodes_update_block.reset(func.get());
-                    break;
-                }
-                case(FunctionTarget::EDGES): {
-                    edges_update_block.reset(func.get());
-                    break;
-                }
-                case(FunctionTarget::GLOBALS): {
-                    globals_update_block.reset(func.get());
-                    break;
-                } 
-            }
-        } else{
-            switch(func->GetFunctionRelation()){
-                case(FunctionRelation::NODES_GLOBALS): {
-                    node_global_agg_block.reset(func.get());
-                    break;
-                }
-                case(FunctionRelation::EDGES_GLOBALS): {
-                    edge_global_agg_block.reset(func.get());
-                    break;
-                }
-                case(FunctionRelation::EDGES_NODES): {
-                    edge_node_agg_block.reset(func.get());
-                    break;
-                }
-            }
-        }
-    }
+    // void RModel_GNN::AddFunction(std::unique_ptr<RFunction> func){
+    //     if(func->GetFunctionType() == FunctionType::UPDATE){
+    //         switch(func->GetFunctionTarget()){
+    //             case(FunctionTarget::NODES): {
+    //                 nodes_update_block.reset(func.get());
+    //                 break;
+    //             }
+    //             case(FunctionTarget::EDGES): {
+    //                 edges_update_block.reset(func.get());
+    //                 break;
+    //             }
+    //             case(FunctionTarget::GLOBALS): {
+    //                 globals_update_block.reset(func.get());
+    //                 break;
+    //             } 
+    //         }
+    //     } else{
+    //         switch(func->GetFunctionRelation()){
+    //             case(FunctionRelation::NODES_GLOBALS): {
+    //                 node_global_agg_block.reset(func.get());
+    //                 break;
+    //             }
+    //             case(FunctionRelation::EDGES_GLOBALS): {
+    //                 edge_global_agg_block.reset(func.get());
+    //                 break;
+    //             }
+    //             case(FunctionRelation::EDGES_NODES): {
+    //                 edge_node_agg_block.reset(func.get());
+    //                 break;
+    //             }
+    //         }
+    //     }
+    // }
 
 
 
