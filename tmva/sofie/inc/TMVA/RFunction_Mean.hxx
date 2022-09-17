@@ -27,7 +27,6 @@ class RFunction_Mean: public RFunction_Aggregate{
         RFunction_Mean(FunctionRelation relation,int NumElements):
         RFunction_Aggregate(relation),num_elements(NumElements){}
         void Initialize(){
-            function_block.reset(new RModel(fFuncName));
             for(int i=0; i<num_elements; ++i){
                 if(fRelation == FunctionRelation::EDGES_NODES){
                         fInputTensors[i].emplace_back("Edge_"+std::to_string(i));

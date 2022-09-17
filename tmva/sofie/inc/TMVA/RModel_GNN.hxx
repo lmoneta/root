@@ -13,14 +13,14 @@ class RFunction_Aggregate;
 
 struct GNN_Init {
     // updation blocks
-    std::unique_ptr<RFunction_Update> edges_update_block;
-    std::unique_ptr<RFunction_Update> nodes_update_block;
-    std::unique_ptr<RFunction_Update> globals_update_block;
+    std::shared_ptr<RFunction_Update> edges_update_block;
+    std::shared_ptr<RFunction_Update> nodes_update_block;
+    std::shared_ptr<RFunction_Update> globals_update_block;
     
     // aggregation blocks
-    std::unique_ptr<RFunction_Aggregate> edge_node_agg_block;
-    std::unique_ptr<RFunction_Aggregate> edge_global_agg_block;
-    std::unique_ptr<RFunction_Aggregate> node_global_agg_block;
+    std::shared_ptr<RFunction_Aggregate> edge_node_agg_block;
+    std::shared_ptr<RFunction_Aggregate> edge_global_agg_block;
+    std::shared_ptr<RFunction_Aggregate> node_global_agg_block;
    
     int num_nodes;
     std::vector<std::pair<int,int>> edges;

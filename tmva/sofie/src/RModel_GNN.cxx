@@ -50,8 +50,8 @@ namespace SOFIE{
         edge_global_agg_block.reset((graph_input_struct.edge_global_agg_block).get());
         node_global_agg_block.reset((graph_input_struct.node_global_agg_block).get());
 
-        num_nodes = std::move(graph_input_struct.num_nodes);
-        num_edges = std::move(graph_input_struct.edges.size());
+        num_nodes = graph_input_struct.num_nodes;
+        num_edges = graph_input_struct.edges.size();
         for(auto& it:graph_input_struct.edges){
             receivers.emplace_back(it.first); 
             senders.emplace_back(it.second);
