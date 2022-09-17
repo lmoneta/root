@@ -9,7 +9,6 @@ namespace Experimental{
 namespace SOFIE{
 
 class RModel;
-class RModel_GNN;
 
 enum class FunctionType{
         UPDATE=0, AGGREGATE=1
@@ -24,21 +23,19 @@ class RFunction{
     protected:
         std::string fFuncName;
         FunctionType fType;
-        std::unique_ptr<RModel> function_block;
+        std::shared_ptr<RModel> function_block;
     public:
         RFunction(){}
         virtual ~RFunction(){}
         FunctionType GetFunctionType(){
                 return fType;
         }
-        std::unique_ptr<RModel> GetFunctionBlock(){
-                return std::move(function_block);
+        std::shared_ptr<RModel> GetFunctionBlock(){
+                return function_block;
         }
 
         RFunction(std::string funcName, FunctionType type):
-                fFuncName( UTILITY::Clean_name(funcName)),fType(type){
-                function_block.reset(new RModel(fFuncName));   
-        }
+                fFuncName( UTILITY::Clean_name(funcName)),fType(type){}
         
         std::string GenerateModel(){
             function_block->Generate(Options::kGNNComponent);
@@ -59,6 +56,7 @@ class RFunction{
             inferFunc+=");";
             return inferFunc;
         }
+
 };
 
 class RFunction_Update: public RFunction{
@@ -67,6 +65,7 @@ class RFunction_Update: public RFunction{
                 std::vector<std::string> fInputTensors;
         public:
         virtual ~RFunction_Update(){}
+        RFunction_Update(){}
                 RFunction_Update(FunctionTarget target): fTarget(target){
                         switch(target){
                                 case FunctionTarget::EDGES:{
@@ -85,9 +84,11 @@ class RFunction_Update: public RFunction{
                                         throw std::runtime_error("Invalid target for Update function");
                         }
                         fType = FunctionType::UPDATE;
+                        function_block = std::make_unique<RModel>(fFuncName);
+         
                 }
-                virtual void AddInitializedTensors(std::any);
-                virtual void Initialize();
+                virtual void AddInitializedTensors(std::any){};
+                virtual void Initialize(){};
                 void AddInputTensors(std::vector<std::vector<std::size_t>> fInputShape){
                         for(long unsigned int i=0; i<fInputShape.size(); ++i){
                                 function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fInputShape[i]);
@@ -102,6 +103,7 @@ class RFunction_Aggregate: public RFunction{
                 std::vector<std::vector<std::string>> fInputTensors;
         public:
         virtual ~RFunction_Aggregate(){}
+        RFunction_Aggregate(){}
                 RFunction_Aggregate(FunctionRelation relation):fRelation(relation){
                         switch (relation)
                         {
@@ -121,9 +123,11 @@ class RFunction_Aggregate: public RFunction{
                                         throw std::runtime_error("Invalid relation for Aggregate function");
 
                         }
+                        fType = FunctionType::AGGREGATE;
+                        function_block = std::make_unique<RModel>(fFuncName);
                 }
-                virtual void AddInitializedTensors(std::any);
-                virtual void Initialize();
+                virtual void AddInitializedTensors(std::any){};
+                virtual void Initialize(){};
                 void AddInputTensors(std::vector<std::vector<std::vector<std::size_t>>> fInputShape){
                         for(long unsigned int i=0; i<fInputShape.size(); ++i){
                                         for(long unsigned int j=0;j<fInputShape[0].size();++j){
