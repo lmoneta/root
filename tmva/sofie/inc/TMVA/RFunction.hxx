@@ -44,6 +44,7 @@ class RFunction{
                 modelGenerationString = "\n//--------- GNN_Update_Function"+fFuncName+"\n"+function_block->ReturnGenerated();
             else        
                 modelGenerationString = "\n//--------- GNN_Aggregate_Function"+fFuncName+"\n"+function_block->ReturnGenerated();
+
             return modelGenerationString;
         }
 

@@ -29,19 +29,20 @@ class RFunction_Mean: public RFunction_Aggregate{
         void Initialize(){
             for(int i=0; i<num_elements; ++i){
                 if(fRelation == FunctionRelation::EDGES_NODES){
-                        fInputTensors[i].emplace_back("Edge_"+std::to_string(i));
-                        fInputTensors[i].emplace_back("Receiver_"+std::to_string(i));
-                        fInputTensors[i].emplace_back("Sender_"+std::to_string(i));
-                        fInputTensors[i].emplace_back("Global");
+                        elementTensor.emplace_back("Edge_"+std::to_string(i));
+                        elementTensor.emplace_back("Receiver_"+std::to_string(i));
+                        elementTensor.emplace_back("Sender_"+std::to_string(i));
                 } else if(fRelation == FunctionRelation::EDGES_GLOBALS){
-                    fInputTensors[i].emplace_back("Edge_"+std::to_string(i));
-                    fInputTensors[i].emplace_back("Receiver_"+std::to_string(i));
-                    fInputTensors[i].emplace_back("Sender_"+std::to_string(i));
+                        elementTensor.emplace_back("Edge_"+std::to_string(i));
+                        elementTensor.emplace_back("Receiver_"+std::to_string(i));
+                        elementTensor.emplace_back("Sender_"+std::to_string(i));
                 } else if(fRelation == FunctionRelation::NODES_GLOBALS){
-                    fInputTensors[i].emplace_back("Node_"+std::to_string(i));
+                        elementTensor.emplace_back("Node_"+std::to_string(i));
                 } else{
                     throw std::runtime_error("Invalid relation for Aggregate function");
                 }
+                fInputTensors.emplace_back(elementTensor);
+                elementTensor.clear();
             }
             
             std::unique_ptr<ROperator> op_concat;
@@ -50,7 +51,7 @@ class RFunction_Mean: public RFunction_Aggregate{
                 function_block->AddOperator(std::move(op_concat));
             }
             std::vector<std::string> Input_Stack;
-            for(long unsigned int i=0; i<num_elements; ++i){
+            for(int i=0; i<num_elements; ++i){
                 Input_Stack.emplace_back(fFuncName+"InputConcatFeature"+std::to_string(i));
             }
             op_concat.reset(new ROperator_Concat<float>(Input_Stack,1,fFuncName+"InputStack"));
