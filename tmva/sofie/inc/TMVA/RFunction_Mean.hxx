@@ -27,6 +27,7 @@ class RFunction_Mean: public RFunction_Aggregate{
         RFunction_Mean(FunctionRelation relation,int NumElements):
         RFunction_Aggregate(relation),num_elements(NumElements){}
         void Initialize(){
+            std::vector<std::string> elementTensor;
             for(int i=0; i<num_elements; ++i){
                 if(fRelation == FunctionRelation::EDGES_NODES){
                         elementTensor.emplace_back("Edge_"+std::to_string(i));
@@ -47,14 +48,14 @@ class RFunction_Mean: public RFunction_Aggregate{
             
             std::unique_ptr<ROperator> op_concat;
             for(long unsigned int i=0; i<num_elements;++i){
-                op_concat.reset(new ROperator_Concat<float>(fInputTensors[i],0,fFuncName+"InputConcatFeature"+std::to_string(i)));
+                op_concat.reset(new ROperator_Concat<float>(fInputTensors[i],0,0,fFuncName+"InputConcatFeature"+std::to_string(i)));
                 function_block->AddOperator(std::move(op_concat));
             }
             std::vector<std::string> Input_Stack;
             for(int i=0; i<num_elements; ++i){
                 Input_Stack.emplace_back(fFuncName+"InputConcatFeature"+std::to_string(i));
             }
-            op_concat.reset(new ROperator_Concat<float>(Input_Stack,1,fFuncName+"InputStack"));
+            op_concat.reset(new ROperator_Concat<float>(Input_Stack,0,1,fFuncName+"InputStack"));
             function_block->AddOperator(std::move(op_concat));
 
             std::unique_ptr<ROperator> op_reduce_mean;

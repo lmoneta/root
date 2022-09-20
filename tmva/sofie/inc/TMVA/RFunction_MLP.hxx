@@ -42,7 +42,7 @@ class RFunction_MLP: public RFunction_Update{
             }
 
             std::unique_ptr<ROperator> op_concat;
-            op_concat.reset(new ROperator_Concat<float>(fInputTensors,0,fFuncName+"InputConcat"));
+            op_concat.reset(new ROperator_Concat<float>(fInputTensors,0,0,fFuncName+"InputConcat"));
             function_block->AddOperator(std::move(op_concat));
             
             std::unique_ptr<ROperator> op_gemm;
