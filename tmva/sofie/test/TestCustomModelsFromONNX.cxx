@@ -33,8 +33,8 @@
 #include "ReduceProd_FromONNX.hxx"
 #include "input_models/references/ReduceProd.ref.hxx"
 
-#include "Shape_FromONNX.hxx"
-#include "input_models/references/Shape.ref.hxx"
+// #include "Shape_FromONNX.hxx"
+// #include "input_models/references/Shape.ref.hxx"
 
 #include "LinearWithLeakyRelu_FromONNX.hxx"
 #include "input_models/references/LinearWithLeakyRelu.ref.hxx"

@@ -54,7 +54,7 @@ class RFunction_Sum: public RFunction_Aggregate{
             }
             std::unique_ptr<ROperator> op_concat;
             for(int i=0; i<num_elements;++i){
-                op_concat.reset(new ROperator_Concat<float>(fInputTensors[i],0,fFuncName+"InputConcatFeature"+std::to_string(i)));
+                op_concat.reset(new ROperator_Concat<float>(fInputTensors[i],0,0,fFuncName+"InputConcatFeature"+std::to_string(i)));
                 function_block->AddOperator(std::move(op_concat));
             }
 
@@ -63,7 +63,7 @@ class RFunction_Sum: public RFunction_Aggregate{
                 Input_Stack.emplace_back(fFuncName+"InputConcatFeature"+std::to_string(i));
             }
 
-            op_concat.reset(new ROperator_Concat<float>(Input_Stack,1,fFuncName+"InputStack"));
+            op_concat.reset(new ROperator_Concat<float>(Input_Stack,0,1,fFuncName+"InputStack"));
             function_block->AddOperator(std::move(op_concat));
 
             std::unique_ptr<ROperator> op_reduce_sum;

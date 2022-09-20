@@ -37,13 +37,14 @@ class RFunction{
         RFunction(std::string funcName, FunctionType type):
                 fFuncName( UTILITY::Clean_name(funcName)),fType(type){}
         
-        std::string GenerateModel(){
-            function_block->Generate(Options::kGNNComponent);
+        std::string GenerateModel(std::string filename, long read_pos=0){
+            function_block->SetFilename(filename);
+            function_block->Generate(Options::kGNNComponent,1,read_pos);
             std::string modelGenerationString;
             if(fType == FunctionType::UPDATE)
-                modelGenerationString = "\n//--------- GNN_Update_Function"+fFuncName+"\n"+function_block->ReturnGenerated();
+                modelGenerationString = "\n//--------- GNN_Update_Function---"+fFuncName+"\n"+function_block->ReturnGenerated();
             else        
-                modelGenerationString = "\n//--------- GNN_Aggregate_Function"+fFuncName+"\n"+function_block->ReturnGenerated();
+                modelGenerationString = "\n//--------- GNN_Aggregate_Function---"+fFuncName+"\n"+function_block->ReturnGenerated();
 
             return modelGenerationString;
         }
@@ -54,6 +55,7 @@ class RFunction{
                 inferFunc+=it;
                 inferFunc+=",";
             }
+            inferFunc.pop_back();
             inferFunc+=");";
             return inferFunc;
         }
