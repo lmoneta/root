@@ -28,6 +28,8 @@ struct GNN_Init {
     int num_node_features;
     int num_edge_features;
     int num_global_features;
+
+    std::string filename;
 };
 
 class RModel_GNN: public RModel{
@@ -53,6 +55,7 @@ private:
     int num_edge_features;
     int num_global_features;
 
+    std::string fFilename;
 
 public:
 
@@ -73,9 +76,7 @@ public:
    
    void InitializeGNN(int batch_size=1);
    void GenerateGNN(int batchSize = 1);
-   std::unique_ptr<RFunction_Update> GetFunction(){
-    return std::move(edges_update_block);
-   }
+
    ~RModel_GNN(){}
 //    ClassDef(RModel_GNN,1);
 };

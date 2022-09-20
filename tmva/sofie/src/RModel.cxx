@@ -343,11 +343,7 @@ namespace SOFIE{
          fGC += "std::vector<std::vector<" + outputType + ">> ";
       }
 
-      if(fIsGNNComponent){
-         fGC+=fName+"::infer(";
-      } else{
-         fGC += "infer(";
-      }
+      fGC += "infer(";
       
       for(size_t i = 0; i<fInputTensorNames.size(); ++i){
          switch((fReadyInputTensorInfos[fInputTensorNames[i]]).type){
@@ -412,7 +408,7 @@ namespace SOFIE{
       fGC += "}\n";
    }
 
-   void RModel::Generate(std::underlying_type_t<Options> options, int batchSize){
+   void RModel::Generate(std::underlying_type_t<Options> options, int batchSize, long pos){
       // session flag is used in operator initialize
       if (static_cast<std::underlying_type_t<Options>>(Options::kNoSession) & options)
          fUseSession = false;
@@ -447,22 +443,24 @@ namespace SOFIE{
          // here add initialization and reading of weight tensors
          if (fUseWeightFile) {
             fGC += "   if (filename.empty()) filename = \"" + fName + ".dat\";\n";
-            ReadInitializedTensorsFromFile();
+            ReadInitializedTensorsFromFile(pos);
             //fUseWeightFile = fUseWeightFile;
          }
+         
          if(!fIsGNN){
          // add here initialization code
          for (size_t id = 0; id < fOperators.size() ; id++){
             fGC += fOperators[id]->GenerateInitCode();
          }
          }
+         
          fGC += "}\n\n";
       }
 
       if(!fIsGNN)
          GenerateOutput();
 
-      if(!fIsGNNComponent){
+      if(!fIsGNNComponent && !fIsGNN){
       if (fUseSession) {
          fGC += "};\n";
       }
@@ -471,7 +469,7 @@ namespace SOFIE{
       }
    }
 
-   void RModel::ReadInitializedTensorsFromFile() {
+   void RModel::ReadInitializedTensorsFromFile(long pos) {
       // generate the code to read initialized tensors from a text data file
       if (fInitializedTensors.empty()) return;
 
@@ -480,6 +478,10 @@ namespace SOFIE{
       fGC += "   if (!f.is_open()){\n";
       fGC += "      throw std::runtime_error(\"tmva-sofie failed to open file for input weights\");\n";
       fGC += "   }\n";
+      if(fIsGNNComponent){
+      fGC += "   f.seekg(" + std::to_string(pos) + ");\n";
+      }
+
       fGC += "   std::string tensor_name;\n";
       fGC += "   int length;\n";
 
@@ -510,14 +512,19 @@ namespace SOFIE{
       fGC += "   f.close();\n";
    }
 
-   void RModel::WriteInitializedTensorsToFile(std::string filename) {
+   long RModel::WriteInitializedTensorsToFile(std::string filename) {
       // write the initialized tensors in a text file
       if (filename == ""){
          filename = fName + ".data";
       }
 
       std::ofstream f;
-      f.open(filename);
+      if(fIsGNNComponent){
+         // appening all GNN components into the same file
+         f.open(filename, std::ios::app);
+      } else{
+         f.open(filename);
+      }
       if (!f.is_open()){
          throw std::runtime_error("tmva-sofie failed to open file for tensor weight data");
       }
@@ -537,7 +544,9 @@ namespace SOFIE{
             f << "\n";
          }
       }
+      long curr_pos = f.tellp();
       f.close();
+      return curr_pos;
    }
 
    void RModel::PrintRequiredInputTensors(){
@@ -653,7 +662,8 @@ namespace SOFIE{
       // write weights in a text file
       size_t pos = filename.find(".hxx");
       filename.replace(pos,4,".dat");
-      if (fUseWeightFile) WriteInitializedTensorsToFile(filename);
+      if (fUseWeightFile) 
+         pos = WriteInitializedTensorsToFile(filename);
    }
 
    void RModel::Streamer(TBuffer &R__b){
