@@ -1,6 +1,9 @@
 #ifndef TMVA_SOFIE_RMODEL_GNN
 #define TMVA_SOFIE_RMODEL_GNN
 
+#include <ctime>
+
+#include "TMVA/RModel_Base.hxx"
 #include "TMVA/RModel.hxx"
 #include "TMVA/RFunction.hxx"
 
@@ -32,7 +35,7 @@ struct GNN_Init {
     std::string filename;
 };
 
-class RModel_GNN: public RModel{
+class RModel_GNN: public RModel_Base{
 
 private:
     
