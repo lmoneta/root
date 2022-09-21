@@ -14,6 +14,7 @@
 ROOT_STANDARD_LIBRARY_PACKAGE(ROOTTMVASofie
   HEADERS
    TMVA/OperatorList.hxx
+   TMVA/RModel_Base.hxx
    TMVA/RModel.hxx
    TMVA/ROperator.hxx
    TMVA/ROperator_BasicUnary.hxx
@@ -53,6 +54,7 @@ ROOT_STANDARD_LIBRARY_PACKAGE(ROOTTMVASofie
    TMVA/RFunction_Sum.hxx
    TMVA/RFunction_Mean.hxx
   SOURCES
+    src/RModel_Base.cxx
     src/RModel.cxx
     src/RModel_GNN.cxx
     src/SOFIE_common.cxx
