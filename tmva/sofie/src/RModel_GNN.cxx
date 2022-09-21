@@ -25,6 +25,8 @@ namespace SOFIE{
       receivers = std::move(other.receivers);
 
       fName = std::move(other.fName);
+      fFileName = std::move(other.fFileName);
+      fParseTime = std::move(other.fParseTime);
     }
 
    RModel_GNN& RModel_GNN::operator=(RModel_GNN&& other){
@@ -40,7 +42,10 @@ namespace SOFIE{
       num_edges = std::move(other.num_edges);
       senders = std::move(other.senders);
       receivers = std::move(other.receivers);
+
       fName = std::move(other.fName);
+      fFileName = std::move(other.fFileName);
+      fParseTime = std::move(other.fParseTime);
 
       return *this;
     }
@@ -63,12 +68,18 @@ namespace SOFIE{
             receivers.emplace_back(it.first); 
             senders.emplace_back(it.second);
         }
-        fName = graph_input_struct.filename;
+        fFileName = graph_input_struct.filename;
+        fName = fFileName.substr(0, fFileName.rfind("."));
+
+        std::time_t ttime = std::time(0);
+        std::tm* gmt_time = std::gmtime(&ttime);
+        fParseTime  = std::asctime(gmt_time);
     }
 
     void RModel_GNN::GenerateGNN(int batchSize){
-        Generate(Options::kGNN | Options::kNoSession | Options::kNoWeightFile, batchSize);
-        
+        std::string hgname;
+        GenerateHeaderInfo(hgname);
+
         // Generating Infer function definition for Edge Update function
         long next_pos;
         fGC+="\n\nnamespace Edge_Update{\n";
@@ -198,7 +209,7 @@ namespace SOFIE{
             fGC += "};\n";
          }
          fGC += ("} //TMVA_SOFIE_" + fName + "\n");
-         fGC += "\n#endif  // TMVA_SOFIE_" + fName + "\n";
+         fGC += "\n#endif  // TMVA_SOFIE_" + hgname + "\n";
     }
 
     // void RModel_GNN::AddFunction(std::unique_ptr<RFunction> func){
