@@ -1,5 +1,5 @@
-#ifndef TMVA_SOFIE_RMODEL_GNN
-#define TMVA_SOFIE_RMODEL_GNN
+#ifndef TMVA_SOFIE_RMODEL_GraphIndependent
+#define TMVA_SOFIE_RMODEL_GraphIndependent
 
 #include <ctime>
 
@@ -12,18 +12,12 @@ namespace Experimental{
 namespace SOFIE{
 
 class RFunction_Update;
-class RFunction_Aggregate;
 
-struct GNN_Init {
+struct GraphIndependent_Init {
     // updation blocks
     std::shared_ptr<RFunction_Update> edges_update_block;
     std::shared_ptr<RFunction_Update> nodes_update_block;
     std::shared_ptr<RFunction_Update> globals_update_block;
-    
-    // aggregation blocks
-    std::shared_ptr<RFunction_Aggregate> edge_node_agg_block;
-    std::shared_ptr<RFunction_Aggregate> edge_global_agg_block;
-    std::shared_ptr<RFunction_Aggregate> node_global_agg_block;
    
     int num_nodes;
     std::vector<std::pair<int,int>> edges;
@@ -35,7 +29,7 @@ struct GNN_Init {
     std::string filename;
 };
 
-class RModel_GNN: public RModel_GNNBase{
+class RModel_GraphIndependent: public RModel_GNNBase{
 
 private:
     
@@ -44,15 +38,8 @@ private:
     std::unique_ptr<RFunction_Update> nodes_update_block;
     std::unique_ptr<RFunction_Update> globals_update_block;
 
-    // aggregation function for edges, nodes & global attributes
-    std::unique_ptr<RFunction_Aggregate> edge_node_agg_block;
-    std::unique_ptr<RFunction_Aggregate> edge_global_agg_block;
-    std::unique_ptr<RFunction_Aggregate> node_global_agg_block;
-
     int num_nodes;
     int num_edges;
-    std::vector<int> senders;              // contains node indices
-    std::vector<int> receivers;            // contains node indices
 
     int num_node_features;
     int num_edge_features;
@@ -62,23 +49,21 @@ private:
 public:
 
    //explicit move ctor/assn
-   RModel_GNN(RModel_GNN&& other);
+   RModel_GraphIndependent(RModel_GraphIndependent&& other);
 
-   RModel_GNN& operator=(RModel_GNN&& other);
+   RModel_GraphIndependent& operator=(RModel_GraphIndependent&& other);
 
    //disallow copy
-   RModel_GNN(const RModel_GNN& other) = delete;
-   RModel_GNN& operator=(const RModel_GNN& other) = delete;
+   RModel_GraphIndependent(const RModel_GraphIndependent& other) = delete;
+   RModel_GraphIndependent& operator=(const RModel_GraphIndependent& other) = delete;
 
-   RModel_GNN(const GNN_Init& graph_input_struct);
-   RModel_GNN(){}
-   RModel_GNN(std::string name, std::string parsedtime);
-
-//    void AddFunction(std::unique_ptr<RFunction> func);
+   RModel_GraphIndependent(const GraphIndependent_Init& graph_input_struct);
+   RModel_GraphIndependent(){}
+   RModel_GraphIndependent(std::string name, std::string parsedtime);
    
    void Generate(int batchSize = 1);
 
-   ~RModel_GNN(){}
+   ~RModel_GraphIndependent(){}
 //    ClassDef(RModel_GNN,1);
 };
 
