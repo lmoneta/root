@@ -76,7 +76,7 @@ namespace SOFIE{
         fParseTime  = std::asctime(gmt_time);
     }
 
-    void RModel_GNN::GenerateGNN(int batchSize){
+    void RModel_GNN::Generate(int batchSize){
         std::string hgname;
         GenerateHeaderInfo(hgname);
 
@@ -200,16 +200,14 @@ namespace SOFIE{
         fGC+=node_global_agg_block->Generate(Node_Global_Aggregate_String);     // aggregating node attributes globally
         fGC+="\n";
 
+        // computing updated global attributes
         fGC+="input_graph.global_data=";
-        fGC+=globals_update_block->Generate({"Edge_Global_Aggregate","Node_Global_Aggregate", "input_graph.global_data"}); // computing updated global attributes
+        fGC+=globals_update_block->Generate({"Edge_Global_Aggregate","Node_Global_Aggregate", "input_graph.global_data"}); 
         fGC+="\n";
 
         fGC+="\nreturn input_graph;\n}";
-        if (fUseSession) {
-            fGC += "};\n";
-         }
-         fGC += ("} //TMVA_SOFIE_" + fName + "\n");
-         fGC += "\n#endif  // TMVA_SOFIE_" + hgname + "\n";
+        fGC += ("} //TMVA_SOFIE_" + fName + "\n");
+        fGC += "\n#endif  // TMVA_SOFIE_" + hgname + "\n";
     }
 
     // void RModel_GNN::AddFunction(std::unique_ptr<RFunction> func){
