@@ -78,6 +78,9 @@ public:
     void SetFilename(std::string filename){
       fName = filename;
     }
+    std::string GetFilename(){
+      return fName;
+    }
    // virtual ~RModel_Base(){}
    ClassDef(RModel_Base,1);
 
