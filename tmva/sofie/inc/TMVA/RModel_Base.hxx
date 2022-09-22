@@ -83,6 +83,12 @@ public:
 
 };
 
+class RModel_GNNBase: public RModel_Base{
+   public:
+      RModel_GNNBase(){}
+      virtual void Generate(int) = 0;
+};
+
 }//SOFIE
 }//Experimental
 }//TMVA
