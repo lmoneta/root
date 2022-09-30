@@ -82,31 +82,31 @@ namespace SOFIE{
 
         // Generating Infer function definition for Edge Update function
         long next_pos;
-        fGC+="\n\nnamespace Edge_Update{\n";
+        fGC+="\n\nnamespace Edge_Update{\nstruct Session {\n";
         std::vector<std::vector<std::size_t>> Update_Input = {{num_edge_features,1},{num_node_features,1},{num_node_features,1},{num_global_features,1}};
         edges_update_block->Initialize();
         edges_update_block->AddInputTensors(Update_Input);
         fGC+=edges_update_block->GenerateModel(fName);
-        next_pos = edges_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName);
-        fGC+="}\n";
+        next_pos = edges_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
+        fGC+="};\n}\n";
 
-        fGC+="\n\nnamespace Node_Update{\n";
+        fGC+="\n\nnamespace Node_Update{\nstruct Session {\n";
         // Generating Infer function definition for Node Update function
         Update_Input = {{num_edge_features+num_node_features+num_node_features,1},{num_node_features,1},{num_global_features,1}};
         nodes_update_block->Initialize();
         nodes_update_block->AddInputTensors(Update_Input);
         fGC+=nodes_update_block->GenerateModel(fName,next_pos);
-        next_pos = nodes_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName);
-        fGC+="}\n";
+        next_pos = nodes_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
+        fGC+="};\n}\n";
 
-        fGC+="\n\nnamespace Global_Update{\n";
+        fGC+="\n\nnamespace Global_Update{\nstruct Session {\n";
         // Generating Infer function definition for Global Update function
         Update_Input = {{num_edge_features+num_node_features+num_node_features,1},{num_node_features,1},{num_global_features,1}};
         globals_update_block->Initialize();
         globals_update_block->AddInputTensors(Update_Input);
         fGC+=globals_update_block->GenerateModel(fName,next_pos);
-        next_pos = globals_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName);
-        fGC+="}\n";
+        next_pos = globals_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
+        fGC+="};\n}\n";
 
         std::vector<std::vector<std::vector<std::size_t>>> AggregateInputShapes;
 
@@ -115,19 +115,19 @@ namespace SOFIE{
             AggregateInputShapes.emplace_back(AggregateElementInput);
         }
 
-        fGC+="\n\nnamespace Edges_Nodes_Aggregate{\n";
+        fGC+="\n\nnamespace Edges_Nodes_Aggregate{\nstruct Session {\n";
         edge_node_agg_block->Initialize();
         edge_node_agg_block->AddInputTensors(AggregateInputShapes);
         fGC+=edge_node_agg_block->GenerateModel(fName,next_pos);
-        next_pos = edge_node_agg_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName);
-        fGC+="}\n";
+        next_pos = edge_node_agg_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
+        fGC+="};\n}\n";
 
-        fGC+="\n\nnamespace Edges_Global_Aggregate{\n";
+        fGC+="\n\nnamespace Edges_Global_Aggregate{\nstruct Session {\n";
         edge_global_agg_block->Initialize();
         edge_global_agg_block->AddInputTensors(AggregateInputShapes);
         fGC+=edge_global_agg_block->GenerateModel(fName,next_pos);
-        next_pos = edge_global_agg_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName);
-        fGC+="}\n";
+        next_pos = edge_global_agg_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
+        fGC+="};\n}\n";
 
         AggregateInputShapes.clear();
         AggregateElementInput = {{num_node_features}};
@@ -135,15 +135,22 @@ namespace SOFIE{
             AggregateInputShapes.emplace_back(AggregateElementInput);
         }
         
-        fGC+="\n\nnamespace Nodes_Global_Aggregate{\n";
+        fGC+="\n\nnamespace Nodes_Global_Aggregate{\nstruct Session {\n";
         node_global_agg_block->Initialize();
         node_global_agg_block->AddInputTensors(AggregateInputShapes);
         fGC+=node_global_agg_block->GenerateModel(fName,next_pos);
-        next_pos = node_global_agg_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName);
-        fGC+="}\n\n";
+        next_pos = node_global_agg_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
+        fGC+="};\n}\n\n";
 
         // computing inplace on input graph
-        fGC += "GNN::GNN_Data infer(GNN::GNN_Data input_graph){\n";
+        fGC += "void infer(TMVA::Experimental::SOFIE::GNN_Data& input_graph){\n";
+        
+        fGC += "Edge_Update::Session edge_update;\n";
+        fGC += "Node_Update::Session node_update;\n";
+        fGC += "Global_Update::Session global_update;\n";
+        fGC += "Edges_Nodes_Aggregate::Session edges_nodes_agg;\n";
+        fGC += "Edges_Global_Aggregate::Session edges_global_agg;\n";
+        fGC += "Nodes_Global_Aggregate::Session nodes_global_agg;\n";
 
         // computing updated edge attributes
         for(int k=0; k<num_edges; ++k){
@@ -175,7 +182,7 @@ namespace SOFIE{
             fGC+="std::vector<float> Node_"+std::to_string(i)+"_Update = ";
             fGC+=nodes_update_block->Generate({"Node_"+std::to_string(i)+"_Edge_Aggregate.data()","input_graph.node_data.data()+"+std::to_string(i),"input_graph.global_data.data()"});    // computing updated node attributes 
             fGC+="\n";
-            fGC+="std::copy(Node_"+std::to_string(i)+"_Edge_Update.begin(), Node_"+std::to_string(i)+"_Edge_Update.end(), input_graph.node_data.begin()+"+std::to_string(i)+");";
+            fGC+="std::copy(Node_"+std::to_string(i)+"_Update.begin(), Node_"+std::to_string(i)+"_Update.end(), input_graph.node_data.begin()+"+std::to_string(i)+");";
             fGC+="\n";
             Node_Edge_Aggregate_String.clear();
         }
@@ -202,10 +209,9 @@ namespace SOFIE{
 
         // computing updated global attributes
         fGC+="input_graph.global_data=";
-        fGC+=globals_update_block->Generate({"Edge_Global_Aggregate","Node_Global_Aggregate", "input_graph.global_data"}); 
-        fGC+="\n";
+        fGC+=globals_update_block->Generate({"Edge_Global_Aggregate.data()","Node_Global_Aggregate.data()", "input_graph.global_data.data()"}); 
+        fGC+="\n}\n";
 
-        fGC+="\nreturn input_graph;\n}";
         fGC += ("} //TMVA_SOFIE_" + fName + "\n");
         fGC += "\n#endif  // TMVA_SOFIE_" + hgname + "\n";
     }
