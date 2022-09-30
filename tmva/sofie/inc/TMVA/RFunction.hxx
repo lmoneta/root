@@ -50,7 +50,7 @@ class RFunction{
         }
 
         std::string Generate(std::vector<std::string> inputPtrs){
-            std::string inferFunc = fFuncName+"::infer(";
+            std::string inferFunc = fFuncName+".infer(";
             for(auto&it : inputPtrs){
                 inferFunc+=it;
                 inferFunc+=",";
@@ -72,15 +72,15 @@ class RFunction_Update: public RFunction{
                 RFunction_Update(FunctionTarget target): fTarget(target){
                         switch(target){
                                 case FunctionTarget::EDGES:{
-                                        fFuncName = "Edge_Update";
+                                        fFuncName = "edge_update";
                                         break;
                                 } 
                                 case FunctionTarget::NODES: {
-                                        fFuncName = "Node_Update";
+                                        fFuncName = "node_update";
                                         break;
                                 }
                                 case FunctionTarget::GLOBALS: {
-                                        fFuncName = "Global_Update";
+                                        fFuncName = "global_update";
                                         break;
                                 }
                                 default:
@@ -111,15 +111,15 @@ class RFunction_Aggregate: public RFunction{
                         switch (relation)
                         {
                                 case FunctionRelation::NODES_GLOBALS:{
-                                        fFuncName = "Nodes_Global_Aggregate";
+                                        fFuncName = "nodes_global_agg";
                                         break;
                                 }
                                 case FunctionRelation::EDGES_GLOBALS:{
-                                        fFuncName = "Edges_Global_Aggregate";
+                                        fFuncName = "edges_global_agg";
                                         break;
                                 }
                                 case FunctionRelation::EDGES_NODES:{
-                                        fFuncName = "Edges_Nodes_Aggregate";
+                                        fFuncName = "edges_nodes_agg";
                                         break;
                                 }
                                 default:
