@@ -16,9 +16,6 @@ if (NOT ONNX_MODELS_DIR)
   set(ONNX_MODELS_DIR input_models)
 endif()
 
-#protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS "${SOFIE_PARSERS_DIR}/onnx_proto3")
-#set_source_files_properties(${PROTO_SRCS} ${PROTO_HDRS} PROPERTIES GENERATED TRUE)
-
 add_executable(emitFromONNX
    EmitFromONNX.cxx
 )
