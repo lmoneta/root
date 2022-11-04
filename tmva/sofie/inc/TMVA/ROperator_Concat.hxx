@@ -102,17 +102,6 @@
                fInputShapes.push_back(model.GetTensorShape(it));
             }
             fOutputShape = ShapeInference(fInputShapes)[0];
-            std::cout<<"printing input shapes: \n";
-            for(auto &it:fInputShapes){
-               for(auto &i:it){
-                  std::cout<<i<<' ';
-               }
-               std::cout<<'\n';
-            }
-            std::cout<<"printing shape for concat output: \n";
-            for(auto &it:fOutputShape){
-               std::cout<<it<<std::endl;
-            }
             model.AddIntermediateTensor(fOutput, model.GetTensorType(fInputs[0]), fOutputShape);
          }
 

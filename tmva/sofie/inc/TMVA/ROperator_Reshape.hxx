@@ -150,10 +150,6 @@ public:
          throw std::runtime_error("TMVA Reshape Op Input Tensor " + fNData + "  is not found in model");
       }
       fShapeInput = model.GetTensorShape(fNData);
-      std::cout<<"printing reshape input shape: \n";
-      for(auto &it:fShapeInput){
-         std::cout<<it<<'\n';
-      }
       // check if optional shape tensor exist
       if (!fNShape.empty()) {
          if (model.CheckIfTensorAlreadyExist(fNShape)) {
@@ -180,10 +176,6 @@ public:
          throw std::runtime_error("TMVA Reshape Op : Invalid Input/Attribute data");
       }
       model.AddIntermediateTensor(fNOutput, model.GetTensorType(fNData), fShapeOutput);
-      std::cout<<"printing output reshape shape: \n";
-      for(auto &it:fShapeOutput){
-         std::cout<<it<<'\n';
-      }
    }
 
    std::string Generate(std::string OpName)
