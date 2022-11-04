@@ -16,54 +16,28 @@ enum class FunctionType{
 enum class FunctionTarget{
         INVALID=0, NODES=1, EDGES=2, GLOBALS=3
 };
-enum class FunctionRelation{
-        INVALID=0, NODES_GLOBALS=1, EDGES_GLOBALS=2, EDGES_NODES=3
+enum class FunctionReducer{
+        INVALID=0, SUM=1, MEAN=2
 };
 class RFunction{
     protected:
         std::string fFuncName;
         FunctionType fType;
-        std::shared_ptr<RModel> function_block;
     public:
         RFunction(){}
         virtual ~RFunction(){}
         FunctionType GetFunctionType(){
                 return fType;
         }
-        std::shared_ptr<RModel> GetFunctionBlock(){
-                return function_block;
-        }
 
         RFunction(std::string funcName, FunctionType type):
                 fFuncName( UTILITY::Clean_name(funcName)),fType(type){}
-        
-        std::string GenerateModel(std::string filename, long read_pos=0){
-            function_block->SetFilename(filename);
-            function_block->Generate(Options::kGNNComponent,1,read_pos);
-            std::string modelGenerationString;
-            if(fType == FunctionType::UPDATE)
-                modelGenerationString = "\n//--------- GNN_Update_Function---"+fFuncName+"\n"+function_block->ReturnGenerated();
-            else        
-                modelGenerationString = "\n//--------- GNN_Aggregate_Function---"+fFuncName+"\n"+function_block->ReturnGenerated();
-
-            return modelGenerationString;
-        }
-
-        std::string Generate(std::vector<std::string> inputPtrs){
-            std::string inferFunc = fFuncName+".infer(";
-            for(auto&it : inputPtrs){
-                inferFunc+=it;
-                inferFunc+=",";
-            }
-            inferFunc.pop_back();
-            inferFunc+=");";
-            return inferFunc;
-        }
 
 };
 
 class RFunction_Update: public RFunction{
         protected:
+                std::shared_ptr<RModel> function_block;
                 FunctionTarget fTarget;
                 std::vector<std::string> fInputTensors;
         public:
@@ -98,47 +72,56 @@ class RFunction_Update: public RFunction{
                                 function_block->AddInputTensorName(fInputTensors[i]);
                         }
                 }
+                std::shared_ptr<RModel> GetFunctionBlock(){
+                        return function_block;
+                }
+
+                std::string GenerateModel(std::string filename, long read_pos=0){
+                        function_block->SetFilename(filename);
+                        function_block->Generate(Options::kGNNComponent,1,read_pos);
+                        std::string modelGenerationString;
+                        modelGenerationString = "\n//--------- GNN_Update_Function---"+fFuncName+"\n"+function_block->ReturnGenerated();
+                        return modelGenerationString;
+                }
+                std::string Generate(std::vector<std::string> inputPtrs){
+                        std::string inferFunc = fFuncName+".infer(";
+                        for(auto&it : inputPtrs){
+                                inferFunc+=it;
+                                inferFunc+=",";
+                        }
+                        inferFunc.pop_back();
+                        inferFunc+=");";
+                        return inferFunc;
+                }
 };
 
 class RFunction_Aggregate: public RFunction{
         protected:
-                FunctionRelation fRelation;
-                std::vector<std::vector<std::string>> fInputTensors;
+                FunctionReducer fReducer;
         public:
         virtual ~RFunction_Aggregate(){}
         RFunction_Aggregate(){}
-                RFunction_Aggregate(FunctionRelation relation):fRelation(relation){
-                        switch (relation)
-                        {
-                                case FunctionRelation::NODES_GLOBALS:{
-                                        fFuncName = "nodes_global_agg";
-                                        break;
-                                }
-                                case FunctionRelation::EDGES_GLOBALS:{
-                                        fFuncName = "edges_global_agg";
-                                        break;
-                                }
-                                case FunctionRelation::EDGES_NODES:{
-                                        fFuncName = "edges_nodes_agg";
-                                        break;
-                                }
-                                default:
-                                        throw std::runtime_error("Invalid relation for Aggregate function");
-
-                        }
+                RFunction_Aggregate(FunctionReducer reducer): fReducer(reducer){
                         fType = FunctionType::AGGREGATE;
-                        function_block = std::make_unique<RModel>(fFuncName);
                 }
-                virtual void AddInitializedTensors(std::any){};
-                virtual void Initialize(){};
-                void AddInputTensors(std::vector<std::vector<std::vector<std::size_t>>> fInputShape){
-                        for(long unsigned int i=0; i<fInputShape.size(); ++i){
-                                        for(long unsigned int j=0;j<fInputShape[0].size();++j){
-                                                function_block->AddInputTensorInfo(fInputTensors[i][j],ETensorType::FLOAT, fInputShape[i][j]);
-                                                function_block->AddInputTensorName(fInputTensors[i][j]);
-                                        }
-                                }
+        virtual std::string GenerateModel() = 0;
+        std::string GetFunctionName(){
+                return fFuncName;
+        }
+        FunctionReducer GetFunctionReducer(){
+                return fReducer;
+        }
+        std::string Generate(int num_features, std::vector<std::string> inputTensors){
+                std::string inferFunc = fFuncName+"("+std::to_string(num_features)+",{";
+                for(auto&it : inputTensors){
+                        inferFunc+=it;
+                        inferFunc+=",";
                 }
+                inferFunc.pop_back();
+                inferFunc+="});";
+                return inferFunc;
+        }
+
 };
 
 

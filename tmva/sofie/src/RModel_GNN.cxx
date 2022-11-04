@@ -74,6 +74,7 @@ namespace SOFIE{
         std::time_t ttime = std::time(0);
         std::tm* gmt_time = std::gmtime(&ttime);
         fParseTime  = std::asctime(gmt_time);
+        fNeededStdLib.insert("cstdarg");   // requried for variable argument list for aggregate functions
     }
 
     void RModel_GNN::Generate(int batchSize){
@@ -83,7 +84,7 @@ namespace SOFIE{
         // Generating Infer function definition for Edge Update function
         long next_pos;
         fGC+="\n\nnamespace Edge_Update{\nstruct Session {\n";
-        std::vector<std::vector<std::size_t>> Update_Input = {{num_edge_features,1},{num_node_features,1},{num_node_features,1},{num_global_features,1}};
+        std::vector<std::vector<std::size_t>> Update_Input = {{1, num_edge_features},{1, num_node_features},{1, num_node_features},{1, num_global_features}};
         edges_update_block->Initialize();
         edges_update_block->AddInputTensors(Update_Input);
         fGC+=edges_update_block->GenerateModel(fName);
@@ -92,7 +93,7 @@ namespace SOFIE{
 
         fGC+="\n\nnamespace Node_Update{\nstruct Session {\n";
         // Generating Infer function definition for Node Update function
-        Update_Input = {{num_edge_features+num_node_features+num_node_features,1},{num_node_features,1},{num_global_features,1}};
+        Update_Input = {{1, num_edge_features},{1, num_node_features},{1, num_global_features}};
         nodes_update_block->Initialize();
         nodes_update_block->AddInputTensors(Update_Input);
         fGC+=nodes_update_block->GenerateModel(fName,next_pos);
@@ -101,46 +102,21 @@ namespace SOFIE{
 
         fGC+="\n\nnamespace Global_Update{\nstruct Session {\n";
         // Generating Infer function definition for Global Update function
-        Update_Input = {{num_edge_features+num_node_features+num_node_features,1},{num_node_features,1},{num_global_features,1}};
         globals_update_block->Initialize();
         globals_update_block->AddInputTensors(Update_Input);
         fGC+=globals_update_block->GenerateModel(fName,next_pos);
         next_pos = globals_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
         fGC+="};\n}\n";
 
-        std::vector<std::vector<std::vector<std::size_t>>> AggregateInputShapes;
+        fGC+=edge_node_agg_block->GenerateModel();
 
-        std::vector<std::vector<std::size_t>> AggregateElementInput = {{num_edge_features},{num_node_features},{num_node_features}};
-        for(int i=0; i<num_edges;++i){
-            AggregateInputShapes.emplace_back(AggregateElementInput);
+        if(edge_node_agg_block->GetFunctionType() != edge_global_agg_block->GetFunctionType()){
+            fGC+=edge_global_agg_block->GenerateModel();
         }
-
-        fGC+="\n\nnamespace Edges_Nodes_Aggregate{\nstruct Session {\n";
-        edge_node_agg_block->Initialize();
-        edge_node_agg_block->AddInputTensors(AggregateInputShapes);
-        fGC+=edge_node_agg_block->GenerateModel(fName,next_pos);
-        next_pos = edge_node_agg_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
-        fGC+="};\n}\n";
-
-        fGC+="\n\nnamespace Edges_Global_Aggregate{\nstruct Session {\n";
-        edge_global_agg_block->Initialize();
-        edge_global_agg_block->AddInputTensors(AggregateInputShapes);
-        fGC+=edge_global_agg_block->GenerateModel(fName,next_pos);
-        next_pos = edge_global_agg_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
-        fGC+="};\n}\n";
-
-        AggregateInputShapes.clear();
-        AggregateElementInput = {{num_node_features}};
-        for(int i=0; i<num_nodes;++i){
-            AggregateInputShapes.emplace_back(AggregateElementInput);
+        if((edge_node_agg_block->GetFunctionType() != node_global_agg_block->GetFunctionType()) && (edge_global_agg_block->GetFunctionType() != node_global_agg_block->GetFunctionType())){
+            fGC+=node_global_agg_block->GenerateModel();
         }
-        
-        fGC+="\n\nnamespace Nodes_Global_Aggregate{\nstruct Session {\n";
-        node_global_agg_block->Initialize();
-        node_global_agg_block->AddInputTensors(AggregateInputShapes);
-        fGC+=node_global_agg_block->GenerateModel(fName,next_pos);
-        next_pos = node_global_agg_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
-        fGC+="};\n}\n\n";
+        fGC+="\n\n";
 
         // computing inplace on input graph
         fGC += "void infer(TMVA::Experimental::SOFIE::GNN_Data& input_graph){\n";
@@ -148,14 +124,12 @@ namespace SOFIE{
         fGC += "Edge_Update::Session edge_update;\n";
         fGC += "Node_Update::Session node_update;\n";
         fGC += "Global_Update::Session global_update;\n";
-        fGC += "Edges_Nodes_Aggregate::Session edges_nodes_agg;\n";
-        fGC += "Edges_Global_Aggregate::Session edges_global_agg;\n";
-        fGC += "Nodes_Global_Aggregate::Session nodes_global_agg;\n";
+
 
         // computing updated edge attributes
         for(int k=0; k<num_edges; ++k){
             fGC+="std::vector<float> Edge_"+std::to_string(k)+"_Update = ";
-            fGC+=edges_update_block->Generate({"input_graph.edge_data.data()+"+std::to_string(k),"input_graph.node_data.data()+input_graph.edges["+std::to_string(k)+"].first","input_graph.node_data.data()+input_graph.edges["+std::to_string(k)+"].second","input_graph.global_data.data()"});
+            fGC+=edges_update_block->Generate({"input_graph.edge_data.data()+"+std::to_string(k),"input_graph.node_data.data()+"+std::to_string(receivers[k])+"*"+std::to_string(num_node_features),"input_graph.node_data.data()+"+std::to_string(senders[k])+"*"+std::to_string(num_node_features),"input_graph.global_data.data()"});
             fGC+="\nstd::copy(Edge_"+std::to_string(k)+"_Update.begin(),Edge_"+std::to_string(k)+"_Update.end(),input_graph.edge_data.begin()+"+std::to_string(k)+");";
         }
         fGC+="\n";
@@ -164,47 +138,45 @@ namespace SOFIE{
         for(int i=0; i<num_nodes; ++i){
             for(int k=0; k<num_edges; ++k){
                 if(receivers[k] == i){
-                    Node_Edge_Aggregate_String.emplace_back("input_graph.edge_data.data()+"+std::to_string(k));
-                    Node_Edge_Aggregate_String.emplace_back("input_graph.node_data.data()+"+std::to_string(i));
-                    Node_Edge_Aggregate_String.emplace_back("input_graph.node_data.data()+"+std::to_string(senders[k]));
+                    Node_Edge_Aggregate_String.emplace_back("input_graph.edge_data.begin()+"+std::to_string(k*num_edge_features));
                 }
             }
-
-            // when node is not a receiver
+            
+            fGC+="std::vector<float> Node_"+std::to_string(i)+"_Edge_Aggregate = ";
+            
+            // when node is not a receiver, fill the aggregated vector with 0 values
             if(Node_Edge_Aggregate_String.size()==0){
-                continue;
+                fGC.resize(fGC.size()-2);
+                fGC+="("+std::to_string(num_edge_features)+", 0);";
+            } else {
+                fGC+=edge_node_agg_block->Generate(num_edge_features,{Node_Edge_Aggregate_String});                      // aggregating edge attributes per node
             }
 
-            fGC+="std::vector<float> Node_"+std::to_string(i)+"_Edge_Aggregate = ";
-            fGC+=edge_node_agg_block->Generate(Node_Edge_Aggregate_String);                      // aggregating edge attributes per node
             fGC+="\n";
-
             fGC+="std::vector<float> Node_"+std::to_string(i)+"_Update = ";
-            fGC+=nodes_update_block->Generate({"Node_"+std::to_string(i)+"_Edge_Aggregate.data()","input_graph.node_data.data()+"+std::to_string(i),"input_graph.global_data.data()"});    // computing updated node attributes 
+            fGC+=nodes_update_block->Generate({"Node_"+std::to_string(i)+"_Edge_Aggregate.data()","input_graph.node_data.data()+"+std::to_string(i*num_node_features),"input_graph.global_data.data()"});    // computing updated node attributes 
             fGC+="\n";
-            fGC+="std::copy(Node_"+std::to_string(i)+"_Update.begin(), Node_"+std::to_string(i)+"_Update.end(), input_graph.node_data.begin()+"+std::to_string(i)+");";
+            fGC+="std::copy(Node_"+std::to_string(i)+"_Update.begin(), Node_"+std::to_string(i)+"_Update.end(), input_graph.node_data.begin()+"+std::to_string(i*num_node_features)+");";
             fGC+="\n";
             Node_Edge_Aggregate_String.clear();
         }
 
         std::vector<std::string> Node_Global_Aggregate_String;
         for(int k=0; k<num_nodes; ++k){
-            Node_Global_Aggregate_String.emplace_back("input_graph.node_data.data()+"+std::to_string(k));
+            Node_Global_Aggregate_String.emplace_back("input_graph.node_data.begin()+"+std::to_string(k*num_node_features));
         }
 
         std::vector<std::string> Edge_Global_Aggregate_String;
         for(int k=0; k<num_edges; ++k){
-            Edge_Global_Aggregate_String.emplace_back("input_graph.edge_data.data()+"+std::to_string(k));
-            Edge_Global_Aggregate_String.emplace_back("input_graph.node_data.data()+"+std::to_string(receivers[k]));
-            Edge_Global_Aggregate_String.emplace_back("input_graph.node_data.data()+"+std::to_string(senders[k]));
+            Edge_Global_Aggregate_String.emplace_back("input_graph.edge_data.begin()+"+std::to_string(k*num_edge_features));
         }
 
         fGC+="std::vector<float> Edge_Global_Aggregate = ";
-        fGC+=edge_global_agg_block->Generate(Edge_Global_Aggregate_String);     // aggregating edge attributes globally
+        fGC+=edge_global_agg_block->Generate(num_edge_features, Edge_Global_Aggregate_String);     // aggregating edge attributes globally
         fGC+="\n";
 
         fGC+="std::vector<float> Node_Global_Aggregate = ";
-        fGC+=node_global_agg_block->Generate(Node_Global_Aggregate_String);     // aggregating node attributes globally
+        fGC+=node_global_agg_block->Generate(num_node_features, Node_Global_Aggregate_String);     // aggregating node attributes globally
         fGC+="\n";
 
         // computing updated global attributes
