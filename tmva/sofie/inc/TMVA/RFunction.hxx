@@ -10,6 +10,10 @@ namespace SOFIE{
 
 class RModel;
 
+enum class GraphType{
+        INVALID=0, GNN=1, GraphIndependent=2
+};
+
 enum class FunctionType{
         UPDATE=0, AGGREGATE=1
 };
@@ -31,7 +35,7 @@ class RFunction{
         }
 
         RFunction(std::string funcName, FunctionType type):
-                fFuncName( UTILITY::Clean_name(funcName)),fType(type){}
+                fFuncName(UTILITY::Clean_name(funcName)),fType(type){}
 
 };
 
@@ -39,11 +43,12 @@ class RFunction_Update: public RFunction{
         protected:
                 std::shared_ptr<RModel> function_block;
                 FunctionTarget fTarget;
+                GraphType fGraphType;
                 std::vector<std::string> fInputTensors;
         public:
         virtual ~RFunction_Update(){}
         RFunction_Update(){}
-                RFunction_Update(FunctionTarget target): fTarget(target){
+                RFunction_Update(FunctionTarget target, GraphType gType): fTarget(target), fGraphType(gType){
                         switch(target){
                                 case FunctionTarget::EDGES:{
                                         fFuncName = "edge_update";
