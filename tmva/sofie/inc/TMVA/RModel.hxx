@@ -21,27 +21,8 @@ private:
    std::vector<std::string> fInputTensorNames;  //input tensor names using ONNX order
 
    std::vector<std::unique_ptr<ROperator>> fOperators;
-
-<<<<<<< HEAD
-   std::string fFileName; //file name of original model file for identification
-   std::string fParseTime; //UTC date and time string at parsing
-
-   std::unordered_set<std::string> fNeededBlasRoutines;
-
-   const std::unordered_set<std::string> fAllowedStdLib = {"vector", "algorithm", "cmath"};
-   std::unordered_set<std::string> fNeededStdLib = {"vector"};
    std::unordered_set<std::string> fCustomOpHeaders;
 
-protected:
-   std::string fName="UnnamedModel";
-   std::string fGC; //generated code
-   bool fUseWeightFile = true;
-   bool fUseSession = true;
-   bool fIsGNN = false;
-   bool fIsGNNComponent = false;
-
-=======
->>>>>>> d8ae68bedf (feat: modify RModel architecture)
 public:
 
    //explicit move ctor/assn

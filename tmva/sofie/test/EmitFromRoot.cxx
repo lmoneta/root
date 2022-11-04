@@ -21,8 +21,6 @@ int main(int argc, char *argv[]){
       return -1;
    }
    std::string outname=argv[2];
-   // if(outname == "Shape")
-   //    return 0;
    RModelParser_ONNX parser;
    RModel model = parser.Parse(argv[1]);
    TFile fileWrite((outname+"_FromROOT.root").c_str(),"RECREATE");
