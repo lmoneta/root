@@ -27,6 +27,12 @@ struct GraphIndependent_Init {
     int num_global_features;
 
     std::string filename;
+
+    ~GraphIndependent_Init(){
+        edges_update_block.reset();
+        nodes_update_block.reset();
+        globals_update_block.reset();
+    }
 };
 
 class RModel_GraphIndependent: public RModel_GNNBase{
