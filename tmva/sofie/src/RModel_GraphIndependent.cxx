@@ -63,58 +63,61 @@ namespace SOFIE{
 
         //Generating Infer function definition for Edge update function
         long next_pos;
-        fGC+="\n\nnamespace Edge_Update{\n";
-        std::vector<std::vector<std::size_t>> Update_Input = {{num_edge_features,1}};
+        fGC+="\n\nnamespace Edge_Update{\nstruct Session {\n";
+        std::vector<std::vector<std::size_t>> Update_Input = {{1, num_edge_features}};
         edges_update_block->Initialize();
         edges_update_block->AddInputTensors(Update_Input);
         fGC+=edges_update_block->GenerateModel(fName);
-        next_pos = edges_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName);
-        fGC+="}\n";
+        next_pos = edges_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
+        fGC+="};\n}\n";
 
-        fGC+="\n\nnamespace Node_Update{\n";
+        fGC+="\n\nnamespace Node_Update{\nstruct Session {\n";
         // Generating Infer function definition for Node Update function
-        Update_Input = {{num_node_features,1}};
+        Update_Input = {{1, num_node_features}};
         nodes_update_block->Initialize();
         nodes_update_block->AddInputTensors(Update_Input);
         fGC+=nodes_update_block->GenerateModel(fName,next_pos);
-        next_pos = nodes_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName);
-        fGC+="}\n";
+        next_pos = nodes_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
+        fGC+="};\n}\n";
 
-        fGC+="\n\nnamespace Global_Update{\n";
+        fGC+="\n\nnamespace Global_Update{\nstruct Session {\n";
         // Generating Infer function definition for Global Update function
-        Update_Input = {{num_global_features,1}};
+        Update_Input = {{1, num_global_features}};
         globals_update_block->Initialize();
         globals_update_block->AddInputTensors(Update_Input);
         fGC+=globals_update_block->GenerateModel(fName,next_pos);
-        next_pos = globals_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName);
-        fGC+="}\n";
+        next_pos = globals_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
+        fGC+="};\n}\n";
         
         // computing inplace on input graph
-        fGC += "GNN::GNN_Data infer(GNN::GNN_Data input_graph){\n";
-        
+        fGC += "void infer(TMVA::Experimental::SOFIE::GNN_Data& input_graph){\n";
+
+        fGC += "Edge_Update::Session edge_update;\n";
+        fGC += "Node_Update::Session node_update;\n";
+        fGC += "Global_Update::Session global_update;\n";
+
         // computing updated edge attributes
         for(int k=0; k<num_edges; ++k){
-            fGC+="std::vector<float> Edge_"+std::to_string(k)+"_Update = ";
-            fGC+=edges_update_block->Generate({"input_graph.edge_data.data()+"+std::to_string(k)});
-            fGC+="\nstd::copy(Edge_"+std::to_string(k)+"_Update.begin(),Edge_"+std::to_string(k)+"_Update.end(),input_graph.edge_data.begin()+"+std::to_string(k)+");";
+            fGC+="\nstd::vector<float> Edge_"+std::to_string(k)+"_Update = ";
+            fGC+=edges_update_block->Generate({"input_graph.edge_data.data()+"+std::to_string(k*num_edge_features)});
+            fGC+="\nstd::copy(Edge_"+std::to_string(k)+"_Update.begin(),Edge_"+std::to_string(k)+"_Update.end(),input_graph.edge_data.begin()+"+std::to_string(k*num_edge_features)+");";
         }
         fGC+="\n";
 
         // computing updated node attributes
         for(int k=0; k<num_nodes; ++k){
-            fGC+="std::vector<float> Node_"+std::to_string(k)+"_Update = ";
-            fGC+=nodes_update_block->Generate({"input_graph.node_data.data()+"+std::to_string(k)});
-            fGC+="\nstd::copy(Node_"+std::to_string(k)+"_Update.begin(),Node_"+std::to_string(k)+"_Update.end(),input_graph.node_data.begin()+"+std::to_string(k)+");";
+            fGC+="\nstd::vector<float> Node_"+std::to_string(k)+"_Update = ";
+            fGC+=nodes_update_block->Generate({"input_graph.node_data.data()+"+std::to_string(k*num_node_features)});
+            fGC+="\nstd::copy(Node_"+std::to_string(k)+"_Update.begin(),Node_"+std::to_string(k)+"_Update.end(),input_graph.node_data.begin()+"+std::to_string(k*num_node_features)+");";
         }
         fGC+="\n";
 
         // computing updated global attributes
-        fGC+="input_graph.global_data=";
-        fGC+=globals_update_block->Generate({"input_graph.global_data"}); 
+        fGC+="\ninput_graph.global_data=";
+        fGC+=globals_update_block->Generate({"input_graph.global_data.data()"}); 
         fGC+="\n";
         
-        fGC+="\nreturn input_graph;\n}";
-        fGC += ("} //TMVA_SOFIE_" + fName + "\n");
+        fGC += ("}\n} //TMVA_SOFIE_" + fName + "\n");
         fGC += "\n#endif  // TMVA_SOFIE_" + hgname + "\n";
 
     }

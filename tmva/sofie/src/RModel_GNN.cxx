@@ -74,7 +74,6 @@ namespace SOFIE{
         std::time_t ttime = std::time(0);
         std::tm* gmt_time = std::gmtime(&ttime);
         fParseTime  = std::asctime(gmt_time);
-        fNeededStdLib.insert("cstdarg");   // requried for variable argument list for aggregate functions
     }
 
     void RModel_GNN::Generate(int batchSize){
