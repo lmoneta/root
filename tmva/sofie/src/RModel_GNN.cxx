@@ -120,12 +120,14 @@ namespace SOFIE{
         // computing inplace on input graph
         fGC += "void infer(TMVA::Experimental::SOFIE::GNN_Data& input_graph){\n";
         
+        fGC += "\n// Instantiating session objects for graph components\n";
         fGC += "Edge_Update::Session edge_update;\n";
         fGC += "Node_Update::Session node_update;\n";
         fGC += "Global_Update::Session global_update;\n";
 
 
         // computing updated edge attributes
+        fGC += "\n// --- Edge Update ---\n";
         for(int k=0; k<num_edges; ++k){
             fGC+="std::vector<float> Edge_"+std::to_string(k)+"_Update = ";
             fGC+=edges_update_block->Generate({"input_graph.edge_data.data()+"+std::to_string(k),"input_graph.node_data.data()+"+std::to_string(receivers[k])+"*"+std::to_string(num_node_features),"input_graph.node_data.data()+"+std::to_string(senders[k])+"*"+std::to_string(num_node_features),"input_graph.global_data.data()"});
@@ -133,6 +135,8 @@ namespace SOFIE{
         }
         fGC+="\n";
 
+        // aggregating edge if it's a receiver node and then updating corresponding node
+        fGC += "\n// --- Node Update ---\n";
         std::vector<std::string> Node_Edge_Aggregate_String;
         for(int i=0; i<num_nodes; ++i){
             for(int k=0; k<num_edges; ++k){
@@ -160,6 +164,7 @@ namespace SOFIE{
             Node_Edge_Aggregate_String.clear();
         }
 
+        // aggregating edges & nodes for global update
         std::vector<std::string> Node_Global_Aggregate_String;
         for(int k=0; k<num_nodes; ++k){
             Node_Global_Aggregate_String.emplace_back("input_graph.node_data.begin()+"+std::to_string(k*num_node_features));
@@ -170,6 +175,7 @@ namespace SOFIE{
             Edge_Global_Aggregate_String.emplace_back("input_graph.edge_data.begin()+"+std::to_string(k*num_edge_features));
         }
 
+        fGC += "\n// --- Global Update ---\n";        
         fGC+="std::vector<float> Edge_Global_Aggregate = ";
         fGC+=edge_global_agg_block->Generate(num_edge_features, Edge_Global_Aggregate_String);     // aggregating edge attributes globally
         fGC+="\n";

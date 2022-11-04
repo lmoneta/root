@@ -33,6 +33,16 @@ struct GNN_Init {
     int num_global_features;
 
     std::string filename;
+
+    ~GNN_Init(){
+        edges_update_block.reset();
+        nodes_update_block.reset();
+        globals_update_block.reset();
+
+        edge_node_agg_block.reset();
+        edge_global_agg_block.reset();
+        node_global_agg_block.reset();
+    }
 };
 
 class RModel_GNN: public RModel_GNNBase{

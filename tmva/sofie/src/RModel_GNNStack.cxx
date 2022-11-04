@@ -9,13 +9,13 @@ namespace TMVA{
 namespace Experimental{
 namespace SOFIE{
 
-    RModel_GNNStack::Initialize(){
-        for(auto it&:fGraphs){
-            fNeededStdLib.insert(it->GetFilename());
+    void RModel_GNNStack::Initialize(){
+        for(size_t i=0; i<fGraphs.size(); ++i){
+            fNeededStdLib.insert(fGraphs[i]->GetFilename());
         }
     }
 
-    RModel_GNNStack::Generate(int batchSize){
+    void RModel_GNNStack::Generate(int batchSize){
         Initialize();
         std::string hgname;
         GenerateHeaderInfo(hgname);
@@ -29,3 +29,7 @@ namespace SOFIE{
         fGC += ("} //TMVA_SOFIE_" + fName + "\n");
         fGC += "\n#endif  // TMVA_SOFIE_" + hgname + "\n";
     }
+
+} // namespace SOFIE
+} // namespace Experimental
+} // namespace TMVA
