@@ -36,7 +36,7 @@ public:
 
    RModel(){}
    RModel(std::string name, std::string parsedtime): RModel_Base(name, parsedtime){}
-   
+
    // For GNN Functions usage
    RModel(std::string function_name):RModel_Base(function_name){}
 
@@ -51,11 +51,11 @@ public:
    // Check if a tensor is initialized
    bool IsInitializedTensor(const std::string& name) const;
    void AddIntermediateTensor(std::string tensor_name, ETensorType type, std::vector<std::size_t> shape);
-   
+
    void AddNeededCustomHeader(std::string filename) {
       fCustomOpHeaders.insert(filename);
    }
-   
+
    void AddInputTensorName(std::string name);
    void AddOutputTensorNameList(std::vector<std::string> outputtensornames);
    void UpdateOutputTensorList(std::vector<std::string> curr_output_tensor, std::vector<std::string> modify_output_tensor);
@@ -68,8 +68,7 @@ public:
    void GenerateIntermediateTensorInfo();
    void GenerateOutput();
    void Generate(std::underlying_type_t<Options> options, int batchSize = 1, long pos = 0);
-   void Generate(Options options = Options::kDefault, int batchSitmva/sofie/inc/TMVA/RModel.hxx
-ze = 1, int pos = 0) {
+   void Generate(Options options = Options::kDefault, int batchSize = 1, int pos = 0) {
       Generate(static_cast<std::underlying_type_t<Options>>(options), batchSize, pos);
    }
 
@@ -80,6 +79,7 @@ ze = 1, int pos = 0) {
    void OutputGenerated(std::string filename = "");
    std::vector<std::string> GetOutputTensorNames(){
       return fOutputTensorNames;
+   }
    void SetFilename(std::string filename){
       fName = filename;
    }

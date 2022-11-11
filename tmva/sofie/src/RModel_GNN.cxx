@@ -65,7 +65,7 @@ namespace SOFIE{
         num_edge_features = graph_input_struct.num_edge_features;
         num_global_features = graph_input_struct.num_global_features;
         for(auto& it:graph_input_struct.edges){
-            receivers.emplace_back(it.first); 
+            receivers.emplace_back(it.first);
             senders.emplace_back(it.second);
         }
         fFileName = graph_input_struct.filename;
@@ -83,7 +83,7 @@ namespace SOFIE{
         // Generating Infer function definition for Edge Update function
         long next_pos;
         fGC+="\n\nnamespace Edge_Update{\nstruct Session {\n";
-        std::vector<std::vector<std::size_t>> Update_Input = {{1, num_edge_features},{1, num_node_features},{1, num_node_features},{1, num_global_features}};
+        std::vector<std::vector<std::size_t>> Update_Input = {{1, size_t(num_edge_features)},{1, size_t(num_node_features)},{1, size_t(num_node_features)},{1, size_t(num_global_features)}};
         edges_update_block->Initialize();
         edges_update_block->AddInputTensors(Update_Input);
         fGC+=edges_update_block->GenerateModel(fName);
@@ -119,7 +119,7 @@ namespace SOFIE{
 
         // computing inplace on input graph
         fGC += "void infer(TMVA::Experimental::SOFIE::GNN_Data& input_graph){\n";
-        
+
         fGC += "\n// Instantiating session objects for graph components\n";
         fGC += "Edge_Update::Session edge_update;\n";
         fGC += "Node_Update::Session node_update;\n";
@@ -144,9 +144,9 @@ namespace SOFIE{
                     Node_Edge_Aggregate_String.emplace_back("input_graph.edge_data.begin()+"+std::to_string(k*num_edge_features));
                 }
             }
-            
+
             fGC+="std::vector<float> Node_"+std::to_string(i)+"_Edge_Aggregate = ";
-            
+
             // when node is not a receiver, fill the aggregated vector with 0 values
             if(Node_Edge_Aggregate_String.size()==0){
                 fGC.resize(fGC.size()-2);
@@ -157,7 +157,7 @@ namespace SOFIE{
 
             fGC+="\n";
             fGC+="std::vector<float> Node_"+std::to_string(i)+"_Update = ";
-            fGC+=nodes_update_block->Generate({"Node_"+std::to_string(i)+"_Edge_Aggregate.data()","input_graph.node_data.data()+"+std::to_string(i*num_node_features),"input_graph.global_data.data()"});    // computing updated node attributes 
+            fGC+=nodes_update_block->Generate({"Node_"+std::to_string(i)+"_Edge_Aggregate.data()","input_graph.node_data.data()+"+std::to_string(i*num_node_features),"input_graph.global_data.data()"});    // computing updated node attributes
             fGC+="\n";
             fGC+="std::copy(Node_"+std::to_string(i)+"_Update.begin(), Node_"+std::to_string(i)+"_Update.end(), input_graph.node_data.begin()+"+std::to_string(i*num_node_features)+");";
             fGC+="\n";
@@ -175,7 +175,7 @@ namespace SOFIE{
             Edge_Global_Aggregate_String.emplace_back("input_graph.edge_data.begin()+"+std::to_string(k*num_edge_features));
         }
 
-        fGC += "\n// --- Global Update ---\n";        
+        fGC += "\n// --- Global Update ---\n";
         fGC+="std::vector<float> Edge_Global_Aggregate = ";
         fGC+=edge_global_agg_block->Generate(num_edge_features, Edge_Global_Aggregate_String);     // aggregating edge attributes globally
         fGC+="\n";
@@ -186,7 +186,7 @@ namespace SOFIE{
 
         // computing updated global attributes
         fGC+="input_graph.global_data=";
-        fGC+=globals_update_block->Generate({"Edge_Global_Aggregate.data()","Node_Global_Aggregate.data()", "input_graph.global_data.data()"}); 
+        fGC+=globals_update_block->Generate({"Edge_Global_Aggregate.data()","Node_Global_Aggregate.data()", "input_graph.global_data.data()"});
         fGC+="\n}\n";
 
         fGC += ("} //TMVA_SOFIE_" + fName + "\n");
@@ -207,7 +207,7 @@ namespace SOFIE{
     //             case(FunctionTarget::GLOBALS): {
     //                 globals_update_block.reset(func.get());
     //                 break;
-    //             } 
+    //             }
     //         }
     //     } else{
     //         switch(func->GetFunctionRelation()){

@@ -64,7 +64,7 @@ namespace SOFIE{
         //Generating Infer function definition for Edge update function
         long next_pos;
         fGC+="\n\nnamespace Edge_Update{\nstruct Session {\n";
-        std::vector<std::vector<std::size_t>> Update_Input = {{1, num_edge_features}};
+        std::vector<std::vector<std::size_t>> Update_Input = {{1, size_t(num_edge_features)}};
         edges_update_block->Initialize();
         edges_update_block->AddInputTensors(Update_Input);
         fGC+=edges_update_block->GenerateModel(fName);
@@ -73,7 +73,7 @@ namespace SOFIE{
 
         fGC+="\n\nnamespace Node_Update{\nstruct Session {\n";
         // Generating Infer function definition for Node Update function
-        Update_Input = {{1, num_node_features}};
+        Update_Input = {{1, size_t(num_node_features)}};
         nodes_update_block->Initialize();
         nodes_update_block->AddInputTensors(Update_Input);
         fGC+=nodes_update_block->GenerateModel(fName,next_pos);
@@ -82,13 +82,13 @@ namespace SOFIE{
 
         fGC+="\n\nnamespace Global_Update{\nstruct Session {\n";
         // Generating Infer function definition for Global Update function
-        Update_Input = {{1, num_global_features}};
+        Update_Input = {{1, size_t(num_global_features)}};
         globals_update_block->Initialize();
         globals_update_block->AddInputTensors(Update_Input);
         fGC+=globals_update_block->GenerateModel(fName,next_pos);
         next_pos = globals_update_block->GetFunctionBlock()->WriteInitializedTensorsToFile(fName+".dat");
         fGC+="};\n}\n";
-        
+
         // computing inplace on input graph
         fGC += "void infer(TMVA::Experimental::SOFIE::GNN_Data& input_graph){\n";
 
@@ -114,11 +114,11 @@ namespace SOFIE{
         }
 
         // computing updated global attributes
-        fGC += "\n// --- Global Update ---\n";        
+        fGC += "\n// --- Global Update ---\n";
         fGC += "input_graph.global_data=";
-        fGC += globals_update_block->Generate({"input_graph.global_data.data()"}); 
+        fGC += globals_update_block->Generate({"input_graph.global_data.data()"});
         fGC += "\n";
-        
+
         fGC += ("}\n} //TMVA_SOFIE_" + fName + "\n");
         fGC += "\n#endif  // TMVA_SOFIE_" + hgname + "\n";
 

@@ -9,7 +9,7 @@
 #include "TMVA/RFunction.hxx"
 #include "TMVA/RModel_GNN.hxx"
 
-#include <any>
+//#include <any>
 #include <sstream>
 #include <algorithm>
 #include <iterator>
@@ -81,8 +81,8 @@ class RFunction_MLP: public RFunction_Update{
             }
         }
 
-        void AddInitializedTensors(std::any initialized_tensors){
-                std::vector<std::vector<std::string>> weight_tensors = std::any_cast<std::vector<std::vector<std::string>>>(initialized_tensors);
+   void AddInitializedTensors(const std::vector<std::vector<std::string>> & weight_tensors){
+//                std::vector<std::vector<std::string>> weight_tensors = std::any_cast<std::vector<std::vector<std::string>>>(initialized_tensors);
                 fKernelTensors = weight_tensors[0];
                 fBiasTensors   = weight_tensors[1];
         }

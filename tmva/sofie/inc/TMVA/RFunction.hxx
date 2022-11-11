@@ -1,7 +1,7 @@
 #ifndef TMVA_SOFIE_RFUNCTION
 #define TMVA_SOFIE_RFUNCTION
 
-#include <any>
+//#include <any>
 #include "TMVA/RModel_GNN.hxx"
 
 namespace TMVA{
@@ -69,7 +69,7 @@ class RFunction_Update: public RFunction{
                         function_block = std::make_unique<RModel>(fFuncName);
          
                 }
-                virtual void AddInitializedTensors(std::any){};
+   virtual void AddInitializedTensors(/*std::any*/ const std::vector<std::vector<std::string>> &){};
                 virtual void Initialize(){};
                 void AddInputTensors(std::vector<std::vector<std::size_t>> fInputShape){
                         for(long unsigned int i=0; i<fInputShape.size(); ++i){
