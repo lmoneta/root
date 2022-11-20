@@ -57,7 +57,7 @@ namespace SOFIE{
         fParseTime  = std::asctime(gmt_time);
     }
 
-    void RModel_GraphIndependent::Generate(int batchSize){
+    void RModel_GraphIndependent::Generate(){
         std::string hgname;
         GenerateHeaderInfo(hgname);
 

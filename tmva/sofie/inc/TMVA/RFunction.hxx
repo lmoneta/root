@@ -69,7 +69,7 @@ class RFunction_Update: public RFunction{
                         function_block = std::make_unique<RModel>(fFuncName);
          
                 }
-                virtual void AddInitializedTensors(std::any){};
+                virtual void AddInitializedTensors(std::vector<std::vector<std::string>>){};
                 virtual void Initialize(){};
                 void AddInputTensors(std::vector<std::vector<std::size_t>> fInputShape){
                         for(long unsigned int i=0; i<fInputShape.size(); ++i){
@@ -116,7 +116,7 @@ class RFunction_Aggregate: public RFunction{
         FunctionReducer GetFunctionReducer(){
                 return fReducer;
         }
-        std::string Generate(int num_features, std::vector<std::string> inputTensors){
+        std::string Generate(std::size_t num_features, std::vector<std::string> inputTensors){
                 std::string inferFunc = fFuncName+"("+std::to_string(num_features)+",{";
                 for(auto&it : inputTensors){
                         inferFunc+=it;

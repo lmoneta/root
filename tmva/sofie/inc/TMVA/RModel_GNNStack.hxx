@@ -1,5 +1,5 @@
-#ifndef TMVA_SOFIE_RMODEL_GNN
-#define TMVA_SOFIE_RMODEL_GNN
+#ifndef TMVA_SOFIE_RMODEL_GNNStack
+#define TMVA_SOFIE_RMODEL_GNNStack
 
 #include <ctime>
 
@@ -19,9 +19,15 @@ class RModel_GNNStack: public RModel_GNNBase{
     public:
         RModel_GNNStack(){}
         void Initialize();
-        void Generate(int batchSize=1);
+        void Generate();
         void AddGraph(std::unique_ptr<RModel_GNNBase> graph){
             fGraphs.emplace_back(std::move(graph));
         }
         ~RModel_GNNStack(){}
 };
+
+} // namespace SOFIE
+} // namespace Experimental
+} // namespace TMVA
+
+#endif //TMVA_SOFIE_RMODEL_GNNStack
