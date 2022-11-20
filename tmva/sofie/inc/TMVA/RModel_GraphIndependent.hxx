@@ -47,9 +47,9 @@ private:
     int num_nodes;
     int num_edges;
 
-    int num_node_features;
-    int num_edge_features;
-    int num_global_features;
+    std::size_t num_node_features;
+    std::size_t num_edge_features;
+    std::size_t num_global_features;
 
 
 public:
@@ -67,7 +67,7 @@ public:
    RModel_GraphIndependent(){}
    RModel_GraphIndependent(std::string name, std::string parsedtime);
    
-   void Generate(int batchSize = 1);
+   void Generate();
 
    ~RModel_GraphIndependent(){}
 //    ClassDef(RModel_GNN,1);

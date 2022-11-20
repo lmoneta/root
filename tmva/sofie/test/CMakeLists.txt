@@ -136,6 +136,7 @@ if (tmva-cpu)
     INCLUDE_DIRS
       ${CMAKE_CURRENT_BINARY_DIR}
   )
+ endif()
 endif()
 
 add_executable(emitGNN

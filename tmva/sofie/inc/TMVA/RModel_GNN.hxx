@@ -28,9 +28,9 @@ struct GNN_Init {
     int num_nodes;
     std::vector<std::pair<int,int>> edges;
    
-    int num_node_features;
-    int num_edge_features;
-    int num_global_features;
+    std::size_t num_node_features;
+    std::size_t num_edge_features;
+    std::size_t num_global_features;
 
     std::string filename;
 
@@ -64,9 +64,9 @@ private:
     std::vector<int> senders;              // contains node indices
     std::vector<int> receivers;            // contains node indices
 
-    int num_node_features;
-    int num_edge_features;
-    int num_global_features;
+    std::size_t num_node_features;
+    std::size_t num_edge_features;
+    std::size_t num_global_features;
 
 
 public:
@@ -86,7 +86,7 @@ public:
 
 //    void AddFunction(std::unique_ptr<RFunction> func);
    
-   void Generate(int batchSize = 1);
+   void Generate();
 
    ~RModel_GNN(){}
 //    ClassDef(RModel_GNN,1);

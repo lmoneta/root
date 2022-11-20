@@ -68,8 +68,7 @@ public:
    void GenerateIntermediateTensorInfo();
    void GenerateOutput();
    void Generate(std::underlying_type_t<Options> options, int batchSize = 1, long pos = 0);
-   void Generate(Options options = Options::kDefault, int batchSitmva/sofie/inc/TMVA/RModel.hxx
-ze = 1, int pos = 0) {
+   void Generate(Options options = Options::kDefault, int batchSize = 1, int pos = 0) {
       Generate(static_cast<std::underlying_type_t<Options>>(options), batchSize, pos);
    }
 
@@ -80,6 +79,7 @@ ze = 1, int pos = 0) {
    void OutputGenerated(std::string filename = "");
    std::vector<std::string> GetOutputTensorNames(){
       return fOutputTensorNames;
+   }
    void SetFilename(std::string filename){
       fName = filename;
    }

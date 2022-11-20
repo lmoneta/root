@@ -76,7 +76,7 @@ namespace SOFIE{
         fParseTime  = std::asctime(gmt_time);
     }
 
-    void RModel_GNN::Generate(int batchSize){
+    void RModel_GNN::Generate(){
         std::string hgname;
         GenerateHeaderInfo(hgname);
 
