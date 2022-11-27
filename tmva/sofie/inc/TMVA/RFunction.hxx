@@ -10,19 +10,7 @@ namespace SOFIE{
 
 class RModel;
 
-enum class GraphType{
-        INVALID=0, GNN=1, GraphIndependent=2
-};
 
-enum class FunctionType{
-        UPDATE=0, AGGREGATE=1
-};
-enum class FunctionTarget{
-        INVALID=0, NODES=1, EDGES=2, GLOBALS=3
-};
-enum class FunctionReducer{
-        INVALID=0, SUM=1, MEAN=2
-};
 class RFunction{
     protected:
         std::string fFuncName;
@@ -97,6 +85,9 @@ class RFunction_Update: public RFunction{
                         inferFunc.pop_back();
                         inferFunc+=");";
                         return inferFunc;
+                }
+                FunctionTarget GetFunctionTarget(){
+                        return fTarget;
                 }
 };
 
