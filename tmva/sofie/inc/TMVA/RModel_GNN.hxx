@@ -48,15 +48,15 @@ struct GNN_Init {
     void createUpdateFunction(T& updateFunction){
         switch(updateFunction.GetFunctionTarget()){
             case FunctionTarget::EDGES: {
-                edges_update_block.reset(*(std::move(updateFunction)));
+                edges_update_block.reset(new T(updateFunction));
                 break;
             }
             case FunctionTarget::NODES: {
-                nodes_update_block.reset(*(std::move(updateFunction)));
+                nodes_update_block.reset(new T(updateFunction));
                 break;
             }
             case FunctionTarget::GLOBALS: {
-                globals_update_block.reset(*(std::move(updateFunction)));
+                globals_update_block.reset(new T(updateFunction));
             }
         }
     }
@@ -65,15 +65,15 @@ struct GNN_Init {
     void createAggregateFunction(T& aggFunction, FunctionRelation relation){
         switch(relation){
             case FunctionRelation::NODES_EDGES : {
-                edge_node_agg_block.reset(*(std::move(aggFunction)));
+                edge_node_agg_block.reset(new T(aggFunction));
                 break;
             }
             case FunctionRelation::NODES_GLOBALS: {
-                node_global_agg_block.reset(*(std::move(aggFunction)));
+                node_global_agg_block.reset(new T(aggFunction));
                 break;
             }
             case FunctionRelation::EDGES_GLOBALS: {
-                edge_global_agg_block.reset(*(std::move(aggFunction)));
+                edge_global_agg_block.reset(new T(aggFunction));
             }
         }
     }
