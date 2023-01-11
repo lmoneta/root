@@ -58,6 +58,9 @@ struct GNN_Init {
             case FunctionTarget::GLOBALS: {
                 globals_update_block.reset(new T(updateFunction));
             }
+            default: {
+                throw std::runtime_error("TMVA SOFIE: Invalid Update function supplied for creating GNN function block.")
+            }
         }
     }
 
@@ -74,6 +77,9 @@ struct GNN_Init {
             }
             case FunctionRelation::EDGES_GLOBALS: {
                 edge_global_agg_block.reset(new T(aggFunction));
+            }
+            default: {
+                throw std::runtime_error("TMVA SOFIE: Invalid Aggregate function supplied for creating GNN function block.")
             }
         }
     }
