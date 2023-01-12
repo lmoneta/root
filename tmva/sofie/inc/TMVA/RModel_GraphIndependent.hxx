@@ -15,9 +15,9 @@ class RFunction_Update;
 
 struct GraphIndependent_Init {
     // updation blocks
-    std::shared_ptr<RFunction_Update> edges_update_block;
-    std::shared_ptr<RFunction_Update> nodes_update_block;
-    std::shared_ptr<RFunction_Update> globals_update_block;
+    std::unique_ptr<RFunction_Update> edges_update_block;
+    std::unique_ptr<RFunction_Update> nodes_update_block;
+    std::unique_ptr<RFunction_Update> globals_update_block;
    
     int num_nodes;
     std::vector<std::pair<int,int>> edges;
@@ -63,7 +63,7 @@ public:
    RModel_GraphIndependent(const RModel_GraphIndependent& other) = delete;
    RModel_GraphIndependent& operator=(const RModel_GraphIndependent& other) = delete;
 
-   RModel_GraphIndependent(const GraphIndependent_Init& graph_input_struct);
+   RModel_GraphIndependent(GraphIndependent_Init& graph_input_struct);
    RModel_GraphIndependent(){}
    RModel_GraphIndependent(std::string name, std::string parsedtime);
    

@@ -16,14 +16,14 @@ class RFunction_Aggregate;
 
 struct GNN_Init {
     // updation blocks
-    std::shared_ptr<RFunction_Update> edges_update_block;
-    std::shared_ptr<RFunction_Update> nodes_update_block;
-    std::shared_ptr<RFunction_Update> globals_update_block;
+    std::unique_ptr<RFunction_Update> edges_update_block;
+    std::unique_ptr<RFunction_Update> nodes_update_block;
+    std::unique_ptr<RFunction_Update> globals_update_block;
     
     // aggregation blocks
-    std::shared_ptr<RFunction_Aggregate> edge_node_agg_block;
-    std::shared_ptr<RFunction_Aggregate> edge_global_agg_block;
-    std::shared_ptr<RFunction_Aggregate> node_global_agg_block;
+    std::unique_ptr<RFunction_Aggregate> edge_node_agg_block;
+    std::unique_ptr<RFunction_Aggregate> edge_global_agg_block;
+    std::unique_ptr<RFunction_Aggregate> node_global_agg_block;
    
     int num_nodes;
     std::vector<std::pair<int,int>> edges;
@@ -57,9 +57,10 @@ struct GNN_Init {
             }
             case FunctionTarget::GLOBALS: {
                 globals_update_block.reset(new T(updateFunction));
+                break;
             }
             default: {
-                throw std::runtime_error("TMVA SOFIE: Invalid Update function supplied for creating GNN function block.")
+                throw std::runtime_error("TMVA SOFIE: Invalid Update function supplied for creating GNN function block.");
             }
         }
     }
@@ -77,9 +78,10 @@ struct GNN_Init {
             }
             case FunctionRelation::EDGES_GLOBALS: {
                 edge_global_agg_block.reset(new T(aggFunction));
+                break;
             }
             default: {
-                throw std::runtime_error("TMVA SOFIE: Invalid Aggregate function supplied for creating GNN function block.")
+                throw std::runtime_error("TMVA SOFIE: Invalid Aggregate function supplied for creating GNN function block.");
             }
         }
     }
@@ -123,7 +125,7 @@ public:
    RModel_GNN(const RModel_GNN& other) = delete;
    RModel_GNN& operator=(const RModel_GNN& other) = delete;
 
-   RModel_GNN(const GNN_Init& graph_input_struct);
+   RModel_GNN(GNN_Init& graph_input_struct);
    RModel_GNN(){}
    RModel_GNN(std::string name, std::string parsedtime);
    
