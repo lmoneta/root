@@ -37,25 +37,12 @@ class RFunction_MLP: public RFunction_Update{
             
             std::string fGemmInput;
             if(fGraphType == GraphType::GNN){            
-                if(fTarget == FunctionTarget::EDGES){
-                    fInputTensors = {"edge","receiver","sender","global"};
-                } else if(fTarget == FunctionTarget::NODES || fTarget == FunctionTarget::GLOBALS){
-                    fInputTensors = {"edge","node","global"}; 
-                }
-
                 std::unique_ptr<ROperator> op_concat;
                 op_concat.reset(new ROperator_Concat<float>(fInputTensors,1,0,fFuncName+"InputConcat"));
                 function_block->AddOperator(std::move(op_concat));
                 fGemmInput = fFuncName+"InputConcat";
 
             } else if(fGraphType == GraphType::GraphIndependent){
-                if(fTarget == FunctionTarget::EDGES){
-                    fInputTensors = {"edge"};
-                } else if(fTarget == FunctionTarget::NODES){
-                    fInputTensors = {"node"}; 
-                } else {
-                    fInputTensors = {"global"};
-                }
                 fGemmInput = fInputTensors[0];
             }
 

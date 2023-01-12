@@ -55,8 +55,25 @@ class RFunction_Update: public RFunction{
                         }
                         fType = FunctionType::UPDATE;
                         function_block = std::make_unique<RModel>(fFuncName);
-         
+
+                        if(fGraphType == GraphType::GNN){            
+                                if(fTarget == FunctionTarget::EDGES){
+                                        fInputTensors = {"edge","receiver","sender","global"};
+                                } else if(fTarget == FunctionTarget::NODES || fTarget == FunctionTarget::GLOBALS){
+                                        fInputTensors = {"edge","node","global"}; 
+                                }
+
+                        } else if(fGraphType == GraphType::GraphIndependent){
+                                if(fTarget == FunctionTarget::EDGES){
+                                        fInputTensors = {"edge"};
+                                } else if(fTarget == FunctionTarget::NODES){
+                                        fInputTensors = {"node"}; 
+                                } else {
+                                        fInputTensors = {"global"};
+                                }
+                        }
                 }
+
                 virtual void AddInitializedTensors(std::vector<std::vector<std::string>>){};
                 virtual void Initialize(){};
                 void AddInputTensors(std::vector<std::vector<std::size_t>> fInputShape){

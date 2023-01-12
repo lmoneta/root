@@ -50,14 +50,14 @@ namespace SOFIE{
       return *this;
     }
 
-    RModel_GNN::RModel_GNN(const GNN_Init& graph_input_struct){
-        edges_update_block.reset((graph_input_struct.edges_update_block).get());
-        nodes_update_block.reset((graph_input_struct.nodes_update_block).get());
-        globals_update_block.reset((graph_input_struct.globals_update_block).get());
+    RModel_GNN::RModel_GNN(GNN_Init& graph_input_struct){
+        edges_update_block = std::move(graph_input_struct.edges_update_block);
+        nodes_update_block = std::move(graph_input_struct.nodes_update_block);
+        globals_update_block = std::move(graph_input_struct.globals_update_block);
 
-        edge_node_agg_block.reset((graph_input_struct.edge_node_agg_block).get());
-        edge_global_agg_block.reset((graph_input_struct.edge_global_agg_block).get());
-        node_global_agg_block.reset((graph_input_struct.node_global_agg_block).get());
+        edge_node_agg_block = std::move(graph_input_struct.edge_node_agg_block);
+        edge_global_agg_block = std::move(graph_input_struct.edge_global_agg_block);
+        node_global_agg_block = std::move(graph_input_struct.node_global_agg_block);
 
         num_nodes = graph_input_struct.num_nodes;
         num_edges = graph_input_struct.edges.size();
