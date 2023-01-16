@@ -25,7 +25,8 @@ def ParseFromMemory(GraphModule, GraphData):
         kernel_tensor_names = ROOT.std.vector['std::string']()
         bias_tensor_names   = ROOT.std.vector['std::string']()
 
-        for i in range(0, num_layers, 2):
+        for i in range(0, 2*num_layers, 2):
+            print("adding, ", node_model.variables[i].name, node_model.variables[i+1].name)
             bias_tensor_names.push_back(node_model.variables[i].name)
             kernel_tensor_names.push_back(node_model.variables[i+1].name)
         val = ROOT.std.vector['std::vector<std::string>']()
@@ -54,7 +55,8 @@ def ParseFromMemory(GraphModule, GraphData):
         kernel_tensor_names = ROOT.std.vector['std::string']()
         bias_tensor_names   = ROOT.std.vector['std::string']()
 
-        for i in range(0, num_layers, 2):
+        for i in range(0, 2*num_layers, 2):
+            print("adding, ", edge_model.variables[i].name, edge_model.variables[i+1].name)
             bias_tensor_names.push_back(edge_model.variables[i].name)
             kernel_tensor_names.push_back(edge_model.variables[i+1].name)
         val = ROOT.std.vector['std::vector<std::string>']()
@@ -83,7 +85,8 @@ def ParseFromMemory(GraphModule, GraphData):
         kernel_tensor_names = ROOT.std.vector['std::string']()
         bias_tensor_names   = ROOT.std.vector['std::string']()
 
-        for i in range(0, num_layers, 2):
+        for i in range(0, 2*num_layers, 2):
+            print("adding, ", global_model.variables[i].name, global_model.variables[i+1].name)
             bias_tensor_names.push_back(global_model.variables[i].name)
             kernel_tensor_names.push_back(global_model.variables[i+1].name)
         val = ROOT.std.vector['std::vector<std::string>']()
