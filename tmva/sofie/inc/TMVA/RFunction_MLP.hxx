@@ -48,7 +48,7 @@ class RFunction_MLP: public RFunction_Update{
 
             std::unique_ptr<ROperator> op_gemm;
             for(int i=0; i<fNumLayers; ++i){
-                op_gemm.reset(new ROperator_Gemm<float>(1.0,1.0,0,0,fGemmInput,fKernelTensors[i],fBiasTensors[i],fFuncName+"Gemm"+std::to_string(i)));
+                op_gemm.reset(new ROperator_Gemm<float>(1.0,1.0,0,0,fGemmInput,UTILITY::Clean_name(fKernelTensors[i]),UTILITY::Clean_name(fBiasTensors[i]),fFuncName+"Gemm"+std::to_string(i)));
                 function_block->AddOperator(std::move(op_gemm));
                 fGemmInput = fFuncName+"Gemm"+i;
                 if(fUseActivation){

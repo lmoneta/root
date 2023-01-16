@@ -50,7 +50,15 @@ public:
    void AddInitializedTensor(std::string tensor_name, ETensorType type, std::vector<std::size_t> shape, std::shared_ptr<void> data);
    
    template <typename T>
-   void AddInitializedTensor(std::string tensor_name, ETensorType type, std::vector<std::size_t> shape, T* data);
+   void AddInitializedTensor(std::string tensor_name, ETensorType type, std::vector<std::size_t> shape, T* raw_data){
+      int size=1;
+      for(auto item:shape){
+         size*=(int)item;
+      }
+      std::shared_ptr<void> data(malloc(size * sizeof(T)), free);
+      std::memcpy(data.get(), raw_data, size * sizeof(T));
+      AddInitializedTensor(tensor_name, type, shape, data);
+   }
 
    // Check if a tensor is initialized
    bool IsInitializedTensor(const std::string& name) const;
