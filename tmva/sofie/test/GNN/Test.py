@@ -146,6 +146,6 @@ def ParseFromMemory(GraphModule, GraphData):
 
     gnn_model = ROOT.TMVA.Experimental.SOFIE.RModel_GNN(gin)
     blas_routines = ROOT.std.vector['std::string']()
-    blas_routines.push_back("gemm")
+    blas_routines.push_back("Gemm")
     gnn_model.AddBlasRoutines(blas_routines)
     return gnn_model
