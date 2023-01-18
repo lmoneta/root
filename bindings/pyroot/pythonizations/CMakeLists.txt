@@ -95,6 +95,15 @@ set(py2_py3_sources
   ROOT/_pythonization/_tgraph.py
   ROOT/_pythonization/_th1.py
   ROOT/_pythonization/_titer.py
+  ROOT/_pythonization/_tmva/_crossvalidation.py
+  ROOT/_pythonization/_tmva/_dataloader.py
+  ROOT/_pythonization/_tmva/_factory.py
+  ROOT/_pythonization/_tmva/_gnn.py
+  ROOT/_pythonization/_tmva/__init__.py
+  ROOT/_pythonization/_tmva/_rbdt.py
+  ROOT/_pythonization/_tmva/_rtensor.py
+  ROOT/_pythonization/_tmva/_tree_inference.py
+  ROOT/_pythonization/_tmva/_utils.py
   ROOT/_pythonization/_tobject.py
   ROOT/_pythonization/_tobjstring.py
   ROOT/_pythonization/_tseqcollection.py

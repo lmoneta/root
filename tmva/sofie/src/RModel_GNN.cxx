@@ -1,6 +1,7 @@
-#include <limits>
 #include <algorithm>
 #include <cctype>
+#include <fstream>
+#include <limits>
 
 #include "TMVA/RModel_GNN.hxx"
 
@@ -79,6 +80,10 @@ namespace SOFIE{
     void RModel_GNN::Generate(){
         std::string hgname;
         GenerateHeaderInfo(hgname);
+
+        std::ofstream f;
+        f.open(fName+".dat");
+        f.close();
 
         // Generating Infer function definition for Edge Update function
         long next_pos;
