@@ -231,7 +231,7 @@ namespace SOFIE{
          i->Initialize(*this);
       }
    }
-   
+
 
    void RModel::GenerateInitializedTensorInfo(){
       for (auto& i: fInitializedTensors){
@@ -312,7 +312,7 @@ namespace SOFIE{
       }
 
       fGC += "infer(";
-      
+
       for(size_t i = 0; i<fInputTensorNames.size(); ++i){
          switch((fReadyInputTensorInfos[fInputTensorNames[i]]).type){
             case  ETensorType::FLOAT :{
@@ -333,10 +333,10 @@ namespace SOFIE{
             }
             default: {
                throw std::runtime_error("TMVA-SOFIE: input tensor " + fInputTensorNames[i] + " is of a data type which is not yet supported.");
-            }        
+            }
          }
       }
-      
+
       fGC.pop_back(); //remove last ","
       fGC += "){\n";
 
@@ -345,7 +345,7 @@ namespace SOFIE{
       for (size_t id = 0; id < fOperators.size() ; id++){
          fGC+= (fOperators[id]->Generate(std::to_string(id)));
       }
-      
+
       if (outputSize == 1) {
          size_t outputLength = ConvertShapeToLength(GetTensorShape(fOutputTensorNames[0]));
 
@@ -417,12 +417,12 @@ namespace SOFIE{
             ReadInitializedTensorsFromFile(pos);
             //fUseWeightFile = fUseWeightFile;
          }
-         
+
          // add here initialization code
          for (size_t id = 0; id < fOperators.size() ; id++){
             fGC += fOperators[id]->GenerateInitCode();
          }
-         
+
          fGC += "}\n\n";
       }
 
@@ -617,12 +617,17 @@ namespace SOFIE{
 
    void RModel::OutputGenerated(std::string filename){
          RModel_Base::OutputGenerated(filename);
-         
+
          // write weights in a text file
-         size_t pos = filename.find(".hxx");
-         filename.replace(pos,4,".dat");
-         if (fUseWeightFile) 
-            pos = WriteInitializedTensorsToFile(filename);
+         if (fUseWeightFile) {
+            if (!filename.empty()) {
+               size_t pos = filename.find(".hxx");
+               filename.replace(pos,4,".dat");
+            }
+            else
+               filename = fName + ".dat";
+            WriteInitializedTensorsToFile(filename);
+         }
    }
 
    void RModel::Streamer(TBuffer &R__b){
