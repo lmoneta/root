@@ -27,14 +27,14 @@ def ParseFromMemory(GraphModule, GraphData):
     # extracting the edges
     edges = []
     for i in range(len(GraphData['senders'])):
-        val =  gbl_namespace.std.make_pair['int,int'](int(GraphData['senders'][i]), int(GraphData['receivers'][i]))
+        val =  gbl_namespace.std.make_pair['int,int'](int(GraphData['receivers'][i]), int(GraphData['senders'][i]))
         gin.edges.push_back(val)
 
     gin.num_node_features = len(GraphData['nodes'][0])
     gin.num_edge_features = len(GraphData['edges'][0])
     gin.num_global_features = len(GraphData['globals'])
 
-    gin.filename = GraphModule.name 
+    gin.filename = GraphModule.name
 
     # adding the node update function
     node_model = GraphModule._node_block._node_model
@@ -53,7 +53,7 @@ def ParseFromMemory(GraphModule, GraphData):
         val.push_back(bias_tensor_names)
         upd.AddInitializedTensors(val)
         gin.createUpdateFunction(upd)
-        
+
         weights = node_model.variables
         for i in weights:
             shape = gbl_namespace.std.vector['std::size_t']()
@@ -61,11 +61,11 @@ def ParseFromMemory(GraphModule, GraphData):
             for j in shape_as_list:
                 shape.push_back(j)
             gin.nodes_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
-            
+
     else:
         print("Invalid Model for node update.")
         return
-    
+
     # adding the edge update function
     edge_model = GraphModule._edge_block._edge_model
     if (edge_model.name == "mlp"):
@@ -83,7 +83,7 @@ def ParseFromMemory(GraphModule, GraphData):
         val.push_back(bias_tensor_names)
         upd.AddInitializedTensors(val)
         gin.createUpdateFunction(upd)
-        
+
         weights = edge_model.variables
         for i in weights:
             shape = gbl_namespace.std.vector['std::size_t']()
@@ -91,7 +91,7 @@ def ParseFromMemory(GraphModule, GraphData):
             for j in shape_as_list:
                 shape.push_back(j)
             gin.edges_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
-            
+
     else:
         print("Invalid Model for edge update.")
         return
@@ -113,7 +113,7 @@ def ParseFromMemory(GraphModule, GraphData):
         val.push_back(bias_tensor_names)
         upd.AddInitializedTensors(val)
         gin.createUpdateFunction(upd)
-        
+
         weights = global_model.variables
         for i in weights:
             shape = gbl_namespace.std.vector['std::size_t']()
@@ -124,7 +124,7 @@ def ParseFromMemory(GraphModule, GraphData):
     else:
         print("Invalid Model for global update.")
         return
-    
+
     # adding edge-node aggregate function
     edge_node_reducer = GraphModule._node_block._received_edges_aggregator._reducer.__qualname__
     if(edge_node_reducer == "unsorted_segment_sum"):
@@ -137,7 +137,7 @@ def ParseFromMemory(GraphModule, GraphData):
         print("Invalid aggregate function for edge-node reduction")
         return
 
-    
+
     # adding node-global aggregate function
     node_global_reducer = GraphModule._global_block._nodes_aggregator._reducer.__qualname__
     if(node_global_reducer == "unsorted_segment_sum"):
