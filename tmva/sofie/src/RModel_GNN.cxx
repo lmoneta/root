@@ -136,7 +136,7 @@ namespace SOFIE{
         for(int k=0; k<num_edges; ++k){
             fGC+="std::vector<float> Edge_"+std::to_string(k)+"_Update = ";
             fGC+=edges_update_block->Generate({"input_graph.edge_data.data()+"+std::to_string(k),"input_graph.node_data.data()+"+std::to_string(receivers[k])+"*"+std::to_string(num_node_features),"input_graph.node_data.data()+"+std::to_string(senders[k])+"*"+std::to_string(num_node_features),"input_graph.global_data.data()"});
-            fGC+="\nstd::copy(Edge_"+std::to_string(k)+"_Update.begin(),Edge_"+std::to_string(k)+"_Update.end(),input_graph.edge_data.begin()+"+std::to_string(k)+");";
+            fGC+="\nstd::copy(Edge_"+std::to_string(k)+"_Update.begin(),Edge_"+std::to_string(k)+"_Update.end(),input_graph.edge_data.begin()+"+std::to_string(k*num_edge_features)+");";
         }
         fGC+="\n";
 
