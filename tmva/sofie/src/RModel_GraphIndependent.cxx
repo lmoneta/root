@@ -61,6 +61,10 @@ namespace SOFIE{
         std::string hgname;
         GenerateHeaderInfo(hgname);
 
+        std::ofstream f;
+        f.open(fName+".dat");
+        f.close();
+
         //Generating Infer function definition for Edge update function
         long next_pos;
         fGC+="\n\nnamespace Edge_Update{\nstruct Session {\n";

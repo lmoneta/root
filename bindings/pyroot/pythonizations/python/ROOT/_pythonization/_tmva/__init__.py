@@ -22,7 +22,7 @@ from ._crossvalidation import CrossValidation
 
 from ._rbdt import Compute, pythonize_rbdt
 
-from ._gnn import ParseFromMemory
+from ._gnn import RModel_GNN, RModel_GraphIndependent
 
 hasRDF = gSystem.GetFromPipe("root-config --has-dataframe") == "yes"
 if hasRDF:

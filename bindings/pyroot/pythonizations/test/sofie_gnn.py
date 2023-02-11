@@ -48,7 +48,7 @@ class SOFIE_GNN(unittest.TestCase):
         model.Generate()
         model.OutputGenerated()
 
-        ROOT.gInterpreter.Declare('#include "graph_network.hxx"')
+        ROOT.gInterpreter.Declare('#include "gnn_network.hxx"')
         input_data = ROOT.TMVA.Experimental.SOFIE.GNN_Data()
 
         for i in GraphData['nodes'].flatten():
@@ -60,7 +60,7 @@ class SOFIE_GNN(unittest.TestCase):
         for i in GraphData['globals'].flatten():
             input_data.global_data.push_back(i)
 
-        ROOT.TMVA_SOFIE_graph_network.infer(input_data)
+        ROOT.TMVA_SOFIE_gnn_network.infer(input_data)
         
         output_node_data = output.nodes.numpy().flatten()
         output_edge_data = output.edges.numpy().flatten()
@@ -75,7 +75,52 @@ class SOFIE_GNN(unittest.TestCase):
         for i in range(len(output_global_data)):
             self.assertAlmostEqual(output_global_data[i], input_data.global_data[i], 2)
 
+    def test_parse_graph_independent(self):
+        '''
+        Test that parsed GraphIndependent model from a graphnets model generates correct 
+        inference code
+        '''
+        GraphModule = gn.modules.GraphIndependent(
+            edge_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True),
+            node_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True),
+            global_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True))
+        
+        GraphData = get_graph_data_dict(2,1)
+        input_graphs = utils_tf.data_dicts_to_graphs_tuple([GraphData])
+        output = GraphModule(input_graphs)
+        
+        # Parsing model to RModel_GraphIndependent
+        model = ROOT.TMVA.Experimental.SOFIE.RModel_GraphIndependent.ParseFromMemory(GraphModule, GraphData)
+        model.Generate()
+        model.OutputGenerated()
 
+        ROOT.gInterpreter.Declare('#include "graph_independent_network.hxx"')
+        input_data = ROOT.TMVA.Experimental.SOFIE.GNN_Data()
+
+        for i in GraphData['nodes'].flatten():
+            input_data.node_data.push_back(i)
+
+        for i in GraphData['edges'].flatten():
+            input_data.edge_data.push_back(i)
+
+        for i in GraphData['globals'].flatten():
+            input_data.global_data.push_back(i)
+
+        ROOT.TMVA_SOFIE_graph_independent_network.infer(input_data)
+        
+        output_node_data = output.nodes.numpy().flatten()
+        output_edge_data = output.edges.numpy().flatten()
+        output_global_data = output.globals.numpy().flatten()
+        
+
+        for i in range(len(output_node_data)):
+            self.assertAlmostEqual(output_node_data[i], input_data.node_data[i], 2)
+
+        for i in range(len(output_edge_data)):
+            self.assertAlmostEqual(output_edge_data[i], input_data.edge_data[i], 2)
+
+        for i in range(len(output_global_data)):
+            self.assertAlmostEqual(output_global_data[i], input_data.global_data[i], 2)
 
 
 if __name__ == '__main__':
