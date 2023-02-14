@@ -1,7 +1,7 @@
 #ifndef TMVA_SOFIE_SOFIE_COMMON
 #define TMVA_SOFIE_SOFIE_COMMON
 
-// #include "TMVA/RTensor.hxx"
+#include "TMVA/RTensor.hxx"
 // #include "TMVA/Types.h"
 
 #include <stdexcept>
@@ -425,9 +425,11 @@ extern "C" void sgemm_(const char * transa, const char * transb, const int * m, 
 
 
 struct GNN_Data {
-      std::vector<float> node_data;
-      std::vector<float> edge_data;
-      std::vector<float> global_data; 
+      RTensor<float> node_data;
+      RTensor<float> edge_data;
+      RTensor<float> global_data;
+
+      GNN_Data(): node_data(RTensor<float>({0,0})), edge_data(RTensor<float>({0,0})), global_data(RTensor<float>({0,0})){}
 };
 
 }//SOFIE

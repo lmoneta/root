@@ -2,6 +2,7 @@ import unittest
 import ROOT
 
 import numpy as np
+from numpy.testing import assert_almost_equal
 import graph_nets as gn
 from graph_nets import utils_tf
 import sonnet as snt
@@ -51,14 +52,9 @@ class SOFIE_GNN(unittest.TestCase):
         ROOT.gInterpreter.Declare('#include "gnn_network.hxx"')
         input_data = ROOT.TMVA.Experimental.SOFIE.GNN_Data()
 
-        for i in GraphData['nodes'].flatten():
-            input_data.node_data.push_back(i)
-
-        for i in GraphData['edges'].flatten():
-            input_data.edge_data.push_back(i)
-
-        for i in GraphData['globals'].flatten():
-            input_data.global_data.push_back(i)
+        input_data.node_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['nodes'])
+        input_data.edge_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['edges'])
+        input_data.global_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['globals'])
 
         ROOT.TMVA_SOFIE_gnn_network.infer(input_data)
         
@@ -66,14 +62,10 @@ class SOFIE_GNN(unittest.TestCase):
         output_edge_data = output.edges.numpy().flatten()
         output_global_data = output.globals.numpy().flatten()
 
-        for i in range(len(output_node_data)):
-            self.assertAlmostEqual(output_node_data[i], input_data.node_data[i], 2)
+        assert_almost_equal(output_node_data, np.asarray(input_data.node_data).flatten())
+        assert_almost_equal(output_edge_data, np.asarray(input_data.edge_data).flatten())
+        assert_almost_equal(output_global_data, np.asarray(input_data.global_data).flatten())
 
-        for i in range(len(output_edge_data)):
-            self.assertAlmostEqual(output_edge_data[i], input_data.edge_data[i], 2)
-
-        for i in range(len(output_global_data)):
-            self.assertAlmostEqual(output_global_data[i], input_data.global_data[i], 2)
 
     def test_parse_graph_independent(self):
         '''
@@ -97,14 +89,9 @@ class SOFIE_GNN(unittest.TestCase):
         ROOT.gInterpreter.Declare('#include "graph_independent_network.hxx"')
         input_data = ROOT.TMVA.Experimental.SOFIE.GNN_Data()
 
-        for i in GraphData['nodes'].flatten():
-            input_data.node_data.push_back(i)
-
-        for i in GraphData['edges'].flatten():
-            input_data.edge_data.push_back(i)
-
-        for i in GraphData['globals'].flatten():
-            input_data.global_data.push_back(i)
+        input_data.node_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['nodes'])
+        input_data.edge_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['edges'])
+        input_data.global_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['globals'])
 
         ROOT.TMVA_SOFIE_graph_independent_network.infer(input_data)
         
@@ -112,15 +99,9 @@ class SOFIE_GNN(unittest.TestCase):
         output_edge_data = output.edges.numpy().flatten()
         output_global_data = output.globals.numpy().flatten()
         
-
-        for i in range(len(output_node_data)):
-            self.assertAlmostEqual(output_node_data[i], input_data.node_data[i], 2)
-
-        for i in range(len(output_edge_data)):
-            self.assertAlmostEqual(output_edge_data[i], input_data.edge_data[i], 2)
-
-        for i in range(len(output_global_data)):
-            self.assertAlmostEqual(output_global_data[i], input_data.global_data[i], 2)
+        assert_almost_equal(output_node_data, np.asarray(input_data.node_data).flatten())
+        assert_almost_equal(output_edge_data, np.asarray(input_data.edge_data).flatten())
+        assert_almost_equal(output_global_data, np.asarray(input_data.global_data).flatten())
 
 
 if __name__ == '__main__':
