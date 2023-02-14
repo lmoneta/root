@@ -213,7 +213,7 @@ namespace SOFIE{
          }
       }
       // check if there are initialized tensors to write in a weight file
-      // support for the time being only wheight of FLOAT type
+      // support for the time being only weight of FLOAT type
       if (fUseWeightFile) {
          bool modelHasWeights = false;
          for (auto& i: fInitializedTensors){
@@ -410,12 +410,16 @@ namespace SOFIE{
             fGC += fOperators[id]->GenerateSessionMembersCode(opName);
          }
          fGC += "\n";
-         fGC += "Session(std::string filename =\"\") {\n";
          // here add initialization and reading of weight tensors
          if (fUseWeightFile) {
+            fGC += "Session(std::string filename =\"\") {\n";
             fGC += "   if (filename.empty()) filename = \"" + fName + ".dat\";\n";
             ReadInitializedTensorsFromFile(pos);
             //fUseWeightFile = fUseWeightFile;
+         } else {
+            // no need to pass weight file since it is not used
+            // keep passing a string for compatibility
+            fGC += "Session(std::string = \"\") {\n";
          }
 
          // add here initialization code
