@@ -227,7 +227,6 @@ namespace SOFIE{
 
 
       for (auto& i : fOperators){
-         //std::cout << "initialize operator  " << typeid(*i).name() << std::endl;
          i->Initialize(*this);
       }
    }
@@ -393,6 +392,7 @@ namespace SOFIE{
       Initialize(batchSize);
       std::string hgname;
       if(!fIsGNNComponent){
+         fGC.clear();
          GenerateHeaderInfo(hgname);
          if (fUseSession) {
             fGC += "struct Session {\n";
