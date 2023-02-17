@@ -58,13 +58,13 @@ class SOFIE_GNN(unittest.TestCase):
 
         ROOT.TMVA_SOFIE_gnn_network.infer(input_data)
         
-        output_node_data = output.nodes.numpy().flatten()
-        output_edge_data = output.edges.numpy().flatten()
+        output_node_data = output.nodes.numpy()
+        output_edge_data = output.edges.numpy()
         output_global_data = output.globals.numpy().flatten()
 
-        assert_almost_equal(output_node_data, np.asarray(input_data.node_data).flatten())
-        assert_almost_equal(output_edge_data, np.asarray(input_data.edge_data).flatten())
-        assert_almost_equal(output_global_data, np.asarray(input_data.global_data).flatten())
+        assert_almost_equal(output_node_data, np.asarray(input_data.node_data))
+        assert_almost_equal(output_edge_data, np.asarray(input_data.edge_data))
+        assert_almost_equal(output_global_data, np.asarray(input_data.global_data))
 
 
     def test_parse_graph_independent(self):
@@ -95,13 +95,13 @@ class SOFIE_GNN(unittest.TestCase):
 
         ROOT.TMVA_SOFIE_graph_independent_network.infer(input_data)
         
-        output_node_data = output.nodes.numpy().flatten()
-        output_edge_data = output.edges.numpy().flatten()
+        output_node_data = output.nodes.numpy()
+        output_edge_data = output.edges.numpy()
         output_global_data = output.globals.numpy().flatten()
         
-        assert_almost_equal(output_node_data, np.asarray(input_data.node_data).flatten())
-        assert_almost_equal(output_edge_data, np.asarray(input_data.edge_data).flatten())
-        assert_almost_equal(output_global_data, np.asarray(input_data.global_data).flatten())
+        assert_almost_equal(output_node_data, np.asarray(input_data.node_data))
+        assert_almost_equal(output_edge_data, np.asarray(input_data.edge_data))
+        assert_almost_equal(output_global_data, np.asarray(input_data.global_data))
 
 
 if __name__ == '__main__':
