@@ -182,7 +182,7 @@ FunctionMinimum ModularFunctionMinimizer::Minimize(const MnFcn &mfcn, const Grad
    // std::cout << typeid(&mb).Name() << std::endl;
    double effective_toler = toler * mfcn.Up(); // scale tolerance with Up()
    // avoid tolerance too smalls (than limits)
-   double eps = MnMachinePrecision().Eps2();
+   double eps = MnMachinePrecision().Eps();
    if (effective_toler < eps)
       effective_toler = eps;
 

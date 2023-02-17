@@ -85,13 +85,14 @@ public:
    // used for one-line printing of fcn minimum state
    class Oneline {
    public:
-      Oneline(double fcn, double edm, int ncalls, int iter = -1);
-      Oneline(const MinimumState &state, int iter = -1);
-      Oneline(const FunctionMinimum &fmin, int iter = -1);
+      Oneline(double fcn, double edm, double dcov, int ncalls, int iter = -1, std::string txt = "");
+      Oneline(const MinimumState &state, int iter = -1, std::string txt = "");
+      Oneline(const FunctionMinimum &fmin, int iter = -1, std::string txt = "");
 
    private:
-      double fFcn, fEdm;
+      double fFcn, fEdm, fDcov;
       int fNcalls, fIter;
+      std::string fText;
 
       friend std::ostream &operator<<(std::ostream &os, const Oneline &x);
    };

@@ -5355,6 +5355,7 @@ L230:
 L300:
    if (iswtr >= 0) {
       Printf(" MIGRAD MINIMIZATION HAS CONVERGED.");
+      printf("Error matrix uncertainty %g \n",fDcovar);
    }
    if (fItaur == 0) {
       if (fIstrat >= 2 || (fIstrat == 1 && fISW[1] < 3)) {

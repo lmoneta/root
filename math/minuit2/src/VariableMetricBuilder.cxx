@@ -34,7 +34,7 @@ namespace Minuit2 {
 
 double inner_product(const LAVector &, const LAVector &);
 
-void VariableMetricBuilder::AddResult(std::vector<MinimumState> &result, const MinimumState &state) const
+void VariableMetricBuilder::AddResult(std::vector<MinimumState> &result, const MinimumState &state, std::string desctxt) const
 {
    // // if (!store) store = StorageLevel();
    // // store |= (result.size() == 0);
@@ -47,7 +47,7 @@ void VariableMetricBuilder::AddResult(std::vector<MinimumState> &result, const M
       TraceIteration(result.size() - 1, result.back());
    else {
       MnPrint print("VariableMetricBuilder", PrintLevel());
-      print.Info(MnPrint::Oneline(result.back(), result.size() - 1));
+      print.Info(MnPrint::Oneline(result.back(), result.size() - 1), desctxt);
    }
 }
 
@@ -64,6 +64,12 @@ FunctionMinimum VariableMetricBuilder::Minimum(const MnFcn &fcn, const GradientC
    // There are also a check for convergence if (edm < 0.1 edmval for exiting the loop)
    // LM: change factor to 2E-3 to be consistent with F77Minuit
    edmval *= 0.002;
+   // avoid  edm smaller than precision
+   double eps = MnMachinePrecision().Eps();
+   if (edmval < eps) {
+      print.Warn("Requested ems is smaller than precision - use edmval = MnMachinePrecision::Eps()");
+      edmval = eps;
+   }
 
    // set global printlevel to the local one so all calls to MN_INFO_MSG can be controlled in the same way
    // at exit of this function the BuilderPrintLevelConf object is destructed and automatically the
@@ -100,7 +106,7 @@ FunctionMinimum VariableMetricBuilder::Minimum(const MnFcn &fcn, const GradientC
    // do actual iterations
    print.Info("Start iterating until Edm is <", edmval, "with call limit =", maxfcn);
 
-   AddResult(result, seed.State());
+   AddResult(result, seed.State(),"(initial after seed)");
 
    // try first with a maxfxn = 80% of maxfcn
    int maxfcn_eff = maxfcn;
@@ -135,13 +141,13 @@ FunctionMinimum VariableMetricBuilder::Minimum(const MnFcn &fcn, const GradientC
 
       if ((strategy.Strategy() == 2) || (strategy.Strategy() == 1 && min.Error().Dcovar() > 0.05)) {
 
-         print.Debug("MnMigrad will verify convergence and Error matrix; dcov =", min.Error().Dcovar());
+         print.Info("MnMigrad will verify convergence and Error matrix by computing Hessian; dcov =", min.Error().Dcovar());
 
          MinimumState st = MnHesse(strategy)(fcn, min.State(), min.Seed().Trafo(), maxfcn);
 
-         print.Info("After Hessian");
+         print.Debug("After Hessian");
 
-         AddResult(result, st);
+         AddResult(result, st, "(after Hessian)");
 
          if (!st.IsValid()) {
             print.Warn("Invalid Hessian - exit the minimization");
@@ -183,8 +189,8 @@ FunctionMinimum VariableMetricBuilder::Minimum(const MnFcn &fcn, const GradientC
    // Add latest state (Hessian calculation)
    const MinimumState &latest = result.back();
 
-   // check edm (add a factor of 10 in tolerance )
-   if (edm > 10 * edmval) {
+   // check edm (add a factor of 10 in tolerance and if larger than machine limit )
+   if (edm > 10 * edmval &&  edm > std::fabs(seed.Precision().Eps2() * result.back().Fval()) ) {
       min.Add(latest, FunctionMinimum::MnAboveMaxEdm);
       print.Warn("No convergence; Edm", edm, "is above tolerance", 10 * edmval);
    } else if (latest.Error().HasReachedCallLimit()) {
@@ -266,7 +272,7 @@ FunctionMinimum VariableMetricBuilder::Minimum(const MnFcn &fcn, const GradientC
          print.Warn("gdel =", gdel);
 
          if (gdel > 0.) {
-            AddResult(result, s0);
+            AddResult(result, s0, "(gdel> 0: approx error matrix is not pos defined)");
 
             return FunctionMinimum(seed, result, fcn.Up());
          }
@@ -280,12 +286,9 @@ FunctionMinimum VariableMetricBuilder::Minimum(const MnFcn &fcn, const GradientC
          print.Warn("No improvement in line search");
 
          // no improvement exit   (is it really needed LM ? in vers. 1.22 tried alternative )
-         // add new state when only fcn changes
+         // add new state only in case of first iteration
          if (result.size() <= 1)
-            AddResult(result, MinimumState(s0.Parameters(), s0.Error(), s0.Gradient(), s0.Edm(), fcn.NumOfCalls()));
-         else
-            // no need to re-store the state
-            AddResult(result, MinimumState(pp.Y(), s0.Edm(), fcn.NumOfCalls()));
+            AddResult(result, MinimumState(s0.Parameters(), s0.Error(), s0.Gradient(), s0.Edm(), fcn.NumOfCalls()),"(after failing line search)");
 
          break;
       }
@@ -301,7 +304,7 @@ FunctionMinimum VariableMetricBuilder::Minimum(const MnFcn &fcn, const GradientC
 
       if (std::isnan(edm)) {
          print.Warn("Edm is NaN; stop iterations");
-         AddResult(result, s0);
+         AddResult(result, s0,"(Edm is NaN)");
          return FunctionMinimum(seed, result, fcn.Up());
       }
 
@@ -314,7 +317,7 @@ FunctionMinimum VariableMetricBuilder::Minimum(const MnFcn &fcn, const GradientC
          if (edm < 0.) {
             print.Warn("Matrix still not pos.def.; stop iterations");
 
-            AddResult(result, s0);
+            AddResult(result, s0,"(Error matrix still not pos def)");
 
             return FunctionMinimum(seed, result, fcn.Up());
          }

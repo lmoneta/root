@@ -55,7 +55,7 @@ public:
    const VariableMetricEDMEstimator &Estimator() const { return fEstimator; }
    const MinimumErrorUpdator &ErrorUpdator() const { return *fErrorUpdator; }
 
-   void AddResult(std::vector<MinimumState> &result, const MinimumState &state) const;
+   void AddResult(std::vector<MinimumState> &result, const MinimumState &state, std::string desctxt = "") const;
 
 private:
    VariableMetricEDMEstimator fEstimator;

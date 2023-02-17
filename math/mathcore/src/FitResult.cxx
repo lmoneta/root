@@ -438,7 +438,7 @@ void FitResult::PrintCovMatrix(std::ostream &os) const {
    if (!fValid) return;
    if (fCovMatrix.size() == 0) return;
 //   os << "****************************************\n";
-   os << "\nCovariance Matrix:\n\n";
+   os << "\nCovariance Matrix:    (elements above diagonal are not printed)\n\n";
    unsigned int npar = fParams.size();
    const int kPrec = 5;
    const int kWidth = 8;
@@ -449,7 +449,7 @@ void FitResult::PrintCovMatrix(std::ostream &os) const {
    int prevPrec = os.precision(kPrec);
    const std::ios_base::fmtflags prevFmt = os.flags();
 
-   os << std::setw(parw) << " " << "\t";
+   os << std::setw(parw) << " ";
    for (unsigned int i = 0; i < npar; ++i) {
       if (!IsParameterFixed(i) ) {
          os << std::right  << std::setw(matw)  << GetParameterName(i) ;
@@ -458,8 +458,8 @@ void FitResult::PrintCovMatrix(std::ostream &os) const {
    os << std::endl;
    for (unsigned int i = 0; i < npar; ++i) {
       if (!IsParameterFixed(i) ) {
-         os << std::left << std::setw(parw) << GetParameterName(i) << "\t";
-         for (unsigned int j = 0; j < npar; ++j) {
+         os << std::left << std::setw(parw) << GetParameterName(i);
+         for (unsigned int j = 0; j <=i; ++j) {
             if (!IsParameterFixed(j) ) {
                os.precision(kPrec); os.width(kWidth);  os << std::right << std::setw(matw) << CovMatrix(i,j);
             }
@@ -468,8 +468,8 @@ void FitResult::PrintCovMatrix(std::ostream &os) const {
       }
    }
 //   os << "****************************************\n";
-   os << "\nCorrelation Matrix:\n\n";
-   os << std::setw(parw) << " " << "\t";
+   os << "\nCorrelation Matrix:    (elements above diagonal are not printed)\n\n";
+   os << std::setw(parw) << " ";
    for (unsigned int i = 0; i < npar; ++i) {
       if (!IsParameterFixed(i) ) {
          os << std::right << std::setw(matw)  << GetParameterName(i) ;
@@ -478,8 +478,8 @@ void FitResult::PrintCovMatrix(std::ostream &os) const {
    os << std::endl;
    for (unsigned int i = 0; i < npar; ++i) {
       if (!IsParameterFixed(i) ) {
-         os << std::left << std::setw(parw) << std::left << GetParameterName(i) << "\t";
-         for (unsigned int j = 0; j < npar; ++j) {
+         os << std::left << std::setw(parw) << std::left << GetParameterName(i);
+         for (unsigned int j = 0; j <= i; ++j) {
             if (!IsParameterFixed(j) ) {
                os.precision(kPrec); os.width(kWidth);  os << std::right << std::setw(matw) << Correlation(i,j);
             }

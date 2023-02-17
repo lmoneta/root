@@ -198,17 +198,17 @@ bool MnPrint::Hidden()
    return true;
 }
 
-MnPrint::Oneline::Oneline(double fcn, double edm, int ncalls, int iter)
-   : fFcn(fcn), fEdm(edm), fNcalls(ncalls), fIter(iter)
+MnPrint::Oneline::Oneline(double fcn, double edm, double dcov, int ncalls, int iter, std::string txt)
+   : fFcn(fcn), fEdm(edm), fDcov(dcov), fNcalls(ncalls), fIter(iter), fText(txt)
 {
 }
 
-MnPrint::Oneline::Oneline(const MinimumState &state, int iter)
-   : MnPrint::Oneline(state.Fval(), state.Edm(), state.NFcn(), iter)
+MnPrint::Oneline::Oneline(const MinimumState &state, int iter, std::string txt)
+   : MnPrint::Oneline(state.Fval(), state.Edm(), state.Error().Dcovar(), state.NFcn(), iter, txt)
 {
 }
 
-MnPrint::Oneline::Oneline(const FunctionMinimum &fmin, int iter) : MnPrint::Oneline(fmin.State(), iter) {}
+MnPrint::Oneline::Oneline(const FunctionMinimum &fmin, int iter, std::string txt) : MnPrint::Oneline(fmin.State(), iter, txt) {}
 
 std::ostream &operator<<(std::ostream &os, const MnPrint::Oneline &x)
 {
@@ -216,8 +216,10 @@ std::ostream &operator<<(std::ostream &os, const MnPrint::Oneline &x)
    if (x.fIter >= 0)
       os << std::setw(4) << x.fIter << " - ";
    const int pr = os.precision(PRECISION);
-   os << "FCN = " << std::setw(WIDTH) << x.fFcn << " Edm = " << std::setw(WIDTH) << x.fEdm
-      << " NCalls = " << std::setw(6) << x.fNcalls;
+   os << "FCN = " << std::setw(WIDTH) << x.fFcn << " Edm = " << std::setw(WIDTH) << x.fEdm;
+   os.precision(5);
+   os << " Dcov = " << x.fDcov << " NCalls = " << std::setw(6) << x.fNcalls;
+   if (!x.fText.empty()) os << "  " << x.fText;
    os.precision(pr);
    return os;
 }
