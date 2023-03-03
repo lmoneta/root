@@ -461,6 +461,7 @@ TMVA::Experimental::RTensor<T> Concatenate( TMVA::Experimental::RTensor<T> & t1,
       std::copy(t1.begin() + i*s1, t1.begin() + (i+1)*s1, tout.begin() + i * sout );
       std::copy(t2.begin() + i*s2, t2.begin() + (i+1)*s2, tout.begin() + i * sout + s1 );
    }
+
    return tout;
 }
 
@@ -469,7 +470,7 @@ inline GNN_Data Concatenate(GNN_Data & data1, GNN_Data & data2, int axis = 0) {
    GNN_Data out;
    out.node_data = Concatenate(data1.node_data,data2.node_data, axis);
    out.edge_data = Concatenate(data1.edge_data,data2.edge_data, axis);
-   out.global_data = Concatenate(data1.global_data,data2.global_data, axis);
+   out.global_data = Concatenate<float>(data1.global_data,data2.global_data, axis-1);
    return out;
 }
 
