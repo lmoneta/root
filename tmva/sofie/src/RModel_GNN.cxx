@@ -3,6 +3,7 @@
 #include <fstream>
 #include <limits>
 
+#include <iostream>
 #include "TMVA/RModel_GNN.hxx"
 
 
@@ -136,6 +137,10 @@ namespace SOFIE{
         for(int k=0; k<num_edges; ++k){
             fGC+="std::vector<float> Edge_"+std::to_string(k)+"_Update = ";
             fGC+=edges_update_block->Generate({"input_graph.edge_data.GetData()+"+std::to_string(k*num_edge_features),"input_graph.node_data.GetData()+"+std::to_string(receivers[k] * num_node_features),"input_graph.node_data.GetData()+"+std::to_string(senders[k] * num_node_features),"input_graph.global_data.GetData()"});
+            if(edges_update_block->GetFunctionBlock()->GetTensorShape(edges_update_block->GetFunctionBlock()->GetOutputTensorNames()[0])[1] != num_edge_features){
+                num_edge_features = edges_update_block->GetFunctionBlock()->GetTensorShape(edges_update_block->GetFunctionBlock()->GetOutputTensorNames()[0])[1];
+                fGC+="\ninput_graph.edge_data = input_graph.edge_data.Resize({"+std::to_string(num_edges)+", "+std::to_string(num_edge_features)+"});";
+            }
             fGC+="\nstd::copy(Edge_"+std::to_string(k)+"_Update.begin(),Edge_"+std::to_string(k)+"_Update.end(),input_graph.edge_data.begin()+"+std::to_string(k*num_edge_features)+");";
         }
         fGC+="\n";
@@ -145,7 +150,7 @@ namespace SOFIE{
         std::vector<std::string> Node_Edge_Aggregate_String;
         for(int i=0; i<num_nodes; ++i){
             for(int k=0; k<num_edges; ++k){
-                if(receivers[k] == i){
+                if(receivers[k] == i){ 
                     Node_Edge_Aggregate_String.emplace_back("input_graph.edge_data.GetData()+"+std::to_string(k*num_edge_features));
                 }
             }
@@ -164,6 +169,10 @@ namespace SOFIE{
             fGC+="std::vector<float> Node_"+std::to_string(i)+"_Update = ";
             fGC+=nodes_update_block->Generate({"Node_"+std::to_string(i)+"_Edge_Aggregate.data()","input_graph.node_data.GetData()+"+std::to_string(i*num_node_features),"input_graph.global_data.GetData()"});    // computing updated node attributes 
             fGC+="\n";
+            if(nodes_update_block->GetFunctionBlock()->GetTensorShape(nodes_update_block->GetFunctionBlock()->GetOutputTensorNames()[0])[1] != num_node_features){
+                num_node_features = nodes_update_block->GetFunctionBlock()->GetTensorShape(nodes_update_block->GetFunctionBlock()->GetOutputTensorNames()[0])[1];
+                fGC+="input_graph.node_data = input_graph.node_data.Resize({"+std::to_string(num_nodes)+", "+std::to_string(num_node_features)+"});\n";
+            }
             fGC+="std::copy(Node_"+std::to_string(i)+"_Update.begin(), Node_"+std::to_string(i)+"_Update.end(), input_graph.node_data.begin()+"+std::to_string(i*num_node_features)+");";
             fGC+="\n";
             Node_Edge_Aggregate_String.clear();
@@ -192,6 +201,10 @@ namespace SOFIE{
         // computing updated global attributes
         fGC += "std::vector<float> Global_Data = ";
         fGC += globals_update_block->Generate({"Edge_Global_Aggregate.data()","Node_Global_Aggregate.data()", "input_graph.global_data.GetData()"}); 
+        if(globals_update_block->GetFunctionBlock()->GetTensorShape(globals_update_block->GetFunctionBlock()->GetOutputTensorNames()[0])[1] != num_global_features){
+                num_global_features = globals_update_block->GetFunctionBlock()->GetTensorShape(globals_update_block->GetFunctionBlock()->GetOutputTensorNames()[0])[1];
+                fGC+="\ninput_graph.global_data = input_graph.global_data.Resize({"+std::to_string(num_global_features)+"});";
+        }
         fGC += "\nstd::copy(Global_Data.begin(), Global_Data.end(), input_graph.global_data.GetData());"; 
         fGC+="\n}\n";
 

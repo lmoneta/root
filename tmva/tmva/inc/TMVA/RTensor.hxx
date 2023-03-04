@@ -496,7 +496,7 @@ inline RTensor<Value_t, Container_t> RTensor<Value_t, Container_t>::Resize(const
 {
    // Create new tensor with the specified shape
    RTensor <Value_t, Container_t> x(shape, fLayout);
-   
+
    // Copying contents from previous tensor
    size_t n = (x.GetSize()>fSize) ? fSize : x.GetSize();
    std::copy(this->GetData(), this->GetData() + n, x.GetData() );
