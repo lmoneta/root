@@ -448,7 +448,7 @@ TMVA::Experimental::RTensor<T> Concatenate( TMVA::Experimental::RTensor<T> & t1,
    if (t1.GetMemoryLayout() == TMVA::Experimental::MemoryLayout::ColumnMajor) {
       throw std::runtime_error("TMVA RTensor Concatenate is not yet supported for column major tensors");
    }
-   
+
    auto & stride1 = t1.GetStrides();
    auto & stride2 = t2.GetStrides();
    auto & outStride = tout.GetStrides();
@@ -471,6 +471,14 @@ inline GNN_Data Concatenate(GNN_Data & data1, GNN_Data & data2, int axis = 0) {
    out.node_data = Concatenate(data1.node_data,data2.node_data, axis);
    out.edge_data = Concatenate(data1.edge_data,data2.edge_data, axis);
    out.global_data = Concatenate<float>(data1.global_data,data2.global_data, axis-1);
+   return out;
+}
+
+inline GNN_Data Copy(const GNN_Data & data) {
+   GNN_Data out;
+   out.node_data = data.node_data.Copy();
+   out.edge_data = data.edge_data.Copy();
+   out.global_data = data.global_data.Copy();
    return out;
 }
 
