@@ -20,6 +20,10 @@ def get_graph_data_dict(num_nodes, num_edges, GLOBAL_FEATURE_SIZE=2, NODE_FEATUR
       "receivers": np.random.randint(num_nodes, size=num_edges, dtype=np.int32),
   }
 
+def CopyData(input_data) :
+  output_data = ROOT.TMVA.Experimental.SOFIE.Copy(input_data)
+  return output_data
+
 class MLPGraphIndependent(snt.Module):
   """GraphIndependent with MLP edge, node, and global models."""
 
@@ -70,15 +74,6 @@ class EncodeProcessDecode(snt.Module):
       decoded_op = self._decoder(latent)
       output_ops.append(self._output_transform(decoded_op))
     return output_ops
-
-def PrintData(input_data) :
-  print("nodes: ",  np.asarray(input_data.node_data))
-  print("edges: ",  np.asarray(input_data.edge_data))
-  print("globals: ",  np.asarray(input_data.global_data))
-
-def CopyData(input_data) :
-  output_data = ROOT.TMVA.Experimental.SOFIE.Copy(input_data)
-  return output_data
 
 class SOFIE_GNN(unittest.TestCase):
     """
@@ -220,15 +215,15 @@ class SOFIE_GNN(unittest.TestCase):
             output = CopyData(core_input)
             output_ops.append(output)
 
-        print("original output_ops: ")
-        print("nodes: ", output_gn[0].nodes.numpy(), output_gn[1].nodes.numpy())
-        print("edges: ", output_gn[0].edges.numpy(), output_gn[1].edges.numpy())
-        print("globals: ", output_gn[0].globals.numpy(), output_gn[1].globals.numpy())
+        for i in range(0, len(output_ops)):
+          output_node_data = output_gn[i].nodes.numpy()
+          output_edge_data = output_gn[i].edges.numpy()
+          output_global_data = output_gn[i].globals.numpy().flatten()
 
-        print("sofie output ops: ")
-        print("nodes: ",  np.asarray(output_ops[0].node_data), np.asarray(output_ops[1].node_data))
-        print("edges: ",  np.asarray(output_ops[0].edge_data), np.asarray(output_ops[1].edge_data))
-        print("globals: ",  np.asarray(output_ops[0].global_data), np.asarray(output_ops[1].global_data))
+          assert_almost_equal(output_node_data, np.asarray(output_ops[i].node_data))
+          assert_almost_equal(output_edge_data, np.asarray(output_ops[i].edge_data))
+          assert_almost_equal(output_global_data, np.asarray(output_ops[i].global_data))
+
 
 
 
