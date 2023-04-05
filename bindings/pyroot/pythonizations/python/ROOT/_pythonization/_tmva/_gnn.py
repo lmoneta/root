@@ -20,6 +20,22 @@ def getActivationFunction(model):
     else:
         return gbl_namespace.TMVA.Experimental.SOFIE.Activation.Invalid
 
+def make_mlp_model(gin, model, target):
+    num_layers = len(model._layers)
+    activation = getActivationFunction(model)
+    upd = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_MLP(target, num_layers, activation, model._activate_final)
+    kernel_tensor_names = gbl_namespace.std.vector['std::string']()
+    bias_tensor_names   = gbl_namespace.std.vector['std::string']()
+
+    for i in range(0, 2*num_layers, 2):
+        bias_tensor_names.push_back(model.variables[i].name)
+        kernel_tensor_names.push_back(model.variables[i+1].name)
+    val = gbl_namespace.std.vector['std::vector<std::string>']()
+    val.push_back(kernel_tensor_names)
+    val.push_back(bias_tensor_names)
+    upd.AddInitializedTensors(val)
+    gin.createUpdateFunction(upd)
+
 class RModel_GNN: 
     def ParseFromMemory(GraphModule, GraphData, filename = "gnn_network"):
         gin = gbl_namespace.TMVA.Experimental.SOFIE.GNN_Init()
@@ -39,92 +55,114 @@ class RModel_GNN:
         
         # adding the node update function
         node_model = GraphModule._node_block._node_model
-        if (node_model.name == "mlp"):
-            num_layers = len(node_model._layers)
-            activation = getActivationFunction(node_model)
-            upd = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_MLP(gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.NODES, num_layers, activation, node_model._activate_final)
-            kernel_tensor_names = gbl_namespace.std.vector['std::string']()
-            bias_tensor_names   = gbl_namespace.std.vector['std::string']()
-
-            for i in range(0, 2*num_layers, 2):
-                bias_tensor_names.push_back(node_model.variables[i].name)
-                kernel_tensor_names.push_back(node_model.variables[i+1].name)
-            val = gbl_namespace.std.vector['std::vector<std::string>']()
-            val.push_back(kernel_tensor_names)
-            val.push_back(bias_tensor_names)
-            upd.AddInitializedTensors(val)
-            gin.createUpdateFunction(upd)
-
-            weights = node_model.variables
-            for i in weights:
-                shape = gbl_namespace.std.vector['std::size_t']()
-                shape_as_list = i.shape.as_list()
-                for j in shape_as_list:
-                    shape.push_back(j)
-                gin.nodes_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
-
+        if (node_model.name == 'mlp'):
+            make_mlp_model(gin, node_model, gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.NODES)
+        elif (node_model.name == 'sequential'):
+            for i in node_model._layers:
+                if(i.name == 'mlp'):
+                    make_mlp_model(gin, node_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.NODES)
+                elif(i.name == 'layer_norm'):
+                    axis = node_model._layers[1]._axis
+                    eps  = node_model._layers[1]._eps 
+                    stash_type = 1
+                    name_x = gin.nodes_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
+                    name_bias = node_model._layers[1].offset.name
+                    name_scale = node_model._layers[1].scale.name
+                    name_Y = name_x+"output"
+                    layer_norm = gbl_namespace.TMVA.Experimental.SOFIE.ROperator_LayerNormalization(axis, eps, 1, name_x, name_scale, name_bias, name_Y, "", "")
+                    gin.nodes_update_block.GetFunctionBlock().AddOperator(layer_norm)
+                    current_output_tensors = gin.nodes_update_block.GetFunctionBlock().GetOutputTensorNames()
+                    new_output_tensors = gbl_namespace.std.vector['std::string']()
+                    new_output_tensors.push_back(name_Y)
+                else:
+                    print("Invalid Model for node update.")
+                    return
+        
         else:
             print("Invalid Model for node update.")
             return
+        
+        weights = node_model.variables
+        for i in weights:
+            shape = gbl_namespace.std.vector['std::size_t']()
+            shape_as_list = i.shape.as_list()
+            for j in shape_as_list:
+                shape.push_back(j)
+            gin.nodes_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
 
         # adding the edge update function
         edge_model = GraphModule._edge_block._edge_model
-        if (edge_model.name == "mlp"):
-            num_layers = len(edge_model._layers)
-            activation = getActivationFunction(edge_model)
-            upd = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_MLP(gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.EDGES, num_layers, activation, edge_model._activate_final)
-            kernel_tensor_names = gbl_namespace.std.vector['std::string']()
-            bias_tensor_names   = gbl_namespace.std.vector['std::string']()
-
-            for i in range(0, 2*num_layers, 2):
-                bias_tensor_names.push_back(edge_model.variables[i].name)
-                kernel_tensor_names.push_back(edge_model.variables[i+1].name)
-            val = gbl_namespace.std.vector['std::vector<std::string>']()
-            val.push_back(kernel_tensor_names)
-            val.push_back(bias_tensor_names)
-            upd.AddInitializedTensors(val)
-            gin.createUpdateFunction(upd)
-
-            weights = edge_model.variables
-            for i in weights:
-                shape = gbl_namespace.std.vector['std::size_t']()
-                shape_as_list = i.shape.as_list()
-                for j in shape_as_list:
-                    shape.push_back(j)
-                gin.edges_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
-
+        if (edge_model.name == 'mlp'):
+            make_mlp_model(gin, edge_model, gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.EDGES)
+        elif (edge_model.name == 'sequential'):
+            for i in edge_model._layers:
+                if(i.name == 'mlp'):
+                    make_mlp_model(gin, edge_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.EDGES)
+                elif(i.name == 'layer_norm'):
+                    axis = edge_model._layers[1]._axis
+                    eps  = edge_model._layers[1]._eps 
+                    stash_type = 1
+                    name_x = gin.nodes_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
+                    name_bias = edge_model._layers[1].offset.name
+                    name_scale = edge_model._layers[1].scale.name
+                    name_Y = name_x+"output"
+                    layer_norm = gbl_namespace.TMVA.Experimental.SOFIE.ROperator_LayerNormalization(axis, eps, 1, name_x, name_scale, name_bias, name_Y, "", "")
+                    gin.edges_update_block.GetFunctionBlock().AddOperator(layer_norm)
+                    current_output_tensors = gin.edges_update_block.GetFunctionBlock().GetOutputTensorNames()
+                    new_output_tensors = gbl_namespace.std.vector['std::string']()
+                    new_output_tensors.push_back(name_Y)
+                else:
+                    print("Invalid Model for edge update.")
+                    return
+        
         else:
             print("Invalid Model for edge update.")
             return
+        
+        weights = edge_model.variables
+        for i in weights:
+            shape = gbl_namespace.std.vector['std::size_t']()
+            shape_as_list = i.shape.as_list()
+            for j in shape_as_list:
+                shape.push_back(j)
+            gin.edges_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
 
         # adding the global update function
         global_model = GraphModule._global_block._global_model
-        if (global_model.name == "mlp"):
-            num_layers = len(global_model._layers)
-            activation = getActivationFunction(global_model)
-            upd = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_MLP(gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.GLOBALS, num_layers, activation, global_model._activate_final)
-            kernel_tensor_names = gbl_namespace.std.vector['std::string']()
-            bias_tensor_names   = gbl_namespace.std.vector['std::string']()
-
-            for i in range(0, 2*num_layers, 2):
-                bias_tensor_names.push_back(global_model.variables[i].name)
-                kernel_tensor_names.push_back(global_model.variables[i+1].name)
-            val = gbl_namespace.std.vector['std::vector<std::string>']()
-            val.push_back(kernel_tensor_names)
-            val.push_back(bias_tensor_names)
-            upd.AddInitializedTensors(val)
-            gin.createUpdateFunction(upd)
-
-            weights = global_model.variables
-            for i in weights:
-                shape = gbl_namespace.std.vector['std::size_t']()
-                shape_as_list = i.shape.as_list()
-                for j in shape_as_list:
-                    shape.push_back(j)
-                gin.globals_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
+        if (global_model.name == 'mlp'):
+            make_mlp_model(gin, global_model, gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.GLOBALS)
+        elif (global_model.name == 'sequential'):
+            for i in global_model._layers:
+                if(i.name == 'mlp'):
+                    make_mlp_model(gin, global_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.GLOBALS)
+                elif(i.name == 'layer_norm'):
+                    axis = global_model._layers[1]._axis
+                    eps  = global_model._layers[1]._eps 
+                    stash_type = 1
+                    name_x = gin.globals_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
+                    name_bias = global_model._layers[1].offset.name
+                    name_scale = global_model._layers[1].scale.name
+                    name_Y = name_x+"output"
+                    layer_norm = gbl_namespace.TMVA.Experimental.SOFIE.ROperator_LayerNormalization(axis, eps, 1, name_x, name_scale, name_bias, name_Y, "", "")
+                    gin.globals_update_block.GetFunctionBlock().AddOperator(layer_norm)
+                    current_output_tensors = gin.globals_update_block.GetFunctionBlock().GetOutputTensorNames()
+                    new_output_tensors = gbl_namespace.std.vector['std::string']()
+                    new_output_tensors.push_back(name_Y)
+                else:
+                    print("Invalid Model for global update.")
+                    return
+        
         else:
             print("Invalid Model for global update.")
             return
+
+        weights = global_model.variables
+        for i in weights:
+            shape = gbl_namespace.std.vector['std::size_t']()
+            shape_as_list = i.shape.as_list()
+            for j in shape_as_list:
+                shape.push_back(j)
+            gin.globals_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
 
         # adding edge-node aggregate function
         edge_node_reducer = GraphModule._node_block._received_edges_aggregator._reducer.__qualname__
