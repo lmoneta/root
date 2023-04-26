@@ -3,6 +3,7 @@
 
 #include <any>
 #include "TMVA/RModel_GNN.hxx"
+#include <iostream>
 
 namespace TMVA{
 namespace Experimental{
@@ -33,6 +34,7 @@ class RFunction_Update: public RFunction{
                 FunctionTarget fTarget;
                 GraphType fGraphType;
                 std::vector<std::string> fInputTensors;
+                std::vector<std::unique_ptr<ROperator>> fAddlOp;
         public:
         virtual ~RFunction_Update(){}
         RFunction_Update(){}
@@ -72,10 +74,13 @@ class RFunction_Update: public RFunction{
                                         fInputTensors = {"global"};
                                 }
                         }
+                        std::cout<<"model type: "<<fFuncName<<"/n";
                 }
 
                 virtual void AddInitializedTensors(std::vector<std::vector<std::string>>){};
                 virtual void Initialize(){};
+                virtual void AddLayerNormalization(int axis, float epsilon, size_t stashType, const std::string &nameX,
+                                    const std::string &nameScale, const std::string &nameB, const std::string &nameY){};
                 void AddInputTensors(std::vector<std::vector<std::size_t>> fInputShape){
                         for(long unsigned int i=0; i<fInputShape.size(); ++i){
                                 function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fInputShape[i]);

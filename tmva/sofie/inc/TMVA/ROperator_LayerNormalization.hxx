@@ -14,7 +14,7 @@ namespace SOFIE {
 template <typename T>
 class ROperator_LayerNormalization : public ROperator {
 private:
-   int64_t fAttrAxis;
+   int fAttrAxis;
    float fAttrEpsilon;
    size_t fAttrStashType;
 
@@ -51,7 +51,7 @@ private:
 public:
    ROperator_LayerNormalization() {}
 
-   ROperator_LayerNormalization(int64_t axis, float epsilon, size_t stashType, const std::string &nameX,
+   ROperator_LayerNormalization(int axis, float epsilon, size_t stashType, const std::string &nameX,
                                 const std::string &nameScale, const std::string &nameB, const std::string &nameY,
                                 const std::string &nameMean, const std::string &nameInvStdDev)
       : fAttrAxis(axis), fAttrEpsilon(epsilon), fAttrStashType(stashType), fNX(nameX), fNScale(nameScale), fNB(nameB),

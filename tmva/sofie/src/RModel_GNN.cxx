@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include "TMVA/RModel_GNN.hxx"
+#include "TMVA/RFunction.hxx"
 
 
 namespace TMVA{
