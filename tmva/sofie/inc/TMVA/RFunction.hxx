@@ -34,7 +34,7 @@ class RFunction_Update: public RFunction{
                 FunctionTarget fTarget;
                 GraphType fGraphType;
                 std::vector<std::string> fInputTensors;
-                std::vector<std::unique_ptr<ROperator>> fAddlOp;
+
         public:
         virtual ~RFunction_Update(){}
         RFunction_Update(){}
@@ -43,7 +43,7 @@ class RFunction_Update: public RFunction{
                                 case FunctionTarget::EDGES:{
                                         fFuncName = "edge_update";
                                         break;
-                                } 
+                                }
                                 case FunctionTarget::NODES: {
                                         fFuncName = "node_update";
                                         break;
@@ -58,18 +58,18 @@ class RFunction_Update: public RFunction{
                         fType = FunctionType::UPDATE;
                         function_block = std::make_unique<RModel>(fFuncName);
 
-                        if(fGraphType == GraphType::GNN){            
+                        if(fGraphType == GraphType::GNN){
                                 if(fTarget == FunctionTarget::EDGES){
                                         fInputTensors = {"edge","receiver","sender","global"};
                                 } else if(fTarget == FunctionTarget::NODES || fTarget == FunctionTarget::GLOBALS){
-                                        fInputTensors = {"edge","node","global"}; 
+                                        fInputTensors = {"edge","node","global"};
                                 }
 
                         } else if(fGraphType == GraphType::GraphIndependent){
                                 if(fTarget == FunctionTarget::EDGES){
                                         fInputTensors = {"edge"};
                                 } else if(fTarget == FunctionTarget::NODES){
-                                        fInputTensors = {"node"}; 
+                                        fInputTensors = {"node"};
                                 } else {
                                         fInputTensors = {"global"};
                                 }

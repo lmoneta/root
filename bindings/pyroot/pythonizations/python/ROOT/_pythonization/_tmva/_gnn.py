@@ -23,6 +23,7 @@ def getActivationFunction(model):
 def make_mlp_model(gin, model, target):
     num_layers = len(model._layers)
     activation = getActivationFunction(model)
+    print("making mlp model")
     upd = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_MLP(target, num_layers, activation, model._activate_final)
     kernel_tensor_names = gbl_namespace.std.vector['std::string']()
     bias_tensor_names   = gbl_namespace.std.vector['std::string']()
@@ -35,8 +36,9 @@ def make_mlp_model(gin, model, target):
     val.push_back(bias_tensor_names)
     upd.AddInitializedTensors(val)
     gin.createUpdateFunction(upd)
+    print("made mlp model")
 
-class RModel_GNN: 
+class RModel_GNN:
     def ParseFromMemory(GraphModule, GraphData, filename = "gnn_network"):
         gin = gbl_namespace.TMVA.Experimental.SOFIE.GNN_Init()
         gin.num_nodes = len(GraphData['nodes'])
@@ -52,7 +54,7 @@ class RModel_GNN:
         gin.num_global_features = len(GraphData['globals'])
 
         gin.filename = filename
-        
+
         # adding the node update function
         node_model = GraphModule._node_block._node_model
         if (node_model.name == 'mlp'):
@@ -63,12 +65,13 @@ class RModel_GNN:
                     make_mlp_model(gin, node_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.NODES)
                 elif(i.name == 'layer_norm'):
                     axis = i._axis
-                    eps  = i._eps 
+                    eps  = i._eps
                     stash_type = 1
                     name_x = gin.nodes_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
                     name_bias = i.offset.name
                     name_scale = i.scale.name
                     name_Y = name_x+"output"
+                    print("add layer norm for node block",name_scale,name_bias)
                     gin.nodes_update_block.AddLayerNormalization(axis[0], eps, 1, name_x, name_scale, name_bias, name_Y)
                     current_output_tensors = gin.nodes_update_block.GetFunctionBlock().GetOutputTensorNames()
                     new_output_tensors = gbl_namespace.std.vector['std::string']()
@@ -77,11 +80,11 @@ class RModel_GNN:
                 else:
                     print("Invalid Model for node update.")
                     return
-        
+
         else:
             print("Invalid Model for node update.")
             return
-        
+
         weights = node_model.variables
         for i in weights:
             shape = gbl_namespace.std.vector['std::size_t']()
@@ -100,12 +103,13 @@ class RModel_GNN:
                     make_mlp_model(gin, edge_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.EDGES)
                 elif(i.name == 'layer_norm'):
                     axis = i._axis
-                    eps  = i._eps 
+                    eps  = i._eps
                     stash_type = 1
                     name_x = gin.edges_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
                     name_bias = i.offset.name
                     name_scale = i.scale.name
                     name_Y = name_x+"output"
+                    print("add layer norm for edge block",name_x,name_bias)
                     gin.edges_update_block.AddLayerNormalization(axis[0], eps, 1, name_x, name_scale, name_bias, name_Y)
                     current_output_tensors = gin.edges_update_block.GetFunctionBlock().GetOutputTensorNames()
                     new_output_tensors = gbl_namespace.std.vector['std::string']()
@@ -114,17 +118,18 @@ class RModel_GNN:
                 else:
                     print("Invalid Model for edge update.")
                     return
-        
+
         else:
             print("Invalid Model for edge update.")
             return
-        
+
         weights = edge_model.variables
         for i in weights:
             shape = gbl_namespace.std.vector['std::size_t']()
             shape_as_list = i.shape.as_list()
             for j in shape_as_list:
                 shape.push_back(j)
+            print("add weights ",i.name)
             gin.edges_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
 
         # adding the global update function
@@ -137,12 +142,13 @@ class RModel_GNN:
                     make_mlp_model(gin, global_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.GLOBALS)
                 elif(i.name == 'layer_norm'):
                     axis = i._axis
-                    eps  = i._eps 
+                    eps  = i._eps
                     stash_type = 1
                     name_x = gin.globals_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
                     name_bias = i.offset.name
                     name_scale = i.scale.name
                     name_Y = name_x+"output"
+                    print("add layer norm for global block")
                     gin.globals_update_block.AddLayerNormalization(axis[0], eps, 1, name_x, name_scale, name_bias, name_Y)
                     current_output_tensors = gin.globals_update_block.GetFunctionBlock().GetOutputTensorNames()
                     new_output_tensors = gbl_namespace.std.vector['std::string']()
@@ -151,7 +157,7 @@ class RModel_GNN:
                 else:
                     print("Invalid Model for global update.")
                     return
-        
+
         else:
             print("Invalid Model for global update.")
             return
@@ -205,6 +211,8 @@ class RModel_GNN:
         gnn_model = gbl_namespace.TMVA.Experimental.SOFIE.RModel_GNN(gin)
         blas_routines = gbl_namespace.std.vector['std::string']()
         blas_routines.push_back("Gemm")
+        blas_routines.push_back("Axpy")
+        blas_routines.push_back("Gemv")
         gnn_model.AddBlasRoutines(blas_routines)
         return gnn_model
 
@@ -243,12 +251,14 @@ class RModel_GraphIndependent:
             upd.AddInitializedTensors(val)
             gin.createUpdateFunction(upd)
 
+            print("I am here.....")
             weights = node_model.variables
             for i in weights:
                 shape = gbl_namespace.std.vector['std::size_t']()
                 shape_as_list = i.shape.as_list()
                 for j in shape_as_list:
                     shape.push_back(j)
+                print ("add weight to indipendent gnn ",i.name)
                 gin.nodes_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
 
         else:

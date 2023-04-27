@@ -16,6 +16,8 @@
 #include <iomanip>
 #include <limits>
 #include <cassert>
+#include <memory>
+#include <vector>
 
 #include <iostream>
 
@@ -35,8 +37,11 @@ class RFunction_MLP: public RFunction_Update{
         bool  fActivateFinal;       // if True, fActivationFunction is applied as the activation for the last layer
         std::vector<std::string> fKernelTensors;
         std::vector<std::string> fBiasTensors;
+        //std::vector<std::unique_ptr<ROperator>> fAddlOp;
+        std::vector<ROperator*> fAddlOp;
 
     public:
+        virtual ~RFunction_MLP(){}
         RFunction_MLP(FunctionTarget target, Int_t numLayers, Activation activation_function=Activation::RELU, bool activate_final=false, GraphType gType=GraphType::GNN):
         RFunction_Update(target, gType), fNumLayers(numLayers), fActivationFunction(activation_function), fActivateFinal(activate_final){
             if(fActivationFunction == Activation::Invalid){
@@ -52,9 +57,9 @@ class RFunction_MLP: public RFunction_Update{
         }
 
         void Initialize(){
-            
+
             std::string fGemmInput;
-            if(fGraphType == GraphType::GNN){            
+            if(fGraphType == GraphType::GNN){
                 std::unique_ptr<ROperator> op_concat;
                 op_concat.reset(new ROperator_Concat<float>(fInputTensors,1,0,fFuncName+"InputConcat"));
                 function_block->AddOperator(std::move(op_concat));
@@ -75,7 +80,7 @@ class RFunction_MLP: public RFunction_Update{
                     function_block->AddOperator(std::move(op_relu));
                     fGemmInput = fFuncName+"Relu"+i;
 
-                }       
+                }
             }
 
             op_gemm.reset(new ROperator_Gemm<float>(1.0,1.0,0,0,fGemmInput,UTILITY::Clean_name(fKernelTensors.back()),UTILITY::Clean_name(fBiasTensors.back()),fFuncName+"Gemm"+std::to_string(fNumLayers)));
@@ -85,26 +90,34 @@ class RFunction_MLP: public RFunction_Update{
                     std::unique_ptr<ROperator> op_relu;
                     op_relu.reset(new ROperator_Relu<float>(fFuncName+"Gemm"+std::to_string(fNumLayers), fFuncName+"Relu"+std::to_string(fNumLayers)));
                     function_block->AddOperator(std::move(op_relu));
-                } 
+                }
             }
 
-            function_block->AddBlasRoutines({"Gemm", "Gemv"});  // for Gemm operation
+
 
             if(fAddlOp.size()){
                 for(auto &i:fAddlOp){
-                    function_block->AddOperator(std::move(i));
+                    //function_block->AddOperator(i /*std::move(i) */);
+                    function_block->AddOperatorReference(i);
                 }
             }
+
+            // nor sure if needed here. They are actually added in the Python code _gnn.py
+            if (fAddlOp.size() == 0)
+                function_block->AddBlasRoutines({"Gemm", "Gemv"});  // for Gemm operation
+            else
+                function_block->AddBlasRoutines({"Gemm", "Gemv","Axpy"});  // for Gemm + layernorm operation
         }
 
         void AddLayerNormalization(int axis, float epsilon, size_t stashType, const std::string &nameX,
                                     const std::string &nameScale, const std::string &nameB, const std::string &nameY){
-            std::unique_ptr<ROperator> op_layerNorm;
-            op_layerNorm.reset(new ROperator_LayerNormalization<float>(axis, epsilon, stashType, nameX,
-                                                                        nameScale, nameB, nameY, "", ""));
-            fAddlOp.push_back(std::move(op_layerNorm));                                                        
+            //std::unique_ptr<ROperator> op_layerNorm;
+            ///op_layerNorm.reset(
+                auto op_layerNorm = new ROperator_LayerNormalization<float>(axis, epsilon, stashType, nameX,
+                                                                        nameScale, nameB, nameY, "", "");
+            fAddlOp.push_back(/*std::move */ (op_layerNorm));
         }
-        
+
 
         void AddInitializedTensors(std::vector<std::vector<std::string>> initialized_tensors){
                 fKernelTensors = initialized_tensors[0];

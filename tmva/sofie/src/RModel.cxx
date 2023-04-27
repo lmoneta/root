@@ -124,7 +124,6 @@ namespace SOFIE{
    }
 
    void RModel::AddOperator(std::unique_ptr<ROperator> op, int order_execution){
-      std::cout<<"print order of execution: "<<order_execution<<std::endl;
       AddBlasRoutines(op->GetBlasRoutines());
       auto libs = op->GetStdLibs();
       for (auto& stdlib : libs) {
@@ -135,7 +134,6 @@ namespace SOFIE{
       }else{
          fOperators.push_back(std::move(op));
       }
-      std::cout<<"operator size: "<<fOperators.size()<<std::endl;
    }
 
    void RModel::AddInitializedTensor(std::string tensor_name, ETensorType type, std::vector<std::size_t> shape, std::shared_ptr<void> data){
@@ -164,6 +162,7 @@ namespace SOFIE{
    }
 
    void RModel::AddOutputTensorNameList(std::vector<std::string> outputtensornames){
+      fOutputTensorNames.clear();
       for(auto& it : outputtensornames){
          fOutputTensorNames.push_back(UTILITY::Clean_name(it));
       }
