@@ -35,7 +35,7 @@ public:
 
    RModel(){}
    RModel(std::string name, std::string parsedtime): RModel_Base(name, parsedtime){}
-   
+
    // For GNN Functions usage
    RModel(std::string function_name):RModel_Base(function_name){}
 
@@ -47,10 +47,11 @@ public:
    void AddInputTensorInfo(std::string input_name, ETensorType type, std::vector<size_t> shape);
    void AddOperator(std::unique_ptr<ROperator> op, int order_execution = -1);
    void AddOperatorReference(ROperator* op, int order_execution = -1){
-      AddOperator(std::move(std::unique_ptr<ROperator>(op)), order_execution);
+      std::unique_ptr<ROperator>  tmp(op);
+      AddOperator(std::move(tmp), order_execution);
    }
    void AddInitializedTensor(std::string tensor_name, ETensorType type, std::vector<std::size_t> shape, std::shared_ptr<void> data);
-   
+
    template <typename T>
    void AddInitializedTensor(std::string tensor_name, ETensorType type, std::vector<std::size_t> shape, T* raw_data){
       int size=1;
@@ -65,7 +66,7 @@ public:
    // Check if a tensor is initialized
    bool IsInitializedTensor(const std::string& name) const;
    void AddIntermediateTensor(std::string tensor_name, ETensorType type, std::vector<std::size_t> shape);
-   
+
    void AddInputTensorName(std::string name);
    void AddOutputTensorNameList(std::vector<std::string> outputtensornames);
    void UpdateOutputTensorList(std::vector<std::string> curr_output_tensor, std::vector<std::string> modify_output_tensor);
