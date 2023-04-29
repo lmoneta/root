@@ -66,8 +66,7 @@ def add_aggregate_function(gin, reducer, relation):
         agg = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Mean()
         gin.createAggregateFunction[gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Mean](agg, relation)
     else:
-        print("Invalid aggregate function for reduction")
-        return    
+        raise RuntimeError("Invalid aggregate function for reduction")    
 
 
 
