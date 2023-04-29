@@ -99,7 +99,6 @@ class RModel_GNN:
                 if(i.name == 'mlp'):
                     make_mlp_model(gin, edge_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.EDGES)
                 elif(i.name == 'layer_norm'):
-                    print("adding layer norm...")
                     axis = i._axis
                     eps  = i._eps 
                     stash_type = 1

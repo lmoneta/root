@@ -75,15 +75,12 @@ class RFunction_Update: public RFunction{
                                         fInputTensors = {"global"};
                                 }
                         }
-                        std::cout<<"model type: "<<fFuncName<<"/n";
                 }
 
                 virtual void AddInitializedTensors(std::vector<std::vector<std::string>>){};
                 virtual void Initialize(){};
                 virtual void AddLayerNormalization(int, float, size_t, const std::string&,
-                                    const std::string&, const std::string&, const std::string&){
-                                        std::cout<<"calling the virtual method";
-                                    };
+                                    const std::string&, const std::string&, const std::string&){};
                 void AddInputTensors(std::vector<std::vector<std::size_t>> fInputShape){
                         for(long unsigned int i=0; i<fInputShape.size(); ++i){
                                 function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fInputShape[i]);
