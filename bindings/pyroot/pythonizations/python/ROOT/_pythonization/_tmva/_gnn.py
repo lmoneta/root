@@ -50,6 +50,14 @@ def add_layer_norm(module_layer, model_block):
     new_output_tensors.push_back(name_Y)
     model_block.GetFunctionBlock().AddOutputTensorNameList(new_output_tensors)    
 
+def add_weights(weights, model_block):
+    for i in weights:
+        shape = gbl_namespace.std.vector['std::size_t']()
+        shape_as_list = i.shape.as_list()
+        for j in shape_as_list:
+            shape.push_back(j)
+        model_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
+
 
 class RModel_GNN: 
     def ParseFromMemory(GraphModule, GraphData, filename = "gnn_network"):
@@ -86,13 +94,7 @@ class RModel_GNN:
             print("Invalid Model for node update.")
             return
         
-        weights = node_model.variables
-        for i in weights:
-            shape = gbl_namespace.std.vector['std::size_t']()
-            shape_as_list = i.shape.as_list()
-            for j in shape_as_list:
-                shape.push_back(j)
-            gin.nodes_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
+        add_weights(node_model.variables, gin.nodes_update_block)
 
         # adding the edge update function
         edge_model = GraphModule._edge_block._edge_model
@@ -111,14 +113,8 @@ class RModel_GNN:
         else:
             print("Invalid Model for edge update.")
             return
-        
-        weights = edge_model.variables
-        for i in weights:
-            shape = gbl_namespace.std.vector['std::size_t']()
-            shape_as_list = i.shape.as_list()
-            for j in shape_as_list:
-                shape.push_back(j)
-            gin.edges_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
+
+        add_weights(edge_model.variables, gin.edges_update_block)
 
         # adding the global update function
         global_model = GraphModule._global_block._global_model
@@ -138,13 +134,7 @@ class RModel_GNN:
             print("Invalid Model for global update.")
             return
 
-        weights = global_model.variables
-        for i in weights:
-            shape = gbl_namespace.std.vector['std::size_t']()
-            shape_as_list = i.shape.as_list()
-            for j in shape_as_list:
-                shape.push_back(j)
-            gin.globals_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
+        add_weights(global_model.variables, gin.globals_update_block)
 
         # adding edge-node aggregate function
         edge_node_reducer = GraphModule._node_block._received_edges_aggregator._reducer.__qualname__
@@ -227,13 +217,7 @@ class RModel_GraphIndependent:
             print("Invalid Model for node update.")
             return
         
-        weights = node_model.variables
-        for i in weights:
-            shape = gbl_namespace.std.vector['std::size_t']()
-            shape_as_list = i.shape.as_list()
-            for j in shape_as_list:
-                shape.push_back(j)
-            gin.nodes_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
+        add_weights(node_model.variables, gin.nodes_update_block)
 
 
         # adding the edge update function
@@ -254,13 +238,7 @@ class RModel_GraphIndependent:
             print("Invalid Model for edge update.")
             return
         
-        weights = edge_model.variables
-        for i in weights:
-            shape = gbl_namespace.std.vector['std::size_t']()
-            shape_as_list = i.shape.as_list()
-            for j in shape_as_list:
-                shape.push_back(j)
-            gin.edges_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())      
+        add_weights(edge_model.variables, gin.edges_update_block)
 
 
         # adding the global update function
@@ -280,14 +258,8 @@ class RModel_GraphIndependent:
         else:
             print("Invalid Model for global update.")
             return
-        
-        weights = global_model.variables
-        for i in weights:
-            shape = gbl_namespace.std.vector['std::size_t']()
-            shape_as_list = i.shape.as_list()
-            for j in shape_as_list:
-                shape.push_back(j)
-            gin.globals_update_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
+
+        add_weights(global_model.variables, gin.globals_update_block)
 
         graph_independent_model = gbl_namespace.TMVA.Experimental.SOFIE.RModel_GraphIndependent(gin)
         blas_routines = gbl_namespace.std.vector['std::string']()
