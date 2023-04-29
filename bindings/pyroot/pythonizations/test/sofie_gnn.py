@@ -209,6 +209,11 @@ class SOFIE_GNN(unittest.TestCase):
         ROOT.gInterpreter.Declare('#include "decoder.hxx"')
         ROOT.gInterpreter.Declare('#include "output_transform.hxx"')
 
+        encoder_session = ROOT.TMVA_SOFIE_encoder.Session()
+        core_session = ROOT.TMVA_SOFIE_core.Session()
+        decoder_session = ROOT.TMVA_SOFIE_decoder.Session()
+        output_transform_session = ROOT.TMVA_SOFIE_output_transform.Session()
+
         # Preparing the input data for running inference on sofie
         input_data = ROOT.TMVA.Experimental.SOFIE.GNN_Data()
         input_data.node_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['nodes'])
@@ -216,16 +221,16 @@ class SOFIE_GNN(unittest.TestCase):
         input_data.global_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['globals'])
 
         # running inference on sofie
-        ROOT.TMVA_SOFIE_encoder.infer(input_data)
+        encoder_session.infer(input_data)
         latent0 = CopyData(input_data)
         latent = input_data
         output_ops = []
         for _ in range(2):
             core_input = ROOT.TMVA.Experimental.SOFIE.Concatenate(latent0, latent, axis=1)
-            ROOT.TMVA_SOFIE_core.infer(core_input)
+            core_session.infer(core_input)
             latent = CopyData(core_input)
-            ROOT.TMVA_SOFIE_decoder.infer(core_input)
-            ROOT.TMVA_SOFIE_output_transform.infer(core_input)
+            decoder_session.infer(core_input)
+            output_transform_session.infer(core_input)
             output = CopyData(core_input)
             output_ops.append(output)
 
