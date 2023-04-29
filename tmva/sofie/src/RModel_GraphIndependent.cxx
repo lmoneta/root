@@ -107,7 +107,7 @@ namespace SOFIE{
         for(int k=0; k<num_edges; ++k){
             fGC+="std::vector<float> Edge_"+std::to_string(k)+"_Update = ";
             fGC+=edges_update_block->Generate({"input_graph.edge_data.GetData()+"+std::to_string(k*num_edge_features)});
-            fGC+="\nstd::copy(Edge_"+std::to_string(k)+"_Update.begin(),Edge_"+std::to_string(k)+"_Update.end(),input_graph.edge_data.begin()+"+std::to_string(k*num_edge_features)+");\n";
+            fGC+="\nstd::copy(Edge_"+std::to_string(k)+"_Update.begin(),Edge_"+std::to_string(k)+"_Update.end(),input_graph.edge_data.GetData()+"+std::to_string(k*num_edge_features)+");\n";
         }
 
         // computing updated node attributes
@@ -115,7 +115,7 @@ namespace SOFIE{
         for(int k=0; k<num_nodes; ++k){
             fGC+="std::vector<float> Node_"+std::to_string(k)+"_Update = ";
             fGC+=nodes_update_block->Generate({"input_graph.node_data.GetData()+"+std::to_string(k*num_node_features)});
-            fGC+="\nstd::copy(Node_"+std::to_string(k)+"_Update.begin(),Node_"+std::to_string(k)+"_Update.end(),input_graph.node_data.begin()+"+std::to_string(k*num_node_features)+");\n";
+            fGC+="\nstd::copy(Node_"+std::to_string(k)+"_Update.begin(),Node_"+std::to_string(k)+"_Update.end(),input_graph.node_data.GetData()+"+std::to_string(k*num_node_features)+");\n";
         }
 
         // computing updated global attributes

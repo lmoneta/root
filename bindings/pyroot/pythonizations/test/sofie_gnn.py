@@ -94,78 +94,80 @@ class SOFIE_GNN(unittest.TestCase):
     Tests for the pythonizations of ParseFromMemory method of SOFIE GNN.
     """
 
-    # def test_parse_gnn(self):
-    #     '''
-    #     Test that parsed GNN model from a graphnets model generates correct
-    #     inference code
-    #     '''
-    #     GraphModule = gn.modules.GraphNetwork(
-    #         edge_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True),
-    #         node_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True),
-    #         global_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True))
+    def test_parse_gnn(self):
+        '''
+        Test that parsed GNN model from a graphnets model generates correct
+        inference code
+        '''
+        GraphModule = gn.modules.GraphNetwork(
+            edge_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True),
+            node_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True),
+            global_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True))
 
-    #     GraphData = get_graph_data_dict(2,1)
-    #     input_graphs = utils_tf.data_dicts_to_graphs_tuple([GraphData])
-    #     output = GraphModule(input_graphs)
+        GraphData = get_graph_data_dict(2,1)
+        input_graphs = utils_tf.data_dicts_to_graphs_tuple([GraphData])
+        output = GraphModule(input_graphs)
 
-    #     # Parsing model to RModel_GNN
-    #     model = ROOT.TMVA.Experimental.SOFIE.RModel_GNN.ParseFromMemory(GraphModule, GraphData)
-    #     model.Generate()
-    #     model.OutputGenerated()
+        # Parsing model to RModel_GNN
+        model = ROOT.TMVA.Experimental.SOFIE.RModel_GNN.ParseFromMemory(GraphModule, GraphData)
+        model.Generate()
+        model.OutputGenerated()
 
-    #     ROOT.gInterpreter.Declare('#include "gnn_network.hxx"')
-    #     input_data = ROOT.TMVA.Experimental.SOFIE.GNN_Data()
+        ROOT.gInterpreter.Declare('#include "gnn_network.hxx"')
+        input_data = ROOT.TMVA.Experimental.SOFIE.GNN_Data()
 
-    #     input_data.node_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['nodes'])
-    #     input_data.edge_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['edges'])
-    #     input_data.global_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['globals'])
+        input_data.node_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['nodes'])
+        input_data.edge_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['edges'])
+        input_data.global_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['globals'])
 
-    #     ROOT.TMVA_SOFIE_gnn_network.infer(input_data)
+        session = ROOT.TMVA_SOFIE_gnn_network.Session()
+        session.infer(input_data)
 
-    #     output_node_data = output.nodes.numpy()
-    #     output_edge_data = output.edges.numpy()
-    #     output_global_data = output.globals.numpy().flatten()
+        output_node_data = output.nodes.numpy()
+        output_edge_data = output.edges.numpy()
+        output_global_data = output.globals.numpy().flatten()
 
-    #     assert_almost_equal(output_node_data, np.asarray(input_data.node_data))
-    #     assert_almost_equal(output_edge_data, np.asarray(input_data.edge_data))
-    #     assert_almost_equal(output_global_data, np.asarray(input_data.global_data))
+        assert_almost_equal(output_node_data, np.asarray(input_data.node_data))
+        assert_almost_equal(output_edge_data, np.asarray(input_data.edge_data))
+        assert_almost_equal(output_global_data, np.asarray(input_data.global_data))
 
 
-    # def test_parse_graph_independent(self):
-    #     '''
-    #     Test that parsed GraphIndependent model from a graphnets model generates correct
-    #     inference code
-    #     '''
-    #     GraphModule = gn.modules.GraphIndependent(
-    #         edge_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True),
-    #         node_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True),
-    #         global_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True))
+    def test_parse_graph_independent(self):
+        '''
+        Test that parsed GraphIndependent model from a graphnets model generates correct
+        inference code
+        '''
+        GraphModule = gn.modules.GraphIndependent(
+            edge_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True),
+            node_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True),
+            global_model_fn=lambda: snt.nets.MLP([2,2], activate_final=True))
 
-    #     GraphData = get_graph_data_dict(2,1)
-    #     input_graphs = utils_tf.data_dicts_to_graphs_tuple([GraphData])
-    #     output = GraphModule(input_graphs)
+        GraphData = get_graph_data_dict(2,1)
+        input_graphs = utils_tf.data_dicts_to_graphs_tuple([GraphData])
+        output = GraphModule(input_graphs)
 
-    #     # Parsing model to RModel_GraphIndependent
-    #     model = ROOT.TMVA.Experimental.SOFIE.RModel_GraphIndependent.ParseFromMemory(GraphModule, GraphData)
-    #     model.Generate()
-    #     model.OutputGenerated()
+        # Parsing model to RModel_GraphIndependent
+        model = ROOT.TMVA.Experimental.SOFIE.RModel_GraphIndependent.ParseFromMemory(GraphModule, GraphData)
+        model.Generate()
+        model.OutputGenerated()
 
-    #     ROOT.gInterpreter.Declare('#include "graph_independent_network.hxx"')
-    #     input_data = ROOT.TMVA.Experimental.SOFIE.GNN_Data()
+        ROOT.gInterpreter.Declare('#include "graph_independent_network.hxx"')
+        input_data = ROOT.TMVA.Experimental.SOFIE.GNN_Data()
 
-    #     input_data.node_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['nodes'])
-    #     input_data.edge_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['edges'])
-    #     input_data.global_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['globals'])
+        input_data.node_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['nodes'])
+        input_data.edge_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['edges'])
+        input_data.global_data = ROOT.TMVA.Experimental.AsRTensor(GraphData['globals'])
 
-    #     ROOT.TMVA_SOFIE_graph_independent_network.infer(input_data)
+        session = ROOT.TMVA_SOFIE_graph_independent_network.Session()
+        session.infer(input_data)
 
-    #     output_node_data = output.nodes.numpy()
-    #     output_edge_data = output.edges.numpy()
-    #     output_global_data = output.globals.numpy().flatten()
+        output_node_data = output.nodes.numpy()
+        output_edge_data = output.edges.numpy()
+        output_global_data = output.globals.numpy().flatten()
 
-    #     assert_almost_equal(output_node_data, np.asarray(input_data.node_data))
-    #     assert_almost_equal(output_edge_data, np.asarray(input_data.edge_data))
-    #     assert_almost_equal(output_global_data, np.asarray(input_data.global_data))
+        assert_almost_equal(output_node_data, np.asarray(input_data.node_data))
+        assert_almost_equal(output_edge_data, np.asarray(input_data.edge_data))
+        assert_almost_equal(output_global_data, np.asarray(input_data.global_data))
 
     def test_lhcb_toy_inference(self):
         '''

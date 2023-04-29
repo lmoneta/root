@@ -161,7 +161,7 @@ namespace SOFIE{
             fGC+="\ninput_graph.edge_data = input_graph.edge_data.Resize({"+std::to_string(num_edges)+", "+std::to_string(num_edge_features)+"});\n";
         }
         for(int k=0; k<num_edges; ++k){
-            fGC+="\nstd::copy(Edge_"+std::to_string(k)+"_Update.begin(),Edge_"+std::to_string(k)+"_Update.end(),input_graph.edge_data.begin()+"+std::to_string(k*num_edge_features)+");\n";
+            fGC+="\nstd::copy(Edge_"+std::to_string(k)+"_Update.begin(),Edge_"+std::to_string(k)+"_Update.end(),input_graph.edge_data.GetData()+"+std::to_string(k*num_edge_features)+");\n";
         }
         fGC+="\n";
 
@@ -189,12 +189,6 @@ namespace SOFIE{
             fGC+="std::vector<float> Node_"+std::to_string(i)+"_Update = ";
             fGC+=nodes_update_block->Generate({"Node_"+std::to_string(i)+"_Edge_Aggregate.data()","input_graph.node_data.GetData()+"+std::to_string(i*num_node_features_input),"input_graph.global_data.GetData()"});    // computing updated node attributes
             fGC+="\n";
-            // if(nodes_update_block->GetFunctionBlock()->GetTensorShape(nodes_update_block->GetFunctionBlock()->GetOutputTensorNames()[0])[1] != num_node_features){
-            //     num_node_features = nodes_update_block->GetFunctionBlock()->GetTensorShape(nodes_update_block->GetFunctionBlock()->GetOutputTensorNames()[0])[1];
-            //     fGC+="input_graph.node_data = input_graph.node_data.Resize({"+std::to_string(num_nodes)+", "+std::to_string(num_node_features)+"});\n";
-            // }
-            // fGC+="std::copy(Node_"+std::to_string(i)+"_Update.begin(), Node_"+std::to_string(i)+"_Update.end(), input_graph.node_data.begin()+"+std::to_string(i*num_node_features)+");";
-            // fGC+="\n";
             Node_Edge_Aggregate_String.clear();
         }
         // copy the output of the nodes
@@ -202,7 +196,7 @@ namespace SOFIE{
             fGC+="input_graph.node_data = input_graph.node_data.Resize({"+std::to_string(num_nodes)+", "+std::to_string(num_node_features)+"});\n";
         }
         for(int i=0; i<num_nodes; ++i){
-            fGC+="std::copy(Node_"+std::to_string(i)+"_Update.begin(), Node_"+std::to_string(i)+"_Update.end(), input_graph.node_data.begin()+"+std::to_string(i*num_node_features)+");\n";
+            fGC+="std::copy(Node_"+std::to_string(i)+"_Update.begin(), Node_"+std::to_string(i)+"_Update.end(), input_graph.node_data.GetData()+"+std::to_string(i*num_node_features)+");\n";
         }
 
         // aggregating edges & nodes for global update
