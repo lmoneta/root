@@ -77,11 +77,11 @@ class RFunction_Update: public RFunction{
                         }
                 }
 
-                virtual void AddInitializedTensors(std::vector<std::vector<std::string>>){};
+                virtual void AddInitializedTensors(const std::vector<std::vector<std::string>>&){};
                 virtual void Initialize(){};
                 virtual void AddLayerNormalization(int, float, size_t, const std::string&,
                                     const std::string&, const std::string&, const std::string&){};
-                void AddInputTensors(std::vector<std::vector<std::size_t>> fInputShape){
+                void AddInputTensors(const std::vector<std::vector<std::size_t>>& fInputShape){
                         for(long unsigned int i=0; i<fInputShape.size(); ++i){
                                 function_block->AddInputTensorInfo(fInputTensors[i],ETensorType::FLOAT, fInputShape[i]);
                                 function_block->AddInputTensorName(fInputTensors[i]);
@@ -91,14 +91,14 @@ class RFunction_Update: public RFunction{
                         return function_block;
                 }
 
-                std::string GenerateModel(std::string filename, long read_pos=0){
+                std::string GenerateModel(const std::string& filename, long read_pos=0){
                         function_block->SetFilename(filename);
                         function_block->Generate(Options::kGNNComponent,1,read_pos);
                         std::string modelGenerationString;
                         modelGenerationString = "\n//--------- GNN_Update_Function---"+fFuncName+"\n"+function_block->ReturnGenerated();
                         return modelGenerationString;
                 }
-                std::string Generate(std::vector<std::string> inputPtrs){
+                std::string Generate(const std::vector<std::string>& inputPtrs){
                         std::string inferFunc = fFuncName+".infer(";
                         for(auto&it : inputPtrs){
                                 inferFunc+=it;
@@ -129,7 +129,7 @@ class RFunction_Aggregate: public RFunction{
         FunctionReducer GetFunctionReducer(){
                 return fReducer;
         }
-        std::string Generate(std::size_t num_features, std::vector<std::string> inputTensors){
+        std::string Generate(std::size_t num_features, const std::vector<std::string>& inputTensors){
                 std::string inferFunc = fFuncName+"("+std::to_string(num_features)+",{";
                 for(auto&it : inputTensors){
                         inferFunc+=it;

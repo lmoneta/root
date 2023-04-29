@@ -108,7 +108,7 @@ class RFunction_MLP: public RFunction_Update{
         }
         
 
-        void AddInitializedTensors(std::vector<std::vector<std::string>> initialized_tensors){
+        void AddInitializedTensors(const std::vector<std::vector<std::string>>& initialized_tensors){
                 fKernelTensors = initialized_tensors[0];
                 fBiasTensors   = initialized_tensors[1];
         }
