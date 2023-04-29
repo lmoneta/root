@@ -34,6 +34,8 @@ class RFunction_Update: public RFunction{
                 FunctionTarget fTarget;
                 GraphType fGraphType;
                 std::vector<std::string> fInputTensors;
+                std::vector<ROperator*> fAddlOp;  // temporary vector to store pointer that will be moved in a unique_ptr
+                
         public:
         virtual ~RFunction_Update(){}
         RFunction_Update(){}

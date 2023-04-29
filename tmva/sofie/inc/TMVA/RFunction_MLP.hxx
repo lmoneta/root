@@ -37,7 +37,6 @@ class RFunction_MLP: public RFunction_Update{
         bool  fActivateFinal;       // if True, fActivationFunction is applied as the activation for the last layer
         std::vector<std::string> fKernelTensors;
         std::vector<std::string> fBiasTensors;
-        std::vector<ROperator*> fAddlOp;
 
     public:
         virtual ~RFunction_MLP(){}
@@ -94,16 +93,15 @@ class RFunction_MLP: public RFunction_Update{
 
 
             if(fAddlOp.size()){
-                std::cout<<"Adding extra layer...";
                 for(auto &i:fAddlOp){
-                    function_block->AddOperatorReference(i);
+                    std::unique_ptr<ROperator> tmp(i);
+                    function_block->AddOperator(std::move(tmp));                
                 }
             }
         }
 
         void AddLayerNormalization(int axis, float epsilon, size_t stashType, const std::string &nameX,
                                     const std::string &nameScale, const std::string &nameB, const std::string &nameY){
-            std::cout<<"Adding layer normalization...";
             auto op_layerNorm = new ROperator_LayerNormalization<float>(axis, epsilon, stashType, nameX,
                                                                         nameScale, nameB, nameY, "", "");
             fAddlOp.push_back((op_layerNorm));
