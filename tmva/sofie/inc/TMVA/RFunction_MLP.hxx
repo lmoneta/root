@@ -16,6 +16,8 @@
 #include <iomanip>
 #include <limits>
 #include <cassert>
+#include <memory>
+#include <vector>
 
 #include <iostream>
 
@@ -35,8 +37,10 @@ class RFunction_MLP: public RFunction_Update{
         bool  fActivateFinal;       // if True, fActivationFunction is applied as the activation for the last layer
         std::vector<std::string> fKernelTensors;
         std::vector<std::string> fBiasTensors;
+        std::vector<ROperator*> fAddlOp;
 
     public:
+        virtual ~RFunction_MLP(){}
         RFunction_MLP(FunctionTarget target, Int_t numLayers, Activation activation_function=Activation::RELU, bool activate_final=false, GraphType gType=GraphType::GNN):
         RFunction_Update(target, gType), fNumLayers(numLayers), fActivationFunction(activation_function), fActivateFinal(activate_final){
             if(fActivationFunction == Activation::Invalid){
@@ -88,21 +92,21 @@ class RFunction_MLP: public RFunction_Update{
                 } 
             }
 
-            function_block->AddBlasRoutines({"Gemm", "Gemv"});  // for Gemm operation
 
             if(fAddlOp.size()){
+                std::cout<<"Adding extra layer...";
                 for(auto &i:fAddlOp){
-                    function_block->AddOperator(std::move(i));
+                    function_block->AddOperatorReference(i);
                 }
             }
         }
 
         void AddLayerNormalization(int axis, float epsilon, size_t stashType, const std::string &nameX,
                                     const std::string &nameScale, const std::string &nameB, const std::string &nameY){
-            std::unique_ptr<ROperator> op_layerNorm;
-            op_layerNorm.reset(new ROperator_LayerNormalization<float>(axis, epsilon, stashType, nameX,
-                                                                        nameScale, nameB, nameY, "", ""));
-            fAddlOp.push_back(std::move(op_layerNorm));                                                        
+            std::cout<<"Adding layer normalization...";
+            auto op_layerNorm = new ROperator_LayerNormalization<float>(axis, epsilon, stashType, nameX,
+                                                                        nameScale, nameB, nameY, "", "");
+            fAddlOp.push_back((op_layerNorm));
         }
         
 

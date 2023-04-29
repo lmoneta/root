@@ -139,12 +139,13 @@ namespace SOFIE{
         fGC+="\n\n";
 
         // computing inplace on input graph
-        fGC += "void infer(TMVA::Experimental::SOFIE::GNN_Data& input_graph){\n";
-
+        fGC += "struct Session {\n";
         fGC += "\n// Instantiating session objects for graph components\n";
         fGC += "Edge_Update::Session edge_update;\n";
         fGC += "Node_Update::Session node_update;\n";
-        fGC += "Global_Update::Session global_update;\n";
+        fGC += "Global_Update::Session global_update;\n\n";
+
+        fGC += "void infer(TMVA::Experimental::SOFIE::GNN_Data& input_graph){\n";
 
 
         // computing updated edge attributes
@@ -233,6 +234,7 @@ namespace SOFIE{
         }
         fGC += "\nstd::copy(Global_Data.begin(), Global_Data.end(), input_graph.global_data.GetData());";
         fGC+="\n}\n";
+        fGC+="};\n";
 
         fGC += ("} //TMVA_SOFIE_" + fName + "\n");
         fGC += "\n#endif  // TMVA_SOFIE_" + hgname + "\n";

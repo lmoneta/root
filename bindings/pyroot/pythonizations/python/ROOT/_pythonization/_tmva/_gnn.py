@@ -99,6 +99,7 @@ class RModel_GNN:
                 if(i.name == 'mlp'):
                     make_mlp_model(gin, edge_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.EDGES)
                 elif(i.name == 'layer_norm'):
+                    print("adding layer norm...")
                     axis = i._axis
                     eps  = i._eps 
                     stash_type = 1
@@ -144,7 +145,7 @@ class RModel_GNN:
                     name_scale = i.scale.name
                     name_Y = name_x+"output"
                     gin.globals_update_block.AddLayerNormalization(axis[0], eps, 1, name_x, name_scale, name_bias, name_Y)
-                    current_output_tensors = gin.globals_update_block.GetFunctionBlock().GetOutputTensorNames()
+                    current_output_tensors  = gin.globals_update_block.GetFunctionBlock().GetOutputTensorNames()
                     new_output_tensors = gbl_namespace.std.vector['std::string']()
                     new_output_tensors.push_back(name_Y)
                     gin.globals_update_block.GetFunctionBlock().AddOutputTensorNameList(new_output_tensors)
@@ -205,6 +206,8 @@ class RModel_GNN:
         gnn_model = gbl_namespace.TMVA.Experimental.SOFIE.RModel_GNN(gin)
         blas_routines = gbl_namespace.std.vector['std::string']()
         blas_routines.push_back("Gemm")
+        blas_routines.push_back("Axpy")
+        blas_routines.push_back("Gemv")
         gnn_model.AddBlasRoutines(blas_routines)
         return gnn_model
 
