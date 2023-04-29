@@ -36,6 +36,21 @@ def make_mlp_model(gin, model, target, type):
     upd.AddInitializedTensors(val)
     gin.createUpdateFunction(upd)
 
+def add_layer_norm(module_layer, model_block):
+    axis = module_layer._axis
+    eps  = module_layer._eps 
+    stash_type = 1
+    name_x = model_block.GetFunctionBlock().GetOutputTensorNames()[0]
+    name_bias = module_layer.offset.name
+    name_scale = module_layer.scale.name
+    name_Y = name_x+"output"
+    model_block.AddLayerNormalization(axis[0], eps, stash_type, name_x, name_scale, name_bias, name_Y)
+    current_output_tensors = model_block.GetFunctionBlock().GetOutputTensorNames()
+    new_output_tensors = gbl_namespace.std.vector['std::string']()
+    new_output_tensors.push_back(name_Y)
+    model_block.GetFunctionBlock().AddOutputTensorNameList(new_output_tensors)    
+
+
 class RModel_GNN: 
     def ParseFromMemory(GraphModule, GraphData, filename = "gnn_network"):
         gin = gbl_namespace.TMVA.Experimental.SOFIE.GNN_Init()
@@ -62,18 +77,7 @@ class RModel_GNN:
                 if(i.name == 'mlp'):
                     make_mlp_model(gin, node_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.NODES, gbl_namespace.TMVA.Experimental.SOFIE.GraphType.GNN)
                 elif(i.name == 'layer_norm'):
-                    axis = i._axis
-                    eps  = i._eps 
-                    stash_type = 1
-                    name_x = gin.nodes_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
-                    name_bias = i.offset.name
-                    name_scale = i.scale.name
-                    name_Y = name_x+"output"
-                    gin.nodes_update_block.AddLayerNormalization(axis[0], eps, 1, name_x, name_scale, name_bias, name_Y)
-                    current_output_tensors = gin.nodes_update_block.GetFunctionBlock().GetOutputTensorNames()
-                    new_output_tensors = gbl_namespace.std.vector['std::string']()
-                    new_output_tensors.push_back(name_Y)
-                    gin.nodes_update_block.GetFunctionBlock().AddOutputTensorNameList(new_output_tensors)
+                    add_layer_norm(i, gin.nodes_update_block)
                 else:
                     print("Invalid Model for node update.")
                     return
@@ -99,18 +103,7 @@ class RModel_GNN:
                 if(i.name == 'mlp'):
                     make_mlp_model(gin, edge_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.EDGES, gbl_namespace.TMVA.Experimental.SOFIE.GraphType.GNN)
                 elif(i.name == 'layer_norm'):
-                    axis = i._axis
-                    eps  = i._eps 
-                    stash_type = 1
-                    name_x = gin.edges_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
-                    name_bias = i.offset.name
-                    name_scale = i.scale.name
-                    name_Y = name_x+"output"
-                    gin.edges_update_block.AddLayerNormalization(axis[0], eps, 1, name_x, name_scale, name_bias, name_Y)
-                    current_output_tensors = gin.edges_update_block.GetFunctionBlock().GetOutputTensorNames()
-                    new_output_tensors = gbl_namespace.std.vector['std::string']()
-                    new_output_tensors.push_back(name_Y)
-                    gin.edges_update_block.GetFunctionBlock().AddOutputTensorNameList(new_output_tensors)
+                    add_layer_norm(i, gin.edges_update_block)
                 else:
                     print("Invalid Model for edge update.")
                     return
@@ -136,18 +129,7 @@ class RModel_GNN:
                 if(i.name == 'mlp'):
                     make_mlp_model(gin, global_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.GLOBALS, gbl_namespace.TMVA.Experimental.SOFIE.GraphType.GNN)
                 elif(i.name == 'layer_norm'):
-                    axis = i._axis
-                    eps  = i._eps 
-                    stash_type = 1
-                    name_x = gin.globals_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
-                    name_bias = i.offset.name
-                    name_scale = i.scale.name
-                    name_Y = name_x+"output"
-                    gin.globals_update_block.AddLayerNormalization(axis[0], eps, 1, name_x, name_scale, name_bias, name_Y)
-                    current_output_tensors  = gin.globals_update_block.GetFunctionBlock().GetOutputTensorNames()
-                    new_output_tensors = gbl_namespace.std.vector['std::string']()
-                    new_output_tensors.push_back(name_Y)
-                    gin.globals_update_block.GetFunctionBlock().AddOutputTensorNameList(new_output_tensors)
+                    add_layer_norm(i, gin.globals_update_block)
                 else:
                     print("Invalid Model for global update.")
                     return
@@ -236,18 +218,7 @@ class RModel_GraphIndependent:
                 if(i.name == 'mlp'):
                     make_mlp_model(gin, node_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.NODES, gbl_namespace.TMVA.Experimental.SOFIE.GraphType.GraphIndependent)
                 elif(i.name == 'layer_norm'):
-                    axis = i._axis
-                    eps  = i._eps 
-                    stash_type = 1
-                    name_x = gin.nodes_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
-                    name_bias = i.offset.name
-                    name_scale = i.scale.name
-                    name_Y = name_x+"output"
-                    gin.nodes_update_block.AddLayerNormalization(axis[0], eps, 1, name_x, name_scale, name_bias, name_Y)
-                    current_output_tensors = gin.nodes_update_block.GetFunctionBlock().GetOutputTensorNames()
-                    new_output_tensors = gbl_namespace.std.vector['std::string']()
-                    new_output_tensors.push_back(name_Y)
-                    gin.nodes_update_block.GetFunctionBlock().AddOutputTensorNameList(new_output_tensors)
+                    add_layer_norm(i, gin.nodes_update_block)
                 else:
                     print("Invalid Model for node update.")
                     return
@@ -274,18 +245,7 @@ class RModel_GraphIndependent:
                 if(i.name == 'mlp'):
                     make_mlp_model(gin, edge_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.EDGES, gbl_namespace.TMVA.Experimental.SOFIE.GraphType.GraphIndependent)
                 elif(i.name == 'layer_norm'):
-                    axis = i._axis
-                    eps  = i._eps 
-                    stash_type = 1
-                    name_x = gin.edges_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
-                    name_bias = i.offset.name
-                    name_scale = i.scale.name
-                    name_Y = name_x+"output"
-                    gin.edges_update_block.AddLayerNormalization(axis[0], eps, 1, name_x, name_scale, name_bias, name_Y)
-                    current_output_tensors = gin.edges_update_block.GetFunctionBlock().GetOutputTensorNames()
-                    new_output_tensors = gbl_namespace.std.vector['std::string']()
-                    new_output_tensors.push_back(name_Y)
-                    gin.edges_update_block.GetFunctionBlock().AddOutputTensorNameList(new_output_tensors)
+                    add_layer_norm(i, gin.edges_update_block)
                 else:
                     print("Invalid Model for edge update.")
                     return
@@ -312,18 +272,7 @@ class RModel_GraphIndependent:
                 if(i.name == 'mlp'):
                     make_mlp_model(gin, global_model._layers[0], gbl_namespace.TMVA.Experimental.SOFIE.FunctionTarget.GLOBALS, gbl_namespace.TMVA.Experimental.SOFIE.GraphType.GraphIndependent)
                 elif(i.name == 'layer_norm'):
-                    axis = i._axis
-                    eps  = i._eps 
-                    stash_type = 1
-                    name_x = gin.globals_update_block.GetFunctionBlock().GetOutputTensorNames()[0]
-                    name_bias = i.offset.name
-                    name_scale = i.scale.name
-                    name_Y = name_x+"output"
-                    gin.globals_update_block.AddLayerNormalization(axis[0], eps, 1, name_x, name_scale, name_bias, name_Y)
-                    current_output_tensors  = gin.globals_update_block.GetFunctionBlock().GetOutputTensorNames()
-                    new_output_tensors = gbl_namespace.std.vector['std::string']()
-                    new_output_tensors.push_back(name_Y)
-                    gin.globals_update_block.GetFunctionBlock().AddOutputTensorNameList(new_output_tensors)
+                    add_layer_norm(i, gin.globals_update_block)
                 else:
                     print("Invalid Model for global update.")
                     return
