@@ -58,6 +58,18 @@ def add_weights(weights, model_block):
             shape.push_back(j)
         model_block.GetFunctionBlock().AddInitializedTensor['float'](i.name, gbl_namespace.TMVA.Experimental.SOFIE.ETensorType.FLOAT, shape, i.numpy())
 
+def add_aggregate_function(gin, reducer, relation):
+    if(reducer == "unsorted_segment_sum"):
+        agg = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Sum()
+        gin.createAggregateFunction[gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Sum](agg, relation)
+    elif(node_global_reducer == "unsorted_segment_mean"):
+        agg = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Mean()
+        gin.createAggregateFunction[gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Mean](agg, relation)
+    else:
+        print("Invalid aggregate function for reduction")
+        return    
+
+
 
 class RModel_GNN: 
     def ParseFromMemory(GraphModule, GraphData, filename = "gnn_network"):
@@ -137,42 +149,13 @@ class RModel_GNN:
         add_weights(global_model.variables, gin.globals_update_block)
 
         # adding edge-node aggregate function
-        edge_node_reducer = GraphModule._node_block._received_edges_aggregator._reducer.__qualname__
-        if(edge_node_reducer == "unsorted_segment_sum"):
-            agg = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Sum()
-            gin.createAggregateFunction[gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Sum](agg, gbl_namespace.TMVA.Experimental.SOFIE.FunctionRelation.NODES_EDGES)
-        elif(edge_node_reducer == "unsorted_segment_mean"):
-            agg = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Mean()
-            gin.createAggregateFunction[gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Mean](agg, gbl_namespace.TMVA.Experimental.SOFIE.FunctionRelation.NODES_EDGES)
-        else:
-            print("Invalid aggregate function for edge-node reduction")
-            return
-
+        add_aggregate_function(gin, GraphModule._node_block._received_edges_aggregator._reducer.__qualname__, gbl_namespace.TMVA.Experimental.SOFIE.FunctionRelation.NODES_EDGES)
 
         # adding node-global aggregate function
-        node_global_reducer = GraphModule._global_block._nodes_aggregator._reducer.__qualname__
-        if(node_global_reducer == "unsorted_segment_sum"):
-            agg = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Sum()
-            gin.createAggregateFunction[gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Sum](agg, gbl_namespace.TMVA.Experimental.SOFIE.FunctionRelation.NODES_GLOBALS)
-        elif(node_global_reducer == "unsorted_segment_mean"):
-            agg = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Mean()
-            gin.createAggregateFunction[gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Mean](agg, gbl_namespace.TMVA.Experimental.SOFIE.FunctionRelation.NODES_GLOBALS)
-        else:
-            print("Invalid aggregate function for node-global reduction")
-            return
+        add_aggregate_function(gin, GraphModule._global_block._nodes_aggregator._reducer.__qualname__, gbl_namespace.TMVA.Experimental.SOFIE.FunctionRelation.NODES_GLOBALS)
 
         # adding edge-global aggregate function
-        node_global_reducer = GraphModule._global_block._edges_aggregator._reducer.__qualname__
-        if(node_global_reducer == "unsorted_segment_sum"):
-            agg = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Sum()
-            gin.createAggregateFunction[gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Sum](agg, gbl_namespace.TMVA.Experimental.SOFIE.FunctionRelation.EDGES_GLOBALS)
-        elif(node_global_reducer == "unsorted_segment_mean"):
-            agg = gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Mean()
-            gin.createAggregateFunction[gbl_namespace.TMVA.Experimental.SOFIE.RFunction_Mean](agg, gbl_namespace.TMVA.Experimental.SOFIE.FunctionRelation.EDGES_GLOBALS)
-        else:
-            print("Invalid aggregate function for node-global reduction")
-            return
-
+        add_aggregate_function(gin, GraphModule._global_block._edges_aggregator._reducer.__qualname__, gbl_namespace.TMVA.Experimental.SOFIE.FunctionRelation.EDGES_GLOBALS)
 
         gnn_model = gbl_namespace.TMVA.Experimental.SOFIE.RModel_GNN(gin)
         blas_routines = gbl_namespace.std.vector['std::string']()
