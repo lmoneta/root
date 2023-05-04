@@ -126,6 +126,16 @@ FunctionMinimum FumiliMinimizer::Minimize(const FCNGradientBase &fcn, const MnUs
    return ModularFunctionMinimizer::Minimize(mfcn, fgc, mnseeds, strategy, maxfcn, toler);
 }
 
+void FumiliMinimizer::SetMethod(const std::string & method) {
+   if (method == "tr")
+      fMinBuilder.SetMethod(FumiliBuilder::kTrustRegion);
+   else if (method == "ls")
+      fMinBuilder.SetMethod(FumiliBuilder::kLineSearch);
+   else if (method == "trs")
+      fMinBuilder.SetMethod(FumiliBuilder::kTrustRegionScaled);
+}
+
+
 } // namespace Minuit2
 
 } // namespace ROOT
