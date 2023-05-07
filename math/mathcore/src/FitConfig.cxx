@@ -242,7 +242,7 @@ std::string FitConfig::MinimizerName() const
    std::string name = MinimizerType();
 
    // append algorithm name for minimizer that support it
-   if ((name.find("Fumili") == std::string::npos) && (name.find("GSLMultiFit") == std::string::npos)) {
+   if ((name.find("Fumili") == std::string::npos)) {
       if (MinimizerAlgoType() != "")
          name += " / " + MinimizerAlgoType();
    }
