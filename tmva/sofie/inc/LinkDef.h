@@ -14,5 +14,7 @@
 #pragma link C++ struct TMVA::Experimental::SOFIE::TensorInfo+;
 #pragma link C++ struct TMVA::Experimental::SOFIE::InputTensorInfo+;
 #pragma link C++ struct TMVA::Experimental::SOFIE::Dim+;
+#pragma link C++ class TMVA::Experimental::SOFIE::RModule+;
+#pragma link C++ class TMVA::Experimental::SOFIE::RModel_TorchGNN+;
 
 #endif

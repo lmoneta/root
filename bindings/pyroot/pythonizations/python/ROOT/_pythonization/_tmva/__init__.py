@@ -22,6 +22,8 @@ from ._crossvalidation import CrossValidation
 
 from ._rbdt import Compute, pythonize_rbdt
 
+from ._torchgnn import RModel_TorchGNN
+
 if sys.version_info >= (3, 8):
     from ._batchgenerator import (
         CreateNumPyGenerators,

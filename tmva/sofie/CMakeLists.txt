@@ -44,9 +44,24 @@ ROOT_STANDARD_LIBRARY_PACKAGE(ROOTTMVASofie
    TMVA/ROperator_Erf.hxx
    TMVA/SOFIE_common.hxx
    TMVA/SOFIEHelpers.hxx
+
+   TMVA/TorchGNN/modules/RModule_Add.hxx
+   TMVA/TorchGNN/modules/RModule_Cat.hxx
+   TMVA/TorchGNN/modules/RModule_GCNConv.hxx
+   TMVA/TorchGNN/modules/RModule_GlobalMeanPool.hxx
+   TMVA/TorchGNN/modules/RModule_Input.hxx
+   TMVA/TorchGNN/modules/RModule_Linear.hxx
+   TMVA/TorchGNN/modules/RModule_ReLU.hxx
+   TMVA/TorchGNN/modules/RModule_Reshape.hxx
+   TMVA/TorchGNN/modules/RModule_Softmax.hxx
+   TMVA/TorchGNN/modules/RModule.hxx
+
+   TMVA/TorchGNN/RModel_TorchGNN.hxx
   SOURCES
     src/RModel.cxx
     src/SOFIE_common.cxx
+    
+    src/TorchGNN/RModel_TorchGNN.cxx
   DEPENDENCIES
     TMVA
 )
