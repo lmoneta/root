@@ -29,6 +29,8 @@
 #include "TMVA/PyMethodBase.h"
 #include <vector>
 
+//class PyArrayObject;
+
 namespace TMVA {
 
    class MethodPyKeras : public PyMethodBase {
@@ -54,11 +56,16 @@ namespace TMVA {
       Bool_t HasAnalysisType(Types::EAnalysisType type, UInt_t numberClasses, UInt_t);
       // Get signal probability of given event
       Double_t GetMvaValue(Double_t *errLower, Double_t *errUpper);
+      // Get signal probabilities for all events
       std::vector<Double_t> GetMvaValues(Long64_t firstEvt, Long64_t lastEvt, Bool_t logProgress);
       // Get regression values of given event
       std::vector<Float_t>& GetRegressionValues();
+      // Get all regression values for all the events in the data set
+      std::vector<Float_t> GetAllRegressionValues();
       // Get class probabilities of given event
       std::vector<Float_t>& GetMulticlassValues();
+      // Get all multiclass values for all the events in the data set
+      std::vector<Float_t> GetAllMulticlassValues();
 
       const Ranking *CreateRanking() { return nullptr; }
       virtual void TestClassification();
@@ -105,10 +112,14 @@ namespace TMVA {
       UInt_t fNVars {0}; // number of variables
       UInt_t fNOutputs {0}; // number of outputs (classes or targets)
       TString fFilenameTrainedModel; // output filename for trained model
+      PyObject * fPyVals = nullptr;   // Python array object for input data
+      PyObject * fPyOutput = nullptr; // Python array object for output data
+
 
       void InitKeras();    //  initialize Keras (importing the readed modules)
       void SetupKerasModel(Bool_t loadTrainedModel); // setups the needed variables, loads the model
       void SetupKerasModelForEval();  // optimizes model for evaluation
+      void InitEvaluation(size_t nEvents);  // allocate arrays for evaluation
       UInt_t  GetNumValidationSamples();  // get number of validation events according to given option
 
       ClassDef(MethodPyKeras, 0);
