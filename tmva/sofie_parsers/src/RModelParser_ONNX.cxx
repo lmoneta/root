@@ -31,6 +31,7 @@ extern ParserFuncSignature ParseSub;
 extern ParserFuncSignature ParseMul;
 extern ParserFuncSignature ParseDiv;
 extern ParserFuncSignature ParsePow;
+extern ParserFuncSignature ParseMod;
 // Nary operators
 extern ParserFuncSignature ParseMax;
 extern ParserFuncSignature ParseMin;
@@ -169,6 +170,7 @@ RModelParser_ONNX::RModelParser_ONNX() noexcept : fOperatorsMapImpl(std::make_un
    RegisterOperator("Mul", ParseMul);
    RegisterOperator("Div", ParseDiv);
    RegisterOperator("Pow", ParsePow);
+   RegisterOperator("Mod", ParseMod);
    // Nary operators
    RegisterOperator("Max", ParseMax);
    RegisterOperator("Min", ParseMin);
