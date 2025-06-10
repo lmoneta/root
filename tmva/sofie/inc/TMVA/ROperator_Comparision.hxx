@@ -131,10 +131,6 @@ public:
                // Update the data and the shape of A
                model.UpdateInitializedTensor(fNX1, model.GetTensorType(fNX1), fShapeY, broadcastedData);
                fShapeX1 = fShapeY;
-            } else {
-               // Add an intermediate tensor for broadcasting A
-               fNBroadcastedX1 = "Broadcasted" + fNX1;
-               model.AddIntermediateTensor(fNBroadcastedX1, model.GetTensorType(fNX1), fShapeY);
             }
          }
          // Broadcast B to Y
@@ -147,10 +143,6 @@ public:
                // Update the data and the shape of B
                model.UpdateInitializedTensor(fNX2, model.GetTensorType(fNX2), fShapeY, broadcastedData);
                fShapeX2 = fShapeY;
-            } else {
-               // Add an intermediate tensor for broadcasting B
-               fNBroadcastedX2 = "Broadcasted" + fNX2;
-               model.AddIntermediateTensor(fNBroadcastedX2, model.GetTensorType(fNX2), fShapeY);
             }
          }
       } else {
@@ -264,32 +256,47 @@ public:
       out << SP << "\n//------ " << ComparisionTrait<T,Op>::Name() << "  " << opName
                                  << " --> " << ConvertShapeToString(fShapeY) << "\n";
       size_t length = ConvertShapeToLength(fShapeY);
-      // Broadcast A if it's uninitialized
-      if (!fNBroadcastedX1.empty()) {
-         std::string type1 = ConvertTypeToString(fTensorType1);
-         out << SP << "// Broadcasting uninitialized tensor " << fNX1 << "\n";
-         out << SP << "{\n";
-         out << SP << SP << type1 << "* data = TMVA::Experimental::SOFIE::UTILITY::UnidirectionalBroadcast<" << type1 << ">(tensor_" << fNX1 << ", " << ConvertShapeToString(fShapeX1) << ", " << ConvertShapeToString(fShapeY) << ");\n";
-         out << SP << SP << "std::copy(data, data + " << length << ", tensor_" << fNBroadcastedX1 << ");\n";
-         out << SP << SP << "delete[] data;\n";
-         out << SP << "}\n";
-      }
-      // Broadcast B if it's uninitialized
-      if (!fNBroadcastedX2.empty()) {
-         std::string type2 = ConvertTypeToString(fTensorType2);
-         out << SP << "// Broadcasting uninitialized tensor " << fNX2 << "\n";
-         out << SP << "{\n";
-         out << SP << SP << type2 << "* data = TMVA::Experimental::SOFIE::UTILITY::UnidirectionalBroadcast<" << type2 << ">(tensor_" << fNX2 << ", " << ConvertShapeToString(fShapeX2) << ", " << ConvertShapeToString(fShapeY) << ");\n";
-         out << SP << SP << "std::copy(data, data + " << length << ", tensor_" << fNBroadcastedX2 << ");\n";
-         out << SP << SP << "delete[] data;\n";
-         out << SP << "}\n";
-      }
-      const std::string& nameX1 = fNBroadcastedX1.empty()? fNX1 : fNBroadcastedX1;
-      const std::string& nameX2 = fNBroadcastedX2.empty()? fNX2 : fNBroadcastedX2;
 
-      out << SP << "for (size_t id = 0; id < " << length << " ; id++){\n";
-      out << SP << SP << "fTensor_" << fNY << "[id] = " << ComparisionTrait<T,Op>::Op( "tensor_" + nameX1 + "[id]" , "tensor_" + nameX2 + "[id]") <<  " ;\n";
+      auto stridesX1 = UTILITY::ComputeStrideFromShape(fShapeX1);
+      auto stridesX2 = UTILITY::ComputeStrideFromShape(fShapeX2);
+      auto stridesY = UTILITY::ComputeStrideFromShape(fShapeY);
+
+      std::string compute_idx_X1, compute_idx_X2, compute_idx_Y;
+      if (std::all_of(fShapeX1.begin(), fShapeX1.end(), [](size_t x) { return x == 1; })){
+         compute_idx_X1 = "0";
+      } else {
+         for(size_t i = 0; i<fShapeX1.size(); ++i){
+            if(fShapeX1[i]==1) continue;
+            compute_idx_X1 += " idx_"+fNY+std::to_string(i+(fShapeY.size()-fShapeX1.size()))+" * "+stridesX1[i]+" +";
+         }
+         compute_idx_X1.pop_back();
+      }
+      if (std::all_of(fShapeX2.begin(), fShapeX2.end(), [](size_t x) { return x == 1; })){
+         compute_idx_X2 = "0";
+      } else {
+         for(size_t i = 0; i<fShapeX2.size(); ++i){
+            if(fShapeX2[i]==1) continue;
+            compute_idx_X2 += " idx_"+fNY+std::to_string(i+(fShapeY.size()-fShapeX2.size()))+" * "+stridesX2[i]+" +";
+         }
+         compute_idx_X2.pop_back();
+      }
+      
+      for(size_t j = 0; j<fShapeY.size(); ++j){
+               out << SP << "size_t "<<"idx_"<<fNY<<j<<";\n";
+      }
+      out << SP << "for(size_t idx = 0; idx < " << length << "; ++idx){\n";
+      out<< SP << SP << "idx_"<<fNY<<"0 = idx / " << stridesY[0]<<";\n";
+      compute_idx_Y += "idx_"+fNY+"0 * " + std::to_string(stridesY[0]);
+      std::string modulo_op = "idx % " + std::to_string(stridesY[0]);
+      for(size_t j = 1; j<fShapeY.size(); ++j){
+               
+               out << SP << SP << "idx_"<<fNY<<j<<" = ("<<modulo_op<<") / "<<stridesY[j]<<";\n";
+               modulo_op += "% " + std::to_string(stridesY[j]);
+               compute_idx_Y = "idx_"+fNY+std::to_string(j)+" * "+std::to_string(stridesY[j])+" + "+compute_idx_Y;
+      }
+      out << SP << SP << "tensor_" << fNY <<"["<<compute_idx_Y<<"] = "<<ComparisionTrait<T,Op>::Op("tensor_"+ fNX1 + "["+compute_idx_X1+"]", "tensor_"+ fNX2 + "["+compute_idx_X2+"]")<<" ;\n";
       out << SP << "}\n";
+
       // since output is a boolean need to add the tensor_xxx variable since it is not defined as a pointer to a boolean std::vector
       if (!fIsModelOutput)
          out << SP << "const std::vector<std::uint8_t> & tensor_" << fNY << " = fTensor_" << fNY << ";\n";

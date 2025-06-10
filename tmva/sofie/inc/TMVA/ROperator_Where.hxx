@@ -110,9 +110,6 @@ public:
                // Update the data and the shape of A
                model.AddConstantTensor(fNBroadcastedA, model.GetTensorType(fNA), fShapeY, broadcastedData);
                fShapeA = fShapeY;
-            } else {
-               // Add an intermediate tensor for broadcasting A
-               model.AddIntermediateTensor(fNBroadcastedA, model.GetTensorType(fNA), fShapeY);
             }
          }
          // Broadcast B to Y
@@ -126,9 +123,6 @@ public:
                // do not update tensor B but add broadcasted one (since it can be input to some other operators)
                model.AddConstantTensor(fNBroadcastedB, model.GetTensorType(fNB), fShapeY, broadcastedData);
                fShapeB = fShapeY;
-            } else {
-               // Add an intermediate tensor for broadcasting B
-               model.AddIntermediateTensor(fNBroadcastedB, model.GetTensorType(fNB), fShapeY);
             }
          }
          // Broadcast C to Y
@@ -142,9 +136,6 @@ public:
                // do not update tensor C but add broadcasted one (since it can be input to some other operators)
                model.AddConstantTensor(fNBroadcastedC, model.GetTensorType(fNC), fShapeY, broadcastedData);
                fShapeC = fShapeY;
-            } else {
-               // Add an intermediate tensor for broadcasting B
-               model.AddIntermediateTensor(fNBroadcastedC, model.GetTensorType(fNC), fShapeY);
             }
          }
       } else {
@@ -252,39 +243,64 @@ public:
       out << SP << "\n//-------- Where " << opName << " --> " << ConvertShapeToString(fShapeY) << "\n";
       size_t length = ConvertShapeToLength(fShapeY);
       std::string typeName = TensorType<T>::Name();
-      // Broadcast A if it's uninitialized
-      if (fShapeA != fShapeY) {
-         out << SP << "// Broadcasting uninitialized tensor " << fNA << "\n";
-         //out << SP << "{\n";
-         out << SP  << "TMVA::Experimental::SOFIE::UTILITY::UnidirectionalBroadcast<" << typeName << ">(tensor_" << fNA << ", " << ConvertShapeToString(fShapeA) << ", " << ConvertShapeToString(fShapeY)
-                         << ", fTensor_" << fNBroadcastedA << ");\n";
-      }
-      // Broadcast B if it's uninitialized
-      if (fShapeB != fShapeY) {
-         out << SP << "// Broadcasting uninitialized tensor " << fNB << "\n";
-         //out << SP << "{\n";
-         out << SP << "TMVA::Experimental::SOFIE::UTILITY::UnidirectionalBroadcast<" << typeName << ">(tensor_" << fNB << ", " << ConvertShapeToString(fShapeB) << ", " << ConvertShapeToString(fShapeY)
-                   << ", fTensor_" << fNBroadcastedB << ");\n";
-      }
-       // Broadcast C if it's uninitialized
-      if (fShapeC != fShapeY) {
-         // special case if C is an input tensor
-         if (fIsInputBoolTensor) {
-            size_t inputLength = ConvertShapeToLength(fShapeC);
-            out << SP << "std::vector<std::uint8_t> fTensor_" << fNC << "(tensor_" << fNC <<  ", tensor_" << fNC << " + " << inputLength << ");\n";
+
+      auto stridesA = UTILITY::ComputeStrideFromShape(fShapeA);
+      auto stridesB = UTILITY::ComputeStrideFromShape(fShapeB);
+      auto stridesC = UTILITY::ComputeStrideFromShape(fShapeC);
+      auto stridesY = UTILITY::ComputeStrideFromShape(fShapeY);
+
+      std::string compute_idx_A, compute_idx_B, compute_idx_C, compute_idx_Y;
+
+      if (std::all_of(fShapeA.begin(), fShapeA.end(), [](size_t x) { return x == 1; })){
+         compute_idx_A = "0";
+      } else {
+         for(size_t i = 0; i<fShapeA.size(); ++i){
+            if(fShapeA[i]==1) continue;
+            compute_idx_A += " idx_"+fNY+std::to_string(i+(fShapeY.size()-fShapeA.size()))+" * "+stridesA[i]+" +";
          }
-         out << SP << "// Broadcasting uninitialized tensor " << fNC << "\n";
-         //out << SP << "{\n";
-         out << SP << "TMVA::Experimental::SOFIE::UTILITY::UnidirectionalBroadcast<std::uint8_t>(fTensor_" << fNC << ".data(), " << ConvertShapeToString(fShapeC) << ", " << ConvertShapeToString(fShapeY)
-                   << ", fTensor_" << fNBroadcastedC << ");\n";
+         compute_idx_A.pop_back();
       }
-      std::string nameA = fNBroadcastedA.empty()? fNA : fNBroadcastedA;
-      std::string nameB = fNBroadcastedB.empty()? fNB : fNBroadcastedB;
-      std::string nameC = fNBroadcastedC.empty()? fNC : fNBroadcastedC;
-      out << SP << "for (size_t id = 0; id < " << length << " ; id++){\n";
+      if (std::all_of(fShapeB.begin(), fShapeB.end(), [](size_t x) { return x == 1; })){
+         compute_idx_B = "0";
+      } else {
+         for(size_t i = 0; i<fShapeB.size(); ++i){
+            if(fShapeB[i]==1) continue;
+            compute_idx_B += " idx_"+fNY+std::to_string(i+(fShapeY.size()-fShapeB.size()))+" * "+stridesB[i]+" +";
+         }
+         compute_idx_B.pop_back();
+      }
+      if (std::all_of(fShapeC.begin(), fShapeC.end(), [](size_t x) { return x == 1; })){
+         compute_idx_C = "0";
+      } else {
+         for(size_t i = 0; i<fShapeC.size(); ++i){
+            if(fShapeC[i]==1) continue;
+            compute_idx_C += " idx_"+fNY+std::to_string(i+(fShapeY.size()-fShapeC.size()))+" * "+stridesC[i]+" +";
+         }
+         compute_idx_C.pop_back();
+      }
+
+      if (fIsInputBoolTensor) {
+            size_t inputLength = ConvertShapeToLength(fShapeC);
+            out << SP << "std::vector<bool> fTensor_" << fNC << "(tensor_" << fNC <<  ", tensor_" << fNC << " + " << inputLength << ");\n";
+      }
+
+      for(size_t j = 0; j<fShapeY.size(); ++j){
+               out << SP << "size_t idx_" << fNY << j<<";\n";
+      }
+      out << SP << "for(size_t idx = 0; idx < " << length << "; ++idx){\n";
+      out<< SP << SP << "idx_"<<fNY<<"0 = idx / " << stridesY[0]<<";\n";
+      compute_idx_Y += "idx_"+fNY+"0 * " + std::to_string(stridesY[0]);
+      std::string modulo_op = "idx % " + std::to_string(stridesY[0]);
+      for(size_t j = 1; j<fShapeY.size(); ++j){
+
+               out << SP << SP << "idx_"<<fNY<<j<<" = ("<<modulo_op<<") / "<<stridesY[j]<<";\n";
+               modulo_op += "% " + std::to_string(stridesY[j]);
+               compute_idx_Y = "idx_"+fNY+std::to_string(j)+" * "+std::to_string(stridesY[j])+" + "+compute_idx_Y;
+      }
+
       // get output tensor applying condition
-      out << SP << SP << "tensor_" << fNY << "[id] = "  << "(fTensor_" << nameC << "[id]) ? tensor_"
-                               << nameA << "[id] : tensor_" + nameB + "[id];\n";
+      out << SP << SP << "tensor_" << fNY << "["<<compute_idx_Y<<"] = "  << "(fTensor_" << fNC << "["<<compute_idx_C<<"]) ? tensor_"
+                               << fNA << "["<<compute_idx_A<<"] : tensor_" + fNB + "["<<compute_idx_B<<"];\n";
       out << SP << "}\n";
       return out.str();
    }

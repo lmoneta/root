@@ -251,6 +251,7 @@ namespace SOFIE{
                   fNC2 = fNC + "bcast";
                   if (!fIsDynamic) {
                      model.AddIntermediateTensor(fNC2, model.GetTensorType(fNC), shapeY);
+                     fOutputTensorNames.emplace_back(fNC2);
                   }
                   else
                      model.AddDynamicTensor(fNC2,model.GetTensorType(fNC), fShapeY);

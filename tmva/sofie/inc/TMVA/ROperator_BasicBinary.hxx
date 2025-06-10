@@ -131,6 +131,7 @@ public:
             bool broadcastA = ret.first & 2;
             bool broadcastB = ret.first & 1;
             // Broadcast A to Y
+            /*  not needed anymore
             if (broadcastA) {
                fNBroadcastedA = "Broadcasted" + fNA + "to" + fNY;
                if (model.IsConstantTensor(fNA)) {
@@ -144,7 +145,7 @@ public:
                   fDimShapeA = ConvertShapeToDim(fShapeA);
                } else {
                   // Add an intermediate tensor for broadcasting A
-                  model.AddIntermediateTensor(fNBroadcastedA, model.GetTensorType(fNA), fShapeY);
+                  // model.AddIntermediateTensor(fNBroadcastedA, model.GetTensorType(fNA), fShapeY);
                }
             }
             // Broadcast B to Y
@@ -170,9 +171,10 @@ public:
                   fDimShapeB = ConvertShapeToDim(fShapeB);
                } else {
                   // Add an intermediate tensor for broadcasting B
-                  model.AddIntermediateTensor(fNBroadcastedB, model.GetTensorType(fNB), fShapeY);
+                  // model.AddIntermediateTensor(fNBroadcastedB, model.GetTensorType(fNB), fShapeY);
                }
             }
+            */
          } else {
             fShapeY = fShapeA;
          }
@@ -281,6 +283,58 @@ public:
       out << SP << "\n//------ " << BinaryOperatorTrait<T,Op>::Name() << "\n";
       auto length = ConvertDimShapeToLength(fDimShapeY);
       std::string typeName = TensorType<T>::Name();
+
+
+      // non dynamic case
+      if (!fShapeA.empty() && !fShapeB.empty() && !fShapeY.empty() ) {
+
+      auto stridesA = UTILITY::ComputeStrideFromShape(fShapeA);
+      auto stridesB = UTILITY::ComputeStrideFromShape(fShapeB);
+      auto stridesY = UTILITY::ComputeStrideFromShape(fShapeY);
+
+      std::string compute_idx_A, compute_idx_B, compute_idx_Y;
+      if (std::all_of(fShapeA.begin(), fShapeA.end(), [](size_t x) { return x == 1; })){
+         compute_idx_A = "0";
+      } else {
+         for(size_t i = 0; i<fShapeA.size(); ++i){
+            if(fShapeA[i]==1) continue;
+            compute_idx_A += " idx_"+fNY+std::to_string(i+(fShapeY.size()-fShapeA.size()))+" * "+stridesA[i]+" +";
+         }
+         compute_idx_A.pop_back();
+      }
+      if (std::all_of(fShapeB.begin(), fShapeB.end(), [](size_t x) { return x == 1; })){
+         compute_idx_B = "0";
+      } else {
+         for(size_t i = 0; i<fShapeB.size(); ++i){
+            if(fShapeB[i]==1) continue;
+            compute_idx_B += " idx_"+fNY+std::to_string(i+(fShapeY.size()-fShapeB.size()))+" * "+stridesB[i]+" +";
+         }
+         compute_idx_B.pop_back();
+      }
+
+      for(size_t j = 0; j<fShapeY.size(); ++j){
+               out << SP << "size_t "<<"idx_"<<fNY<<j<<";\n";
+      }
+      out << SP << "for(size_t idx = 0; idx < " << length << "; ++idx){\n";
+      out<< SP << SP << "idx_"<<fNY<<"0 = idx / " << stridesY[0]<<";\n";
+      // compute_idx_Y += "idx_"+fNY+"0 * " + std::to_string(stridesY[0]);
+      if(fShapeY[0]!=1){
+          compute_idx_Y += " idx_"+fNY+"0 * " + std::to_string(stridesY[0]) + " +";
+     }
+      std::string modulo_op = "idx % " + std::to_string(stridesY[0]);
+      for(size_t j = 1; j<fShapeY.size(); ++j){
+
+               out << SP << SP << "idx_"<<fNY<<j<<" = ("<<modulo_op<<") / "<<stridesY[j]<<";\n";
+               //modulo_op += "% " + std::to_string(stridesY[j]);
+               //compute_idx_Y = "idx_"+fNY+std::to_string(j)+" * "+std::to_string(stridesY[j])+" + "+compute_idx_Y;
+               modulo_op += " % " + std::to_string(stridesY[j]);
+               compute_idx_Y += " idx_"+fNY+std::to_string(j)+" * "+std::to_string(stridesY[j])+" +";
+      }
+      compute_idx_Y.pop_back();
+      out << SP << SP << "tensor_" << fNY <<"["<<compute_idx_Y<<"] = "<<BinaryOperatorTrait<T,Op>::Op("tensor_"+ fNA + "["+compute_idx_A+"]", "tensor_"+ fNB + "["+compute_idx_B+"]")<<" ;\n";
+
+   }  else {
+      // dynamic case with broadcasting
       // we need to check if we can broadcast (case flag has bit 4 set)
       if (fBroadcastFlag & 4) {
          // need to check if shapes are the same
@@ -337,6 +391,8 @@ public:
       out << SP << SP << "tensor_" << fNY << "[id] = "
                << BinaryOperatorTrait<T,Op>::Op( "tensor_" + nameA + "[id]" , "tensor_" + nameB + "[id]")
                <<  " ;\n";
+   }
+
       out << SP << "}\n";
       return out.str();
    }
