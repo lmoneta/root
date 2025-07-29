@@ -552,6 +552,31 @@ namespace Internal {
    }
 
    ////////////////////////////////////////////////////////////////////////////////
+   /// @param[in] config Configuration to use. The default is kWholeMachine, which
+   ///                   will create a thread pool that spans the whole machine.
+   ///
+   /// EnableImplicitMT calls in turn EnableThreadSafety.
+   /// If ImplicitMT is already enabled, this function does nothing.
+
+   void EnableImplicitMT(ROOT::EIMTConfig config)
+   {
+#ifdef R__USE_IMT
+      if (ROOT::Internal::IsImplicitMTEnabledImpl())
+         return;
+      EnableThreadSafety();
+      static void (*sym)(ROOT::EIMTConfig) =
+         (void (*)(ROOT::EIMTConfig))Internal::GetSymInLibImt("ROOT_TImplicitMT_EnableImplicitMT_Config");
+      if (sym)
+         sym(config);
+      ROOT::Internal::IsImplicitMTEnabledImpl() = true;
+#else
+      ::Warning("EnableImplicitMT",
+                "Cannot enable implicit multi-threading with config %d, please build ROOT with -Dimt=ON",
+                static_cast<int>(config));
+#endif
+   }
+
+   ////////////////////////////////////////////////////////////////////////////////
    /// Disables the implicit multi-threading in ROOT (see EnableImplicitMT).
    void DisableImplicitMT()
    {
@@ -602,21 +627,7 @@ ClassImp(TROOT);
 ////////////////////////////////////////////////////////////////////////////////
 /// Default ctor.
 
-TROOT::TROOT() : TDirectory(),
-     fLineIsProcessing(0), fVersion(0), fVersionInt(0), fVersionCode(0),
-     fVersionDate(0), fVersionTime(0), fBuiltDate(0), fBuiltTime(0),
-     fTimer(0), fApplication(nullptr), fInterpreter(nullptr), fBatch(kTRUE),
-     fIsWebDisplay(kFALSE), fIsWebDisplayBatch(kFALSE), fEditHistograms(kTRUE),
-     fFromPopUp(kTRUE),fMustClean(kTRUE),fForceStyle(kFALSE),
-     fInterrupt(kFALSE),fEscape(kFALSE),fExecutingMacro(kFALSE),fEditorMode(0),
-     fPrimitive(nullptr),fSelectPad(nullptr),fClasses(nullptr),fTypes(nullptr),fGlobals(nullptr),fGlobalFunctions(nullptr),
-     fClosedObjects(nullptr),fFiles(nullptr),fMappedFiles(nullptr),fSockets(nullptr),fCanvases(nullptr),fStyles(nullptr),fFunctions(nullptr),
-     fTasks(nullptr),fColors(nullptr),fGeometries(nullptr),fBrowsers(nullptr),fSpecials(nullptr),fCleanups(nullptr),
-     fMessageHandlers(nullptr),fStreamerInfo(nullptr),fClassGenerators(nullptr),fSecContexts(nullptr),
-     fProofs(nullptr),fClipboard(nullptr),fDataSets(nullptr),fUUIDs(nullptr),fRootFolder(nullptr),fBrowsables(nullptr),
-     fPluginManager(nullptr)
-{
-}
+TROOT::TROOT() : TDirectory() {}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Initialize the ROOT system. The creation of the TROOT object initializes
@@ -636,19 +647,7 @@ TROOT::TROOT() : TDirectory(),
 /// extend the ROOT system without adding permanent dependencies
 /// (e.g. the graphics system is initialized via such a function).
 
-TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
-   : TDirectory(), fLineIsProcessing(0), fVersion(0), fVersionInt(0), fVersionCode(0),
-     fVersionDate(0), fVersionTime(0), fBuiltDate(0), fBuiltTime(0),
-     fTimer(0), fApplication(nullptr), fInterpreter(nullptr), fBatch(kTRUE),
-     fIsWebDisplay(kFALSE), fIsWebDisplayBatch(kFALSE), fEditHistograms(kTRUE),
-     fFromPopUp(kTRUE),fMustClean(kTRUE),fForceStyle(kFALSE),
-     fInterrupt(kFALSE),fEscape(kFALSE),fExecutingMacro(kFALSE),fEditorMode(0),
-     fPrimitive(nullptr),fSelectPad(nullptr),fClasses(nullptr),fTypes(nullptr),fGlobals(nullptr),fGlobalFunctions(nullptr),
-     fClosedObjects(nullptr),fFiles(nullptr),fMappedFiles(nullptr),fSockets(nullptr),fCanvases(nullptr),fStyles(nullptr),fFunctions(nullptr),
-     fTasks(nullptr),fColors(nullptr),fGeometries(nullptr),fBrowsers(nullptr),fSpecials(nullptr),fCleanups(nullptr),
-     fMessageHandlers(nullptr),fStreamerInfo(nullptr),fClassGenerators(nullptr),fSecContexts(nullptr),
-     fProofs(nullptr),fClipboard(nullptr),fDataSets(nullptr),fUUIDs(nullptr),fRootFolder(nullptr),fBrowsables(nullptr),
-     fPluginManager(nullptr)
+TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc) : TDirectory()
 {
    if (fgRootInit || ROOT::Internal::gROOTLocal) {
       //Warning("TROOT", "only one instance of TROOT allowed");
@@ -753,7 +752,6 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    fCleanups    = setNameLocked(new THashList, "Cleanups");
    fMessageHandlers = setNameLocked(new TList, "MessageHandlers");
    fSecContexts = setNameLocked(new TList, "SecContexts");
-   fProofs      = setNameLocked(new TList, "Proofs");
    fClipboard   = setNameLocked(new TList, "Clipboard");
    fDataSets    = setNameLocked(new TList, "DataSets");
    fTypes       = new TListOfTypes; fTypes->UseRWLock();
@@ -779,7 +777,6 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    fRootFolder->AddFolder("Cleanups",  "List of RecursiveRemove Collections",fCleanups);
    fRootFolder->AddFolder("StreamerInfo","List of Active StreamerInfo Classes",fStreamerInfo);
    fRootFolder->AddFolder("SecContexts","List of Security Contexts",fSecContexts);
-   fRootFolder->AddFolder("PROOF Sessions", "List of PROOF sessions",fProofs);
    fRootFolder->AddFolder("ROOT Memory","List of Objects in the gROOT Directory",fList);
    fRootFolder->AddFolder("ROOT Files","List of Connected ROOT Files",fFiles);
 
@@ -852,7 +849,6 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
 
    // Set initial/default list of browsable objects
    fBrowsables->Add(fRootFolder, "root");
-   fBrowsables->Add(fProofs, "PROOF Sessions");
    fBrowsables->Add(workdir, gSystem->WorkingDirectory());
    fBrowsables->Add(fFiles, "ROOT Files");
 
@@ -943,7 +939,6 @@ TROOT::~TROOT()
 #ifdef R__COMPLETE_MEM_TERMINATION
       SafeDelete(fCanvases);
       SafeDelete(fTasks);
-      SafeDelete(fProofs);
       SafeDelete(fDataSets);
       SafeDelete(fClipboard);
 
@@ -1206,7 +1201,7 @@ void TROOT::CloseFiles()
                socket->SetBit(kMustCleanup);
                fClosedObjects->AddLast(socket);
             } else {
-               // Crap ... this is not a socket, likely Proof or something, let's try to find a Close
+               // Crap ... this is not a socket, let's try to find a Close
                Longptr_t other_offset;
                CallFunc_t *otherCloser = gInterpreter->CallFunc_Factory();
                gInterpreter->CallFunc_SetFuncProto(otherCloser, socket->IsA()->GetClassInfo(), "Close", "", &other_offset);
@@ -2060,6 +2055,7 @@ void TROOT::InitThreads()
 ////////////////////////////////////////////////////////////////////////////////
 /// Initialize the interpreter. Should be called only after main(),
 /// to make sure LLVM/Clang is fully initialized.
+/// This function must be called in a single thread context (static initialization)
 
 void TROOT::InitInterpreter()
 {
@@ -2531,6 +2527,8 @@ static void CallCloseFiles()
 /// for headers. Calls TCling::RegisterModule() unless gCling
 /// is NULL, i.e. during startup, where the information is buffered in
 /// the static GetModuleHeaderInfoBuffer().
+/// The caller of this function should be holding the ROOT Write lock or be
+/// single threaded (dlopen)
 
 void TROOT::RegisterModule(const char* modulename,
                            const char** headers,

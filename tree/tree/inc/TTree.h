@@ -71,10 +71,20 @@ class TVirtualIndex;
 class TBranchRef;
 class TBasket;
 class TStreamerInfo;
+class TTree;
 class TTreeCache;
 class TTreeCloner;
 class TFileMergeInfo;
 class TVirtualPerfStats;
+
+namespace ROOT::Internal::TreeUtils {
+void TBranch__SetTree(TTree *tree, TObjArray &branches);
+
+TBranch *CallBranchImpRef(TTree &tree, const char *branchname, TClass *ptrClass, EDataType datatype, void *addobj,
+                          Int_t bufsize = 32000, Int_t splitlevel = 99);
+TBranch *CallBranchImp(TTree &tree, const char *branchname, TClass *ptrClass, void *addobj, Int_t bufsize = 32000,
+                       Int_t splitlevel = 99);
+}
 
 class TTree : public TNamed, public TAttLine, public TAttFill, public TAttMarker {
 
@@ -160,13 +170,27 @@ private:
    mutable std::atomic<Long64_t> fIMTTotBytes;    ///<! Total bytes for the IMT flush baskets
    mutable std::atomic<Long64_t> fIMTZipBytes;    ///<! Zip bytes for the IMT flush baskets.
 
+   std::unordered_map<std::string, TBranch *>
+      fNamesToBranches; ///<! maps names to their branches, useful when retrieving branches by name
+
    void             InitializeBranchLists(bool checkLeafCount);
    void             SortBranchesByTime();
    Int_t            FlushBasketsImpl() const;
    void             MarkEventCluster();
    Long64_t         GetMedianClusterSize();
 
+   void RegisterBranchFullName(std::pair<std::string, TBranch *> &&kv) { fNamesToBranches.insert(kv); }
+   friend void ROOT::Internal::TreeUtils::TBranch__SetTree(TTree *tree, TObjArray &branches);
+
+   Int_t
+   SetBranchAddressImp(const char *bname, void *add, TBranch **ptr, TClass *realClass, EDataType datatype, bool isptr);
+
 protected:
+   friend TBranch *ROOT::Internal::TreeUtils::CallBranchImpRef(TTree &tree, const char *branchname, TClass *ptrClass,
+                                                               EDataType datatype, void *addobj, Int_t bufsize,
+                                                               Int_t splitlevel);
+   friend TBranch *ROOT::Internal::TreeUtils::CallBranchImp(TTree &tree, const char *branchname, TClass *ptrClass,
+                                                            void *addobj, Int_t bufsize, Int_t splitlevel);
    virtual void     KeepCircular();
    virtual TBranch *BranchImp(const char* branchname, const char* classname, TClass* ptrClass, void* addobj, Int_t bufsize, Int_t splitlevel);
    virtual TBranch *BranchImp(const char* branchname, TClass* ptrClass, void* addobj, Int_t bufsize, Int_t splitlevel);
@@ -184,6 +208,15 @@ protected:
    void             ImportClusterRanges(TTree *fromtree);
    void             MoveReadCache(TFile *src, TDirectory *dir);
    Int_t            SetCacheSizeAux(bool autocache = true, Long64_t cacheSize = 0);
+
+   TBranch *GetBranchFromSelf(const char *branchName);
+   TBranch *GetBranchFromFriends(const char *branchName);
+   // This overload is used when setting the branch address of friends of this tree. When registering the branches
+   // to be found later, we can't know a priori which friend will have branch 'bname'. TTree and TChain have different
+   // ways to deal with the fact that we should not print spurious error messages that a branch cannot be found
+   // if it is not in one particular friend but in another
+   virtual Int_t SetBranchAddress(const char *bname, void *add, TBranch **ptr, TClass *realClass, EDataType datatype,
+                                  bool isptr, bool suppressMissingBranchError);
 
    class TFriendLock {
       // Helper class to prevent infinite recursion in the

@@ -45,8 +45,12 @@
   \param -experimental-io-features <FEATURES> Enables the corresponding experimental feature for output trees.
                                               \see ROOT::Experimental::EIOFeatures
   \param -f            Force overwriting of output file.
-  \param -f[0-9]       Set target compression level. 0 = uncompressed, 9 = highly compressed. Default is 101
-                       (kDefaultZLIB). You can also specify the full compression algorithm, e.g. -f505.
+  \param -f[0-9]       Set target compression algorithm `i` and level `j` passing the number `i*100 + j`, e.g. `-f505`.
+                       The last digit (`j`) can be set from 0 = uncompressed to 9 = highly compressed.
+                       The first digit (`i`) is 1 for ZLIB, 2 for LZMA, 4 for LZ4 and 5 for ZSTD.
+                       Recommended numbers are 101 (ZLIB), 207 (LZMA), 404 (LZ4), 505 (ZSTD),
+                       The default value for this flag is 101 (kDefaultZLIB).
+                       See ROOT::RCompressionSetting and TFile::TFile documentation for more details.
   \param -fk           Sets the target file to contain the baskets with the same compression as the input files
                        (unless -O is specified). Compresses the meta data using the compression level specified
                        in the first input or the compression setting after fk (for example 505 when using -fk505)
@@ -63,7 +67,9 @@
                        "-L" flag. "SkipListed" will skip all the listed objects; "OnlyListed" will only merge those
                        objects. If this flag is passed, "-L" must be passed as well.
   \param -n <N_FILES>  Open at most `N` files at once (use 0 to request to use the system maximum - which is also
-                       the default)
+                       the default). This number includes both the input reading files as well as the output file.
+                       Thus, if set to 1, it will be automatically replaced to a minimum of 2. If set to a too large value,
+                       it will be clipped to the system maximum.
   \param -O            Re-optimize basket size when merging TTree
   \param -T            Do not merge Trees
   \param -v [LEVEL]    Explicitly set the verbosity level: 0 request no output, 99 is the default
@@ -811,6 +817,8 @@ int main(int argc, char **argv)
       }
       merger.SetNotrees(args.fNoTrees);
       merger.SetMergeOptions(TString(merger.GetMergeOptions()) + " " + cacheSize);
+      merger.SetErrorBehavior(args.fSkipErrors ? TFileMerger::EErrorBehavior::kSkipOnError
+                                               : TFileMerger::EErrorBehavior::kFailOnError);
       merger.SetIOFeatures(features);
       Int_t fileMergerFlags = TFileMerger::kAll;
       Int_t extraFlags = ParseFilterFile(args.fObjectFilterFile, args.fObjectFilterType, merger);

@@ -8,23 +8,38 @@
 # For the list of contributors see $ROOTSYS/README/CREDITS.                    #
 ################################################################################
 
-from os import environ
+import importlib
+import os
+import sys
 
 # Prevent cppyy's check for the PCH
-environ["CLING_STANDARD_PCH"] = "none"
+os.environ["CLING_STANDARD_PCH"] = "none"
 
 # Prevent cppyy's check for extra header directory
-environ["CPPYY_API_PATH"] = "none"
+os.environ["CPPYY_API_PATH"] = "none"
 
 # Prevent cppyy from filtering ROOT libraries
-environ["CPPYY_NO_ROOT_FILTER"] = "1"
+os.environ["CPPYY_NO_ROOT_FILTER"] = "1"
+
+root_module_path = os.path.dirname(__file__) # expected to be ${CMAKE_INSTALL_PYTHONDIR}/ROOT
+root_install_pythondir = os.path.dirname(root_module_path) # expected to be ${CMAKE_INSTALL_PYTHONDIR}
+
+# Directly tell cppyy where to find the backend library so we don't have to
+# rely on the LD_LIBRARY_PATH being set
+os.environ["CPPYY_BACKEND_LIBRARY"] = os.path.join(root_install_pythondir, "libcppyy_backend")
+
+# The libROOTPythonizations CPython extension is in the same directory as the
+# ROOT Python module, but to find the other ROOT libraries we need to also add
+# the path of the ROOT library directory (only needed on Windows). For example,
+# if the ROOT Python module is in $ROOTSYS/bin/ROOT/__init__.py, the libraries
+# are usually in $ROOTSYS/bin.
+if 'win32' in sys.platform:
+    os.add_dll_directory(root_install_pythondir)
 
 # Do setup specific to AddressSanitizer environments
 from . import _asan
 
 import cppyy
-import sys, importlib
-import libROOTPythonizations
 
 # Build cache of commonly used python strings (the cache is python intern, so
 # all strings are shared python-wide, not just in PyROOT).
@@ -171,7 +186,7 @@ if _is_ipython:
     ip = get_ipython()
     if hasattr(ip, "kernel"):
         import JupyROOT
-        from . import JsMVA
+        # from . import JsMVA
 
 # Register cleanup
 import atexit

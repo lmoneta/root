@@ -45,7 +45,7 @@ class RNTupleJoinProcessor;
 /**
 \class ROOT::REntry
 \ingroup NTuple
-\brief The REntry is a collection of values in an ntuple corresponding to a complete row in the data set.
+\brief The REntry is a collection of values in an RNTuple corresponding to a complete row in the data set.
 
 The entry provides a memory-managed binder for a set of values read from fields in an RNTuple. The memory locations that are associated
 with values are managed through shared pointers.
@@ -93,21 +93,6 @@ private:
       fValues.emplace_back(value);
       return value.template GetPtr<T>();
    }
-
-   /// Update the RValue for a field in the entry. To be used when its underlying ROOT::RFieldBase changes, which
-   /// typically happens when the page source from which the field values are read changes.
-   void UpdateValue(ROOT::RFieldToken token, ROOT::RFieldBase::RValue &&value)
-   {
-      std::swap(fValues.at(token.fIndex), value);
-   }
-   void UpdateValue(ROOT::RFieldToken token, ROOT::RFieldBase::RValue &value)
-   {
-      std::swap(fValues.at(token.fIndex), value);
-   }
-
-   /// Return the RValue currently bound to the provided field.
-   ROOT::RFieldBase::RValue &GetValue(ROOT::RFieldToken token) { return fValues.at(token.fIndex); }
-   ROOT::RFieldBase::RValue &GetValue(std::string_view fieldName) { return GetValue(GetToken(fieldName)); }
 
    void Read(ROOT::NTupleSize_t index)
    {
@@ -176,14 +161,19 @@ public:
       return ROOT::RFieldToken(it->second, fSchemaId);
    }
 
+   /// Create a new value for the field referenced by `token`.
    void EmplaceNewValue(ROOT::RFieldToken token)
    {
       EnsureMatchingModel(token);
       fValues[token.fIndex].EmplaceNew();
    }
 
+   /// Create a new value for the field referenced by its name.
    void EmplaceNewValue(std::string_view fieldName) { EmplaceNewValue(GetToken(fieldName)); }
 
+   /// Bind the value for the field, referenced by `token`, to `objPtr`.
+   ///
+   /// \sa BindValue(std::string_view, std::shared_ptr<T>)
    template <typename T>
    void BindValue(ROOT::RFieldToken token, std::shared_ptr<T> objPtr)
    {
@@ -192,12 +182,22 @@ public:
       fValues[token.fIndex].Bind(objPtr);
    }
 
+   /// Bind the value for the field, referenced by its name, to `objPtr`.
+   ///
+   /// Ownership is shared with the caller and the object will be kept alive until it is replaced (by a call to
+   /// EmplaceNewValue, BindValue, or BindRawPtr) or the entry is destructed.
+   ///
+   /// **Note**: if `T = void`, type checks are disabled. It is the caller's responsibility to match the field and
+   /// object types.
    template <typename T>
    void BindValue(std::string_view fieldName, std::shared_ptr<T> objPtr)
    {
       BindValue<T>(GetToken(fieldName), objPtr);
    }
 
+   /// Bind the value for the field, referenced by `token`, to `rawPtr`.
+   ///
+   /// \sa BindRawPtr(std::string_view, T *)
    template <typename T>
    void BindRawPtr(ROOT::RFieldToken token, T *rawPtr)
    {
@@ -206,12 +206,22 @@ public:
       fValues[token.fIndex].BindRawPtr(rawPtr);
    }
 
+   /// Bind the value for the field, referenced by its name, to `rawPtr`.
+   ///
+   /// The caller retains ownership of the object and must ensure it is kept alive when reading or writing using the
+   /// entry.
+   ///
+   /// **Note**: if `T = void`, type checks are disabled. It is the caller's responsibility to match the field and
+   /// object types.
    template <typename T>
    void BindRawPtr(std::string_view fieldName, T *rawPtr)
    {
       BindRawPtr<void>(GetToken(fieldName), rawPtr);
    }
 
+   /// Get the (typed) pointer to the value for the field referenced by `token`.
+   ///
+   /// \sa GetPtr(std::string_view)
    template <typename T>
    std::shared_ptr<T> GetPtr(ROOT::RFieldToken token) const
    {
@@ -220,6 +230,12 @@ public:
       return std::static_pointer_cast<T>(fValues[token.fIndex].GetPtr<void>());
    }
 
+   /// Get the (typed) pointer to the value for the field referenced by `token`.
+   ///
+   /// Ownership is shared and the caller can continue to use the object after the entry is destructed.
+   ///
+   /// **Note**: if `T = void`, type checks are disabled. It is the caller's responsibility to use the returned pointer
+   /// according to the field type.
    template <typename T>
    std::shared_ptr<T> GetPtr(std::string_view fieldName) const
    {

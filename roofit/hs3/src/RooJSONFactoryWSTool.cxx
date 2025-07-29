@@ -178,13 +178,35 @@ struct Var {
  */
 bool isNumber(const std::string &str)
 {
-   bool first = true;
-   for (char const &c : str) {
-      if (std::isdigit(c) == 0 && c != '.' && !(first && (c == '-' || c == '+')))
+   bool seen_digit = false;
+   bool seen_dot = false;
+   bool seen_e = false;
+   bool after_e = false;
+   bool sign_allowed = true;
+
+   for (size_t i = 0; i < str.size(); ++i) {
+      char c = str[i];
+
+      if (std::isdigit(c)) {
+         seen_digit = true;
+         sign_allowed = false;
+      } else if ((c == '+' || c == '-') && sign_allowed) {
+         // Sign allowed at the beginning or right after 'e'/'E'
+         sign_allowed = false;
+      } else if (c == '.' && !seen_dot && !after_e) {
+         seen_dot = true;
+         sign_allowed = false;
+      } else if ((c == 'e' || c == 'E') && seen_digit && !seen_e) {
+         seen_e = true;
+         after_e = true;
+         sign_allowed = true; // allow sign immediately after 'e'
+         seen_digit = false;  // reset: we now expect digits after e
+      } else {
          return false;
-      first = false;
+      }
    }
-   return true;
+
+   return seen_digit;
 }
 
 /**
@@ -896,8 +918,8 @@ RooRealVar *RooJSONFactoryWSTool::requestImpl<RooRealVar>(const std::string &obj
 {
    if (RooRealVar *retval = _workspace.var(objname))
       return retval;
-   if (JSONNode const *vars = getVariablesNode(*_rootnodeInput)) {
-      if (auto node = vars->find(objname)) {
+   if (const auto *vars = getVariablesNode(*_rootnodeInput)) {
+      if (const auto &node = vars->find(objname)) {
          this->importVariable(*node);
          if (RooRealVar *retval = _workspace.var(objname))
             return retval;
@@ -911,8 +933,8 @@ RooAbsPdf *RooJSONFactoryWSTool::requestImpl<RooAbsPdf>(const std::string &objna
 {
    if (RooAbsPdf *retval = _workspace.pdf(objname))
       return retval;
-   if (auto distributionsNode = _rootnodeInput->find("distributions")) {
-      if (auto child = findNamedChild(*distributionsNode, objname)) {
+   if (const auto &distributionsNode = _rootnodeInput->find("distributions")) {
+      if (const auto &child = findNamedChild(*distributionsNode, objname)) {
          this->importFunction(*child, true);
          if (RooAbsPdf *retval = _workspace.pdf(objname))
             return retval;
@@ -932,8 +954,8 @@ RooAbsReal *RooJSONFactoryWSTool::requestImpl<RooAbsReal>(const std::string &obj
       return pdf;
    if (RooRealVar *var = requestImpl<RooRealVar>(objname))
       return var;
-   if (auto functionNode = _rootnodeInput->find("functions")) {
-      if (auto child = findNamedChild(*functionNode, objname)) {
+   if (const auto &functionNode = _rootnodeInput->find("functions")) {
+      if (const auto &child = findNamedChild(*functionNode, objname)) {
          this->importFunction(*child, true);
          if (RooAbsReal *retval = _workspace.function(objname))
             return retval;
@@ -1077,6 +1099,7 @@ void RooJSONFactoryWSTool::exportObject(RooAbsArg const &func, std::set<std::str
    if (it != exporters.end()) { // check if we have a specific exporter available
       for (auto &exp : it->second) {
          _serversToExport.clear();
+         _serversToDelete.clear();
          if (!exp->exportObject(this, &func, elem)) {
             // The exporter might have messed with the content of the node
             // before failing. That's why we clear it and only reset the name.
@@ -1091,6 +1114,9 @@ void RooJSONFactoryWSTool::exportObject(RooAbsArg const &func, std::set<std::str
             exportObjects(func.servers(), exportedObjectNames);
          } else {
             exportObjects(_serversToExport, exportedObjectNames);
+         }
+         for (auto &s : _serversToDelete) {
+            delete s;
          }
          return;
       }
@@ -1434,9 +1460,9 @@ RooJSONFactoryWSTool::CombinedData RooJSONFactoryWSTool::exportCombinedData(RooA
    // use the RooAbsData::split() overload that takes the RooSimultaneous.
    // Like this, the observables that are not relevant for a given channel
    // are automatically split from the component datasets.
-   std::unique_ptr<TList> dataList{simPdf ? data.split(*simPdf, true) : data.split(*cat, true)};
+   std::vector<std::unique_ptr<RooAbsData>> dataList{simPdf ? data.split(*simPdf, true) : data.split(*cat, true)};
 
-   for (RooAbsData *absData : static_range_cast<RooAbsData *>(*dataList)) {
+   for (std::unique_ptr<RooAbsData> const &absData : dataList) {
       std::string catName(absData->GetName());
       std::string dataName;
       if (std::isalpha(catName[0])) {
@@ -1841,6 +1867,18 @@ void RooJSONFactoryWSTool::exportAllObjects(JSONNode &n)
    sortByName(allpdfs);
    std::set<std::string> exportedObjectNames;
    exportObjects(allpdfs, exportedObjectNames);
+
+   // export all toplevel functions
+   std::vector<RooAbsReal *> allfuncs;
+   for (auto &arg : _workspace.allFunctions()) {
+      if (!arg->hasClients()) {
+         if (auto *func = dynamic_cast<RooAbsReal *>(arg)) {
+            allfuncs.push_back(func);
+         }
+      }
+   }
+   sortByName(allfuncs);
+   exportObjects(allfuncs, exportedObjectNames);
 
    // export attributes of all objects
    for (RooAbsArg *arg : _workspace.components()) {

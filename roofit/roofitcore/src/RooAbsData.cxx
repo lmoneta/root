@@ -473,10 +473,7 @@ RooFit::OwningPtr<RooAbsData> RooAbsData::reduce(const RooCmdArg& arg1,const Roo
 
 RooFit::OwningPtr<RooAbsData> RooAbsData::reduce(const char* cut) const
 {
-  RooFormulaVar cutVar(cut,cut,*get()) ;
-  auto ret = reduceEng(*get(),&cutVar,nullptr,0,std::numeric_limits<std::size_t>::max()) ;
-  ret->copyGlobalObservables(*this);
-  return RooFit::makeOwningPtr(std::move(ret));
+  return reduce(RooFormulaVar{cut,cut,*get()});
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1482,15 +1479,16 @@ SplittingSetup initSplit(RooAbsData const &data, RooAbsCategory const &splitCat)
    return setup;
 }
 
-RooFit::OwningPtr<TList> splitImpl(RooAbsData const &data, const RooAbsCategory &cloneCat, bool createEmptyDataSets,
-                                   std::function<std::unique_ptr<RooAbsData>(const char *label)> createEmptyData)
+std::vector<std::unique_ptr<RooAbsData>>
+splitImpl(RooAbsData const &data, const RooAbsCategory &cloneCat, bool createEmptyDataSets,
+          std::function<std::unique_ptr<RooAbsData>(const char *label)> createEmptyData)
 {
-   auto dsetList = std::make_unique<TList>();
+   std::vector<std::unique_ptr<RooAbsData>> dsetList;
 
    // If createEmptyDataSets is true, prepopulate with empty sets corresponding to all states
    if (createEmptyDataSets) {
       for (const auto &nameIdx : cloneCat) {
-         dsetList->Add(createEmptyData(nameIdx.first.c_str()).release());
+         dsetList.emplace_back(createEmptyData(nameIdx.first.c_str()).release());
       }
    }
 
@@ -1499,10 +1497,13 @@ RooFit::OwningPtr<TList> splitImpl(RooAbsData const &data, const RooAbsCategory 
    // Loop over dataset and copy event to matching subset
    for (int i = 0; i < data.numEntries(); ++i) {
       const RooArgSet *row = data.get(i);
-      auto subset = static_cast<RooAbsData *>(dsetList->FindObject(cloneCat.getCurrentLabel()));
+      auto found = std::find_if(dsetList.begin(), dsetList.end(), [&](auto const &item) {
+         return strcmp(item->GetName(), cloneCat.getCurrentLabel()) == 0;
+      });
+      RooAbsData *subset = found != dsetList.end() ? found->get() : nullptr;
       if (!subset) {
-         subset = createEmptyData(cloneCat.getCurrentLabel()).release();
-         dsetList->Add(subset);
+         dsetList.emplace_back(createEmptyData(cloneCat.getCurrentLabel()));
+         subset = dsetList.back().get();
       }
 
       // For datasets with weight errors or sumW2, the interface to fill
@@ -1514,7 +1515,7 @@ RooFit::OwningPtr<TList> splitImpl(RooAbsData const &data, const RooAbsCategory 
       }
    }
 
-   return RooFit::makeOwningPtr(std::move(dsetList));
+   return dsetList;
 }
 
 } // namespace
@@ -1542,13 +1543,14 @@ RooFit::OwningPtr<TList> splitImpl(RooAbsData const &data, const RooAbsCategory 
  *         Returns `nullptr` if an error occurs.
  */
 
-RooFit::OwningPtr<TList> RooAbsData::split(const RooAbsCategory &splitCat, bool createEmptyDataSets) const
+std::vector<std::unique_ptr<RooAbsData>>
+RooAbsData::split(const RooAbsCategory &splitCat, bool createEmptyDataSets) const
 {
    SplittingSetup setup = initSplit(*this, splitCat);
 
    // Something went wrong
    if (!setup.cloneCat)
-      return nullptr;
+      throw std::runtime_error("runtime error in RooAbsData::split");
 
    auto createEmptyData = [&](const char *label) -> std::unique_ptr<RooAbsData> {
       return std::unique_ptr<RooAbsData>{
@@ -1574,7 +1576,8 @@ RooFit::OwningPtr<TList> RooAbsData::split(const RooAbsCategory &splitCat, bool 
  * \return An owning pointer to a TList of subsets of the dataset.
  *         Returns `nullptr` if an error occurs.
  */
-RooFit::OwningPtr<TList> RooAbsData::split(const RooSimultaneous &simPdf, bool createEmptyDataSets) const
+std::vector<std::unique_ptr<RooAbsData>>
+RooAbsData::split(const RooSimultaneous &simPdf, bool createEmptyDataSets) const
 {
    auto &splitCat = const_cast<RooAbsCategoryLValue &>(simPdf.indexCat());
 
@@ -1582,7 +1585,7 @@ RooFit::OwningPtr<TList> RooAbsData::split(const RooSimultaneous &simPdf, bool c
 
    // Something went wrong
    if (!setup.cloneCat)
-      return nullptr;
+      throw std::runtime_error("runtime error in RooAbsData::split");
 
    // Get the observables for a given pdf in the RooSimultaneous, or an empty
    // RooArgSet if no pdf is set

@@ -18,8 +18,11 @@
 #include <ROOT/RFieldBase.hxx>
 #include <ROOT/RNTuple.hxx>
 #include <ROOT/RPageStorageFile.hxx>
+#include <ROOT/StringUtils.hxx>
 
 #include <TDirectory.h>
+
+#include <iomanip>
 
 std::unique_ptr<ROOT::Internal::RPageSource> ROOT::Experimental::RNTupleOpenSpec::CreatePageSource() const
 {
@@ -229,6 +232,30 @@ void ROOT::Experimental::RNTupleSingleProcessor::AddEntriesToJoinTable(Internal:
    joinTable.Add(*fPageSource, Internal::RNTupleJoinTable::kDefaultPartitionKey, entryOffset);
 }
 
+void ROOT::Experimental::RNTupleSingleProcessor::PrintStructureImpl(std::ostream &output) const
+{
+   static constexpr int width = 32;
+
+   std::string ntupleNameTrunc = fNTupleSpec.fNTupleName.substr(0, width - 4);
+   if (ntupleNameTrunc.size() < fNTupleSpec.fNTupleName.size())
+      ntupleNameTrunc = fNTupleSpec.fNTupleName.substr(0, width - 6) + "..";
+
+   output << "+" << std::setfill('-') << std::setw(width - 1) << "+\n";
+   output << std::setfill(' ') << "| " << ntupleNameTrunc << std::setw(width - 2 - ntupleNameTrunc.size()) << " |\n";
+
+   if (const std::string *storage = std::get_if<std::string>(&fNTupleSpec.fStorage)) {
+      std::string storageTrunc = storage->substr(0, width - 5);
+      if (storageTrunc.size() < storage->size())
+         storageTrunc = storage->substr(0, width - 8) + "...";
+
+      output << std::setfill(' ') << "| " << storageTrunc << std::setw(width - 2 - storageTrunc.size()) << " |\n";
+   } else {
+      output << "| " << std::setw(width - 2) << " |\n";
+   }
+
+   output << "+" << std::setfill('-') << std::setw(width - 1) << "+\n";
+}
+
 //------------------------------------------------------------------------------
 
 ROOT::Experimental::RNTupleChainProcessor::RNTupleChainProcessor(
@@ -334,7 +361,36 @@ void ROOT::Experimental::RNTupleChainProcessor::AddEntriesToJoinTable(Internal::
    }
 }
 
+void ROOT::Experimental::RNTupleChainProcessor::PrintStructureImpl(std::ostream &output) const
+{
+   for (const auto &innerProc : fInnerProcessors) {
+      innerProc->PrintStructure(output);
+   }
+}
+
 //------------------------------------------------------------------------------
+
+namespace ROOT::Experimental::Internal {
+class RAuxiliaryProcessorField final : public ROOT::RRecordField {
+private:
+   using RFieldBase::GenerateColumns;
+   void GenerateColumns() final
+   {
+      throw RException(R__FAIL("RAuxiliaryProcessorField fields must only be used for reading"));
+   }
+
+public:
+   RAuxiliaryProcessorField(std::string_view fieldName, std::vector<std::unique_ptr<RFieldBase>> itemFields)
+      : ROOT::RRecordField(fieldName, "RAuxiliaryProcessorField")
+   {
+      fOffsets.reserve(itemFields.size());
+      for (auto &item : itemFields) {
+         fOffsets.push_back(GetItemPadding(fSize, item->GetAlignment()));
+      }
+      AttachItemFields(std::move(itemFields));
+   }
+};
+} // namespace ROOT::Experimental::Internal
 
 ROOT::Experimental::RNTupleJoinProcessor::RNTupleJoinProcessor(std::unique_ptr<RNTupleProcessor> primaryProcessor,
                                                                std::unique_ptr<RNTupleProcessor> auxProcessor,
@@ -346,13 +402,6 @@ ROOT::Experimental::RNTupleJoinProcessor::RNTupleJoinProcessor(std::unique_ptr<R
      fPrimaryProcessor(std::move(primaryProcessor)),
      fAuxiliaryProcessor(std::move(auxProcessor))
 {
-   // FIXME(fdegeus): this check is not complete, e.g. the situation where the auxiliary processor is a chain of joins
-   // would pass. It would be better to fix the underlying issue (how to access their fields), so this check would
-   // become unecessary altogether.
-   if (dynamic_cast<RNTupleJoinProcessor *>(fAuxiliaryProcessor.get())) {
-      throw RException(R__FAIL("auxiliary RNTupleJoinProcessors are currently not supported"));
-   }
-
    if (fProcessorName.empty()) {
       fProcessorName = fPrimaryProcessor->GetProcessorName();
    }
@@ -425,13 +474,19 @@ void ROOT::Experimental::RNTupleJoinProcessor::SetModel(std::unique_ptr<ROOT::RN
       auxFields.emplace_back(auxModel->GetConstField(fieldName).Clone(fieldName));
    }
 
-   auto auxParentField =
-      std::make_unique<ROOT::RRecordField>(fAuxiliaryProcessor->GetProcessorName(), std::move(auxFields));
+   auto auxParentField = std::make_unique<Internal::RAuxiliaryProcessorField>(fAuxiliaryProcessor->GetProcessorName(),
+                                                                              std::move(auxFields));
    const auto &subFields = auxParentField->GetConstSubfields();
    fModel->AddField(std::move(auxParentField));
 
    for (const auto &field : subFields) {
       fModel->RegisterSubfield(field->GetQualifiedFieldName());
+
+      if (field->GetTypeName() == "RAuxiliaryProcessorField") {
+         for (const auto &auxSubField : field->GetConstSubfields()) {
+            fModel->RegisterSubfield(auxSubField->GetQualifiedFieldName());
+         }
+      }
    }
 
    // If the model has a default entry, adopt its value pointers. This way, the pointers returned by
@@ -519,4 +574,29 @@ void ROOT::Experimental::RNTupleJoinProcessor::AddEntriesToJoinTable(Internal::R
                                                                      ROOT::NTupleSize_t entryOffset)
 {
    fPrimaryProcessor->AddEntriesToJoinTable(joinTable, entryOffset);
+}
+
+void ROOT::Experimental::RNTupleJoinProcessor::PrintStructureImpl(std::ostream &output) const
+{
+   std::ostringstream primaryStructureStr;
+   fPrimaryProcessor->PrintStructure(primaryStructureStr);
+   const auto primaryStructure = ROOT::Split(primaryStructureStr.str(), "\n", /*skipEmpty=*/true);
+   const auto primaryStructureWidth = primaryStructure.front().size();
+
+   std::ostringstream auxStructureStr;
+   fAuxiliaryProcessor->PrintStructure(auxStructureStr);
+   const auto auxStructure = ROOT::Split(auxStructureStr.str(), "\n", /*skipEmpty=*/true);
+
+   const auto maxLength = std::max(primaryStructure.size(), auxStructure.size());
+   for (unsigned i = 0; i < maxLength; i++) {
+      if (i < primaryStructure.size())
+         output << primaryStructure[i];
+      else
+         output << std::setw(primaryStructureWidth) << "";
+
+      if (i < auxStructure.size())
+         output << " " << auxStructure[i];
+
+      output << "\n";
+   }
 }

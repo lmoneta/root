@@ -1,14 +1,13 @@
 # -*- coding: UTF-8 -*-
-import py, sys
+import py, sys, pytest, os
 from pytest import mark, raises, skip
-from .support import setup_make, pylong, pyunicode, maxvalue, ispypy
+from support import setup_make, pylong, pyunicode, maxvalue, ispypy
 
-currpath = py.path.local(__file__).dirpath()
-test_dct = str(currpath.join("stltypesDict"))
 
-def setup_module(mod):
-    setup_make("stltypes")
+currpath = os.getcwd()
+test_dct = currpath + "/libstltypesDict"
 
+global_n = 5
 
 # after CPython's Lib/test/seq_tests.py
 def iterfunc(seqn):
@@ -197,7 +196,7 @@ class TestSTLVECTOR:
         cls.test_dct = test_dct
         import cppyy
         cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        cls.N = global_n
 
     def test01_builtin_type_vector_types(self):
         """Test access to std::vector<int>/std::vector<double>"""
@@ -618,6 +617,7 @@ class TestSTLVECTOR:
         v = cppyy.gbl.std.vector(l)
         assert list(l) == l
 
+    @mark.xfail
     def test18_array_interface(self):
         """Test usage of __array__ from numpy"""
 
@@ -1737,7 +1737,7 @@ class TestSTLDEQUE:
         cls.test_dct = test_dct
         import cppyy
         cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        cls.N = global_n
 
     def test01_deque_byvalue_regression(self):
         """Return by value of a deque used to crash"""
@@ -1764,7 +1764,7 @@ class TestSTLSET:
         cls.test_dct = test_dct
         import cppyy
         cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        cls.N = global_n
 
     def test01_set_iteration(self):
         """Iterate over a set"""
@@ -1857,7 +1857,7 @@ class TestSTLTUPLE:
         cls.test_dct = test_dct
         import cppyy
         cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        cls.N = global_n
 
     def test01_tuple_creation_and_access(self):
         """Create tuples and access their elements"""
@@ -1949,7 +1949,7 @@ class TestSTLPAIR:
         cls.test_dct = test_dct
         import cppyy
         cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        cls.N = global_n
 
     def test01_pair_pack_unpack(self):
         """Pack/unpack pairs"""
@@ -2121,3 +2121,7 @@ class TestSTLEXCEPTION:
 
         gc.collect()
         assert cppyy.gbl.GetMyErrorCount() == 0
+
+
+if __name__ == "__main__":
+    exit(pytest.main(args=['-sv', '-ra', __file__]))

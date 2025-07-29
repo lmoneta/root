@@ -1079,6 +1079,7 @@ const char *TSystem::UnixPathName(const char *name)
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Concatenate a directory and a file name. User must delete returned string.
+/// \deprecated Consider replacing with TSystem::PrependPathName
 
 char *TSystem::ConcatFileName(const char *dir, const char *name)
 {
@@ -2884,6 +2885,12 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          mode = kDebug;
       }
    }
+#if defined(_MSC_VER) && defined(_DEBUG)
+   // if ROOT is build in debug mode, ACLiC must also build in debug mode
+   // for compatibility reasons
+   if (!(mode & kDebug))
+      mode |= kDebug;
+#endif
    UInt_t verboseLevel = verbose ? 7 : gDebug;
    Bool_t flatBuildDir = (fAclicProperties & kFlatBuildDir) || (opt && strchr(opt,'-')!=nullptr);
 
@@ -3728,12 +3735,18 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    TString optdebFlags;
    if (mode & kDebug)
       optdebFlags = fFlagsDebug + " ";
+#ifdef WIN32
+   else
+#endif
    if (mode & kOpt)
       optdebFlags += fFlagsOpt;
    cmd.ReplaceAll("$Opt", optdebFlags);
 #ifdef WIN32
    R__FixLink(cmd);
    cmd.ReplaceAll("-std=", "-std:");
+   if (mode & kDebug) {
+      cmd.ReplaceAll(" && link ", "&& link /DEBUG ");
+   }
 #endif
 
    TString testcmd = fMakeExe;

@@ -763,28 +763,38 @@ ROOT::RResult<ROOT::RNTuple> ROOT::Internal::RMiniFileReader::GetNTupleProper(st
    if (key.fObjLen < kMinNTupleSize) {
       return R__FAIL("invalid anchor size: " + std::to_string(key.fObjLen) + " < " + std::to_string(sizeof(RTFNTuple)));
    }
+
+   const auto objNbytes = key.GetSize() - key.fKeyLen;
+   auto res = GetNTupleProperAtOffset(offset, objNbytes, key.fObjLen);
+   return res;
+}
+
+ROOT::RResult<ROOT::RNTuple> ROOT::Internal::RMiniFileReader::GetNTupleProperAtOffset(std::uint64_t payloadOffset,
+                                                                                      std::uint64_t compSize,
+                                                                                      std::uint64_t uncompLen)
+{
    // The object length can be smaller than the size of RTFNTuple if it comes from a past RNTuple class version,
    // or larger than it if it comes from a future RNTuple class version.
-   auto bufAnchor = MakeUninitArray<unsigned char>(std::max<size_t>(key.fObjLen, sizeof(RTFNTuple)));
+   auto bufAnchor = MakeUninitArray<unsigned char>(std::max<size_t>(uncompLen, sizeof(RTFNTuple)));
    RTFNTuple *ntuple = new (bufAnchor.get()) RTFNTuple;
 
-   auto objNbytes = key.GetSize() - key.fKeyLen;
-   ReadBuffer(ntuple, objNbytes, offset);
-   if (objNbytes != key.fObjLen) {
-      // Decompress into a temporary buffer
-      auto unzipBuf = MakeUninitArray<unsigned char>(key.fObjLen);
-      RNTupleDecompressor::Unzip(bufAnchor.get(), objNbytes, key.fObjLen, unzipBuf.get());
-      // Then copy back to bufAnchor
-      memcpy(bufAnchor.get(), unzipBuf.get(), key.fObjLen);
+   if (compSize != uncompLen) {
+      // Read into a temporary buffer
+      auto unzipBuf = MakeUninitArray<unsigned char>(std::max<size_t>(uncompLen, sizeof(RTFNTuple)));
+      ReadBuffer(unzipBuf.get(), compSize, payloadOffset);
+      // Unzip into the final buffer
+      RNTupleDecompressor::Unzip(unzipBuf.get(), compSize, uncompLen, ntuple);
+   } else {
+      ReadBuffer(ntuple, compSize, payloadOffset);
    }
 
    // We require that future class versions only append members and store the checksum in the last 8 bytes
    // Checksum calculation: strip byte count, class version, fChecksum member
-   auto lenCkData = key.fObjLen - ntuple->GetOffsetCkData() - sizeof(uint64_t);
-   auto ckCalc = XXH3_64bits(ntuple->GetPtrCkData(), lenCkData);
+   const auto lenCkData = uncompLen - ntuple->GetOffsetCkData() - sizeof(uint64_t);
+   const auto ckCalc = XXH3_64bits(ntuple->GetPtrCkData(), lenCkData);
    uint64_t ckOnDisk;
 
-   RUInt64BE *ckOnDiskPtr = reinterpret_cast<RUInt64BE *>(bufAnchor.get() + key.fObjLen - sizeof(uint64_t));
+   RUInt64BE *ckOnDiskPtr = reinterpret_cast<RUInt64BE *>(bufAnchor.get() + uncompLen - sizeof(uint64_t));
    ckOnDisk = static_cast<uint64_t>(*ckOnDiskPtr);
    if (ckCalc != ckOnDisk) {
       return R__FAIL("RNTuple anchor checksum mismatch");

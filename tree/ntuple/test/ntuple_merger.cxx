@@ -2847,6 +2847,74 @@ TEST(RNTupleMerger, MergeIncrementalLMExtMemFile)
    }
 }
 
+TEST(RNTupleMerger, MergeLMExtBig)
+{
+   // Merge 2 RNTuples where the first one contains an extra field and the second one contains lots of elements.
+   // This is meant to stress test the generation of zero pages when late model extending the merged rntuple.
+   FileRaii fileGuard1("test_ntuple_merge_lmext_big_1.root");
+   FileRaii fileGuard2("test_ntuple_merge_lmext_big_2.root");
+   FileRaii fileGuardOut("test_ntuple_merge_lmext_big_out.root");
+
+   {
+      auto model = RNTupleModel::Create();
+      auto pFoo = model->MakeField<double>("foo");
+      auto pBar = model->MakeField<double>("bar");
+      auto writer = RNTupleWriter::Recreate(std::move(model), "ntuple", fileGuard1.GetPath());
+      for (int i = 0; i < 50; ++i) {
+         *pFoo = i;
+         *pBar = 2 * i;
+         writer->Fill();
+      }
+   }
+   {
+      auto model = RNTupleModel::Create();
+      auto pFoo = model->MakeField<double>("foo");
+      auto writer = RNTupleWriter::Recreate(std::move(model), "ntuple", fileGuard2.GetPath());
+      for (int i = 0; i < 50'000; ++i) {
+         *pFoo = i;
+         writer->Fill();
+      }
+   }
+
+   // Merge the inputs
+   {
+      std::vector<std::unique_ptr<RPageSource>> sources;
+      sources.push_back(RPageSource::Create("ntuple", fileGuard1.GetPath(), RNTupleReadOptions()));
+      sources.push_back(RPageSource::Create("ntuple", fileGuard2.GetPath(), RNTupleReadOptions()));
+      std::vector<RPageSource *> sourcePtrs;
+      for (const auto &s : sources)
+         sourcePtrs.push_back(s.get());
+
+      auto wopts = RNTupleWriteOptions();
+      wopts.SetCompression(0);
+      auto destination = std::make_unique<RPageSinkFile>("ntuple", fileGuardOut.GetPath(), wopts);
+      RNTupleMerger merger{std::move(destination)};
+      auto opts = RNTupleMergeOptions();
+      opts.fMergingMode = ENTupleMergingMode::kUnion;
+      auto res = merger.Merge(sourcePtrs, opts);
+      ASSERT_TRUE(bool(res));
+   }
+
+   // Now verify that the output file contains the expected data.
+   {
+      auto reader = RNTupleReader::Open("ntuple", fileGuardOut.GetPath());
+      EXPECT_EQ(reader->GetNEntries(), 50'050);
+
+      auto vFoo = reader->GetView<double>("foo");
+      auto vBar = reader->GetView<double>("bar");
+      EXPECT_DOUBLE_EQ(vFoo(0), 0);
+      EXPECT_DOUBLE_EQ(vBar(0), 0);
+      EXPECT_DOUBLE_EQ(vFoo(49), 49);
+      EXPECT_DOUBLE_EQ(vBar(49), 98);
+      EXPECT_DOUBLE_EQ(vFoo(50), 0);
+      EXPECT_DOUBLE_EQ(vBar(50), 0);
+      EXPECT_DOUBLE_EQ(vFoo(1000), 950);
+      EXPECT_DOUBLE_EQ(vBar(1000), 0);
+      EXPECT_DOUBLE_EQ(vFoo(50'049), 49999);
+      EXPECT_DOUBLE_EQ(vBar(50'049), 0);
+   }
+}
+
 TEST(RNTupleMerger, MergeEmptySchema)
 {
    // Try merging two ntuples with an empty schema
@@ -3130,6 +3198,311 @@ TEST(RNTupleMerger, MergeStaggeredIncremental)
          float expBar = (idx / kNEvents) % 2 == 1 ? idx : 0;
          EXPECT_FLOAT_EQ(*pnFoo, expFoo);
          EXPECT_FLOAT_EQ(*pnBar, expBar);
+      }
+   }
+}
+
+TEST(RNTupleMerger, MergeUntypedRecordEqual)
+{
+   // Merge 2 RNTuples with a single Untyped Record field with the same children in the same order.
+   // It's supposed to work.
+
+   FileRaii fileGuard1("test_ntuple_merge_untyped_equal_1.root");
+   {
+      auto model = RNTupleModel::Create();
+      std::vector<std::unique_ptr<RFieldBase>> children;
+      children.push_back(std::make_unique<RField<int>>("int"));
+      children.push_back(std::make_unique<RField<float>>("float"));
+      auto record = std::make_unique<ROOT::RRecordField>("record", std::move(children));
+      model->AddField(std::move(record));
+      auto ntuple = RNTupleWriter::Recreate(std::move(model), "ntuple", fileGuard1.GetPath());
+      for (size_t i = 0; i < 10; ++i) {
+         ntuple->Fill();
+      }
+   }
+
+   FileRaii fileGuard2("test_ntuple_merge_untyped_equal_2.root");
+   {
+      auto model = RNTupleModel::Create();
+      std::vector<std::unique_ptr<RFieldBase>> children;
+      children.push_back(std::make_unique<RField<int>>("int"));
+      children.push_back(std::make_unique<RField<float>>("float"));
+      auto record = std::make_unique<ROOT::RRecordField>("record", std::move(children));
+      model->AddField(std::move(record));
+      auto ntuple = RNTupleWriter::Recreate(std::move(model), "ntuple", fileGuard2.GetPath());
+      for (size_t i = 0; i < 10; ++i) {
+         ntuple->Fill();
+      }
+   }
+
+   // Now merge the inputs
+   FileRaii fileGuard3("test_ntuple_merge_untyped_equal_out.root");
+   {
+      // Gather the input sources
+      std::vector<std::unique_ptr<RPageSource>> sources;
+      sources.push_back(RPageSource::Create("ntuple", fileGuard1.GetPath(), RNTupleReadOptions()));
+      sources.push_back(RPageSource::Create("ntuple", fileGuard2.GetPath(), RNTupleReadOptions()));
+      std::vector<RPageSource *> sourcePtrs;
+      for (const auto &s : sources) {
+         sourcePtrs.push_back(s.get());
+      }
+
+      RNTupleMergeOptions opts;
+      {
+         auto destination = std::make_unique<RPageSinkFile>("ntuple", fileGuard3.GetPath(), RNTupleWriteOptions());
+         opts.fMergingMode = ENTupleMergingMode::kFilter;
+         RNTupleMerger merger{std::move(destination)};
+         auto res = merger.Merge(sourcePtrs, opts);
+         EXPECT_TRUE(bool(res));
+      }
+      {
+         auto destination = std::make_unique<RPageSinkFile>("ntuple", fileGuard3.GetPath(), RNTupleWriteOptions());
+         opts.fMergingMode = ENTupleMergingMode::kUnion;
+         RNTupleMerger merger{std::move(destination)};
+         auto res = merger.Merge(sourcePtrs, opts);
+         EXPECT_TRUE(bool(res));
+      }
+      {
+         auto destination = std::make_unique<RPageSinkFile>("ntuple", fileGuard3.GetPath(), RNTupleWriteOptions());
+         opts.fMergingMode = ENTupleMergingMode::kStrict;
+         RNTupleMerger merger{std::move(destination)};
+         auto res = merger.Merge(sourcePtrs, opts);
+         EXPECT_TRUE(bool(res));
+      }
+   }
+
+   // Now check some information
+   // ntuple1 has 10 entries
+   // ntuple2 has 10 entries
+   {
+      auto ntuple1 = RNTupleReader::Open("ntuple", fileGuard1.GetPath());
+      auto ntuple2 = RNTupleReader::Open("ntuple", fileGuard2.GetPath());
+      auto ntuple3 = RNTupleReader::Open("ntuple", fileGuard3.GetPath());
+      ASSERT_EQ(ntuple1->GetNEntries() + ntuple2->GetNEntries(), ntuple3->GetNEntries());
+   }
+}
+
+TEST(RNTupleMerger, MergeUntypedRecordDifferent)
+{
+   // Merge 2 RNTuples with a single Untyped Record field with different children.
+   // It's supposed to fail.
+
+   FileRaii fileGuard1("test_ntuple_merge_untyped_diff_1.root");
+   {
+      auto model = RNTupleModel::Create();
+      std::vector<std::unique_ptr<RFieldBase>> children;
+      children.push_back(std::make_unique<RField<int>>("int"));
+      auto record = std::make_unique<ROOT::RRecordField>("record", std::move(children));
+      model->AddField(std::move(record));
+      auto ntuple = RNTupleWriter::Recreate(std::move(model), "ntuple", fileGuard1.GetPath());
+      for (size_t i = 0; i < 10; ++i) {
+         ntuple->Fill();
+      }
+   }
+
+   FileRaii fileGuard2("test_ntuple_merge_untyped_diff_2.root");
+   {
+      auto model = RNTupleModel::Create();
+      std::vector<std::unique_ptr<RFieldBase>> children;
+      children.push_back(std::make_unique<RField<float>>("float"));
+      auto record = std::make_unique<ROOT::RRecordField>("record", std::move(children));
+      model->AddField(std::move(record));
+      auto ntuple = RNTupleWriter::Recreate(std::move(model), "ntuple", fileGuard2.GetPath());
+      for (size_t i = 0; i < 10; ++i) {
+         ntuple->Fill();
+      }
+   }
+
+   // Now merge the inputs
+   FileRaii fileGuard3("test_ntuple_merge_untyped_diff_out.root");
+   {
+      // Gather the input sources
+      std::vector<std::unique_ptr<RPageSource>> sources;
+      sources.push_back(RPageSource::Create("ntuple", fileGuard1.GetPath(), RNTupleReadOptions()));
+      sources.push_back(RPageSource::Create("ntuple", fileGuard2.GetPath(), RNTupleReadOptions()));
+      std::vector<RPageSource *> sourcePtrs;
+      for (const auto &s : sources) {
+         sourcePtrs.push_back(s.get());
+      }
+
+      RNTupleMergeOptions opts;
+      {
+         auto destination = std::make_unique<RPageSinkFile>("ntuple", fileGuard3.GetPath(), RNTupleWriteOptions());
+         opts.fMergingMode = ENTupleMergingMode::kFilter;
+         RNTupleMerger merger{std::move(destination)};
+         auto res = merger.Merge(sourcePtrs, opts);
+         EXPECT_FALSE(bool(res));
+      }
+      {
+         auto destination = std::make_unique<RPageSinkFile>("ntuple", fileGuard3.GetPath(), RNTupleWriteOptions());
+         opts.fMergingMode = ENTupleMergingMode::kUnion;
+         RNTupleMerger merger{std::move(destination)};
+         auto res = merger.Merge(sourcePtrs, opts);
+         EXPECT_FALSE(bool(res));
+      }
+      {
+         auto destination = std::make_unique<RPageSinkFile>("ntuple", fileGuard3.GetPath(), RNTupleWriteOptions());
+         opts.fMergingMode = ENTupleMergingMode::kStrict;
+         RNTupleMerger merger{std::move(destination)};
+         auto res = merger.Merge(sourcePtrs, opts);
+         EXPECT_FALSE(bool(res));
+      }
+   }
+}
+
+TEST(RNTupleMerger, MergeUntypedSymmetric)
+{
+   // Merge 2 RNTuples with a single Untyped Record field with the same children but in different order.
+   // It's supposed to fail.
+
+   FileRaii fileGuard1("test_ntuple_merge_untyped_sym_1.root");
+   {
+      auto model = RNTupleModel::Create();
+      std::vector<std::unique_ptr<RFieldBase>> children;
+      children.push_back(std::make_unique<RField<int>>("int"));
+      children.push_back(std::make_unique<RField<float>>("float"));
+      auto record = std::make_unique<ROOT::RRecordField>("record", std::move(children));
+      model->AddField(std::move(record));
+      auto ntuple = RNTupleWriter::Recreate(std::move(model), "ntuple", fileGuard1.GetPath());
+      for (size_t i = 0; i < 10; ++i) {
+         ntuple->Fill();
+      }
+   }
+
+   FileRaii fileGuard2("test_ntuple_merge_untyped_sym_2.root");
+   {
+      auto model = RNTupleModel::Create();
+      std::vector<std::unique_ptr<RFieldBase>> children;
+      children.push_back(std::make_unique<RField<float>>("float"));
+      children.push_back(std::make_unique<RField<int>>("int"));
+      auto record = std::make_unique<ROOT::RRecordField>("record", std::move(children));
+      model->AddField(std::move(record));
+      auto ntuple = RNTupleWriter::Recreate(std::move(model), "ntuple", fileGuard2.GetPath());
+      for (size_t i = 0; i < 10; ++i) {
+         ntuple->Fill();
+      }
+   }
+
+   // Now merge the inputs
+   FileRaii fileGuard3("test_ntuple_merge_untyped_sym_out.root");
+   {
+      // Gather the input sources
+      std::vector<std::unique_ptr<RPageSource>> sources;
+      sources.push_back(RPageSource::Create("ntuple", fileGuard1.GetPath(), RNTupleReadOptions()));
+      sources.push_back(RPageSource::Create("ntuple", fileGuard2.GetPath(), RNTupleReadOptions()));
+      std::vector<RPageSource *> sourcePtrs;
+      for (const auto &s : sources) {
+         sourcePtrs.push_back(s.get());
+      }
+
+      RNTupleMergeOptions opts;
+      {
+         auto destination = std::make_unique<RPageSinkFile>("ntuple", fileGuard3.GetPath(), RNTupleWriteOptions());
+         opts.fMergingMode = ENTupleMergingMode::kFilter;
+         RNTupleMerger merger{std::move(destination)};
+         auto res = merger.Merge(sourcePtrs, opts);
+         EXPECT_FALSE(bool(res));
+      }
+      {
+         auto destination = std::make_unique<RPageSinkFile>("ntuple", fileGuard3.GetPath(), RNTupleWriteOptions());
+         opts.fMergingMode = ENTupleMergingMode::kUnion;
+         RNTupleMerger merger{std::move(destination)};
+         auto res = merger.Merge(sourcePtrs, opts);
+         EXPECT_FALSE(bool(res));
+      }
+      {
+         auto destination = std::make_unique<RPageSinkFile>("ntuple", fileGuard3.GetPath(), RNTupleWriteOptions());
+         opts.fMergingMode = ENTupleMergingMode::kStrict;
+         RNTupleMerger merger{std::move(destination)};
+         auto res = merger.Merge(sourcePtrs, opts);
+         EXPECT_FALSE(bool(res));
+      }
+   }
+}
+
+TEST(RNTupleMerger, GenerateZeroPagesIncremental)
+{
+   // Incrementally Union-merge RNTuples with alternating fields, so to trigger generation of zero pages.
+   // This is a minimal reproducer of a bug uncovered by an ATLAS-like merging flow:
+   // https://gitlab.cern.ch/amete/rootparallelmerger/-/tree/master-rntuple-prototype
+   FileRaii fileGuardOut("test_ntuple_merge_zeropages_incr_out.root");
+
+   {
+      TFileMerger merger(kFALSE, kTRUE);
+      merger.SetMergeOptions(TString("rntuple.MergingMode=Union"));
+      merger.OutputFile(fileGuardOut.GetPath().c_str(), "RECREATE",
+                        ROOT::RCompressionSetting::EDefaults::kUseCompiledDefault);
+
+      auto writeOpts = RNTupleWriteOptions();
+
+      // Produce data
+      for (int idx : {0, 1, 2, 3, 4}) {
+         auto file = std::unique_ptr<TMemFile>(new TMemFile(std::to_string(idx).c_str(), "CREATE"));
+
+         auto model = ROOT::RNTupleModel::Create();
+         const auto dataName = (idx % 2 == 0) ? "foo" : "bar";
+         auto field = ROOT::RFieldBase::Create(dataName, "std::vector<int>").Unwrap();
+         model->AddField(std::move(field));
+
+         auto writer = ROOT::RNTupleWriter::Append(std::move(model), "ntuple", *file, writeOpts);
+
+         std::vector<int> data;
+         for (int i = 0; i < 5000; ++i) {
+            auto entry = writer->GetModel().CreateBareEntry();
+            data.clear();
+            for (int j = 0; j < 1000; ++j) {
+               data.push_back(i * j + j);
+            }
+            entry->BindRawPtr(dataName, &data);
+            writer->Fill(*entry);
+         }
+
+         writer.reset();
+
+         merger.AddFile(file.get());
+         bool res = merger.PartialMerge(TFileMerger::kAllIncremental | TFileMerger::kKeepCompression);
+         ASSERT_TRUE(res);
+
+         file->Write();
+      }
+   }
+
+   // Read back the data
+   auto reader = ROOT::RNTupleReader::Open("ntuple", fileGuardOut.GetPath());
+   EXPECT_EQ(reader->GetNEntries(), 25000);
+
+   auto viewFoo = reader->GetView<std::vector<int>>("foo");
+   auto viewBar = reader->GetView<std::vector<int>>("bar");
+
+   for (int idx : {0, 1, 2, 3, 4}) {
+      auto fooData = viewFoo(idx * 5000);
+      auto barData = viewBar(idx * 5000);
+      if (idx % 2 == 0) {
+         ASSERT_EQ(fooData.size(), 1000);
+         EXPECT_EQ(fooData[0], 0);
+         EXPECT_EQ(fooData[500], 500);
+         EXPECT_EQ(barData.size(), 0);
+
+         fooData = viewFoo(idx * 5000 + 4999);
+         barData = viewBar(idx * 5000 + 4999);
+         ASSERT_EQ(fooData.size(), 1000);
+         EXPECT_EQ(fooData[0], 0);
+         EXPECT_EQ(fooData[1], 5000);
+         EXPECT_EQ(fooData[999], 4995000);
+         EXPECT_EQ(barData.size(), 0);
+      } else {
+         EXPECT_EQ(fooData.size(), 0);
+         ASSERT_EQ(barData.size(), 1000);
+         EXPECT_EQ(barData[0], 0);
+         EXPECT_EQ(barData[500], 500);
+
+         fooData = viewFoo(idx * 5000 + 4999);
+         barData = viewBar(idx * 5000 + 4999);
+         EXPECT_EQ(fooData.size(), 0);
+         ASSERT_EQ(barData.size(), 1000);
+         EXPECT_EQ(barData[0], 0);
+         EXPECT_EQ(barData[1], 5000);
+         EXPECT_EQ(barData[999], 4995000);
       }
    }
 }

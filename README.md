@@ -21,7 +21,7 @@ full advantage of multi-core and distributed systems.
 ROOT is performance critical software written in C++ and enables rapid prototyping 
 powered by a unique C++ compliant interpreter called Cling. 
 Cling also enables performant C++ type introspection which is a building block of automatic 
-interoperability with Python. Thanks to PyROOT, leveraging the cppyy technology, 
+interoperability with Python. Thanks to its dynamic Python bindings, leveraging the cppyy technology, 
 ROOT offers efficient, on-demand C++/Python interoperability in a uniform cross-language 
 execution environment.
 
@@ -33,8 +33,8 @@ for the benefit of its community.
 
 ## Contribution Guidelines
 - [How to contribute](https://github.com/root-project/root/blob/master/CONTRIBUTING.md)
-- [Coding conventions](https://root.cern/coding-conventions)
-- [Meetings](https://root.cern/meetings)
+- [Coding conventions](https://root.cern/contribute/coding_conventions/)
+- [Meetings](https://root.cern/for_developers/meetings/)
 
 ## Cite
 When citing ROOT, please use both the reference reported below and the DOI specific to your ROOT version available [on Zenodo](https://zenodo.org/badge/latestdoi/10994345) [![DOI](https://zenodo.org/badge/10994345.svg)](https://zenodo.org/badge/latestdoi/10994345). For example, you can copy-paste and fill in the following citation:
@@ -56,7 +56,7 @@ For instructions on how to build ROOT from these source files, see https://root.
 Our ["Getting started with ROOT"](https://root.cern/learn) page is then the perfect place to get familiar with ROOT.
 
 ## Help and Support
-- [Forum](https://root.cern/forum/)
+- [Forum](https://root-forum.cern.ch/)
 - [Issue tracker](https://github.com/root-project/root/issues)
   * [Previous now read-only Jira issue tracker](https://sft.its.cern.ch/jira/projects/ROOT/issues/ROOT-5820?filter=allopenissues)
 - [Documentation](https://root.cern/guides/reference-guide)

@@ -61,6 +61,9 @@ namespace CPyCppyy {
     static std::regex s_fnptr("\\((\\w*:*)*\\*&*\\)");
 }
 
+// Define our own PyUnstable_Object_IsUniqueReferencedTemporary function if the
+// Python version is lower than 3.14, the version where that function got introduced.
+#if PY_VERSION_HEX < 0x030e0000
 #if PY_VERSION_HEX < 0x03000000
 const Py_ssize_t MOVE_REFCOUNT_CUTOFF = 1;
 #elif PY_VERSION_HEX < 0x03080000
@@ -72,6 +75,10 @@ const Py_ssize_t MOVE_REFCOUNT_CUTOFF = 2;
 #else
 // since py3.8, vector calls behave again as expected
 const Py_ssize_t MOVE_REFCOUNT_CUTOFF = 1;
+#endif
+inline bool PyUnstable_Object_IsUniqueReferencedTemporary(PyObject *pyobject) {
+    return Py_REFCNT(pyobject) <= MOVE_REFCOUNT_CUTOFF;
+}
 #endif
 
 //- pretend-ctypes helpers ---------------------------------------------------
@@ -123,13 +130,17 @@ struct CPyCppyy_tagPyCArgObject {      // not public (but stable; note that olde
 #define ct_c_fcomplex   21
 #define ct_c_complex    22
 #define ct_c_pointer    23
-#define NTYPES          24
+#define ct_c_funcptr    24
+#define ct_c_int16      25
+#define ct_c_int32      26
+#define NTYPES          27
 
 static std::array<const char*, NTYPES> gCTypesNames = {
     "c_bool", "c_char", "c_wchar", "c_byte", "c_ubyte", "c_short", "c_ushort", "c_uint16",
     "c_int", "c_uint", "c_uint32", "c_long", "c_ulong", "c_longlong", "c_ulonglong",
     "c_float", "c_double", "c_longdouble",
-    "c_char_p", "c_wchar_p", "c_void_p", "c_fcomplex", "c_complex", "_Pointer" };
+    "c_char_p", "c_wchar_p", "c_void_p", "c_fcomplex", "c_complex",
+    "_Pointer", "_CFuncPtr" };
 static std::array<PyTypeObject*, NTYPES> gCTypesTypes;
 static std::array<PyTypeObject*, NTYPES> gCTypesPtrTypes;
 
@@ -387,6 +398,10 @@ static inline type CPyCppyy_PyLong_As##name(PyObject* pyobject)              \
 
 CPPYY_PYLONG_AS_TYPE(UInt8,     uint8_t,        0,         UCHAR_MAX)
 CPPYY_PYLONG_AS_TYPE(Int8,      int8_t,         SCHAR_MIN, SCHAR_MAX)
+CPPYY_PYLONG_AS_TYPE(UInt16,    uint16_t,       0,         UINT16_MAX)
+CPPYY_PYLONG_AS_TYPE(Int16,     int16_t,        INT16_MIN, INT16_MAX)
+CPPYY_PYLONG_AS_TYPE(UInt32,    uint32_t,       0,         UINT32_MAX)
+CPPYY_PYLONG_AS_TYPE(Int32,     int32_t,        INT32_MIN, INT32_MAX)
 CPPYY_PYLONG_AS_TYPE(UShort,    unsigned short, 0,         USHRT_MAX)
 CPPYY_PYLONG_AS_TYPE(Short,     short,          SHRT_MIN,  SHRT_MAX)
 CPPYY_PYLONG_AS_TYPE(StrictInt, int,            INT_MIN,   INT_MAX)
@@ -782,6 +797,10 @@ CPPYY_IMPL_BASIC_CONST_CHAR_REFCONVERTER(UChar, unsigned char, c_uchar,        0
 CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Bool,   bool,           c_bool,      CPyCppyy_PyLong_AsBool)
 CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Int8,   int8_t,         c_int8,      CPyCppyy_PyLong_AsInt8)
 CPPYY_IMPL_BASIC_CONST_REFCONVERTER(UInt8,  uint8_t,        c_uint8,     CPyCppyy_PyLong_AsUInt8)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Int16,  int16_t,        c_int16,     CPyCppyy_PyLong_AsInt16)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(UInt16, uint16_t,       c_uint16,    CPyCppyy_PyLong_AsUInt16)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Int32,  int32_t,        c_int32,     CPyCppyy_PyLong_AsInt32)
+CPPYY_IMPL_BASIC_CONST_REFCONVERTER(UInt32, uint32_t,       c_uint32,    CPyCppyy_PyLong_AsUInt32)
 CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Short,  short,          c_short,     CPyCppyy_PyLong_AsShort)
 CPPYY_IMPL_BASIC_CONST_REFCONVERTER(UShort, unsigned short, c_ushort,    CPyCppyy_PyLong_AsUShort)
 CPPYY_IMPL_BASIC_CONST_REFCONVERTER(Int,    int,            c_int,       CPyCppyy_PyLong_AsStrictInt)
@@ -857,6 +876,10 @@ CPPYY_IMPL_REFCONVERTER(SChar,   c_byte,       signed char,        'b');
 CPPYY_IMPL_REFCONVERTER(UChar,   c_ubyte,      unsigned char,      'B');
 CPPYY_IMPL_REFCONVERTER(Int8,    c_int8,       int8_t,             'b');
 CPPYY_IMPL_REFCONVERTER(UInt8,   c_uint8,      uint8_t,            'B');
+CPPYY_IMPL_REFCONVERTER(Int16,   c_int16,      int16_t,            'h');
+CPPYY_IMPL_REFCONVERTER(UInt16,  c_uint16,     uint16_t,           'H');
+CPPYY_IMPL_REFCONVERTER(Int32,   c_int32,      int32_t,            'i');
+CPPYY_IMPL_REFCONVERTER(UInt32,  c_uint32,     uint32_t,           'I');
 CPPYY_IMPL_REFCONVERTER(Short,   c_short,      short,              'h');
 CPPYY_IMPL_REFCONVERTER(UShort,  c_ushort,     unsigned short,     'H');
 CPPYY_IMPL_REFCONVERTER_FROM_MEMORY(Int, c_int);
@@ -1015,6 +1038,14 @@ CPPYY_IMPL_BASIC_CONVERTER_IB(
     Int8,  int8_t,  long, c_int8, PyInt_FromLong, CPyCppyy_PyLong_AsInt8,  'l')
 CPPYY_IMPL_BASIC_CONVERTER_IB(
     UInt8, uint8_t, long, c_uint8, PyInt_FromLong, CPyCppyy_PyLong_AsUInt8, 'l')
+CPPYY_IMPL_BASIC_CONVERTER_IB(
+    Int16,  int16_t,  long, c_int16, PyInt_FromLong, CPyCppyy_PyLong_AsInt16,  'l')
+CPPYY_IMPL_BASIC_CONVERTER_IB(
+    UInt16, uint16_t, long, c_uint16, PyInt_FromLong, CPyCppyy_PyLong_AsUInt16, 'l')
+CPPYY_IMPL_BASIC_CONVERTER_IB(
+    Int32,  int32_t,  long, c_int32, PyInt_FromLong, CPyCppyy_PyLong_AsInt32,  'l')
+CPPYY_IMPL_BASIC_CONVERTER_IB(
+    UInt32, uint32_t, long, c_uint32, PyInt_FromLong, CPyCppyy_PyLong_AsUInt32, 'l')
 CPPYY_IMPL_BASIC_CONVERTER_IB(
     Short, short, long, c_short, PyInt_FromLong, CPyCppyy_PyLong_AsShort, 'l')
 CPPYY_IMPL_BASIC_CONVERTER_IB(
@@ -1750,7 +1781,11 @@ CPPYY_IMPL_ARRAY_CONVERTER(UChar,    c_ubyte,      unsigned char,        'B', )
 CPPYY_IMPL_ARRAY_CONVERTER(Byte,     c_ubyte,      std::byte,            'B', )
 #endif
 CPPYY_IMPL_ARRAY_CONVERTER(Int8,     c_byte,       int8_t,               'b', _i8)
+CPPYY_IMPL_ARRAY_CONVERTER(Int16,    c_int16,      int16_t,              'h', _i16)
+CPPYY_IMPL_ARRAY_CONVERTER(Int32,    c_int32,      int32_t,              'i', _i32)
 CPPYY_IMPL_ARRAY_CONVERTER(UInt8,    c_ubyte,      uint8_t,              'B', _i8)
+CPPYY_IMPL_ARRAY_CONVERTER(UInt16,   c_uint16,     uint16_t,             'H', _i16)
+CPPYY_IMPL_ARRAY_CONVERTER(UInt32,   c_uint32,     uint32_t,             'I', _i32)
 CPPYY_IMPL_ARRAY_CONVERTER(Short,    c_short,      short,                'h', )
 CPPYY_IMPL_ARRAY_CONVERTER(UShort,   c_ushort,     unsigned short,       'H', )
 CPPYY_IMPL_ARRAY_CONVERTER(Int,      c_int,        int,                  'i', )
@@ -2091,7 +2126,7 @@ bool CPyCppyy::STLStringMoveConverter::SetArg(
         if (pyobj->fFlags & CPPInstance::kIsRValue) {
             pyobj->fFlags &= ~CPPInstance::kIsRValue;
             moveit_reason = 2;
-        } else if (Py_REFCNT(pyobject) <= MOVE_REFCOUNT_CUTOFF) {
+        } else if (PyUnstable_Object_IsUniqueReferencedTemporary(pyobject)) {
             moveit_reason = 1;
         } else
             moveit_reason = 0;
@@ -2328,7 +2363,7 @@ bool CPyCppyy::InstanceMoveConverter::SetArg(
     if (pyobj->fFlags & CPPInstance::kIsRValue) {
         pyobj->fFlags &= ~CPPInstance::kIsRValue;
         moveit_reason = 2;
-    } else if (Py_REFCNT(pyobject) <= MOVE_REFCOUNT_CUTOFF) {
+    } else if (PyUnstable_Object_IsUniqueReferencedTemporary(pyobject)) {
         moveit_reason = 1;
     }
 
@@ -2665,6 +2700,12 @@ static void* PyFunction_AsCPointer(PyObject* pyobject,
             if (fptr) return fptr;
         }
         // fall-through, with calling through Python
+    }
+
+    if (PyObject_IsInstance(pyobject, (PyObject*)GetCTypesType(ct_c_funcptr))) {
+    // ctypes function pointer
+        void* fptr = *(void**)((CPyCppyy_tagCDataObject*)pyobject)->b_ptr;
+        return fptr;
     }
 
     if (PyCallable_Check(pyobject)) {
@@ -3466,9 +3507,21 @@ public:
         gf["int8_t"] =                      (cf_t)+[](cdims_t) { static Int8Converter c{};           return &c; };
         gf["const int8_t&"] =               (cf_t)+[](cdims_t) { static ConstInt8RefConverter c{};   return &c; };
         gf["int8_t&"] =                     (cf_t)+[](cdims_t) { static Int8RefConverter c{};        return &c; };
+        gf["int16_t"] =                     (cf_t)+[](cdims_t) { static Int16Converter c{};          return &c; };
+        gf["const int16_t&"] =              (cf_t)+[](cdims_t) { static ConstInt16RefConverter c{};  return &c; };
+        gf["int16_t&"] =                    (cf_t)+[](cdims_t) { static Int16RefConverter c{};       return &c; };
+        gf["int32_t"] =                     (cf_t)+[](cdims_t) { static Int32Converter c{};          return &c; };
+        gf["const int32_t&"] =              (cf_t)+[](cdims_t) { static ConstInt32RefConverter c{};  return &c; };
+        gf["int32_t&"] =                    (cf_t)+[](cdims_t) { static Int32RefConverter c{};       return &c; };
         gf["uint8_t"] =                     (cf_t)+[](cdims_t) { static UInt8Converter c{};          return &c; };
         gf["const uint8_t&"] =              (cf_t)+[](cdims_t) { static ConstUInt8RefConverter c{};  return &c; };
         gf["uint8_t&"] =                    (cf_t)+[](cdims_t) { static UInt8RefConverter c{};       return &c; };
+        gf["uint16_t"] =                    (cf_t)+[](cdims_t) { static UInt16Converter c{};         return &c; };
+        gf["const uint16_t&"] =             (cf_t)+[](cdims_t) { static ConstUInt16RefConverter c{}; return &c; };
+        gf["uint16_t&"] =                   (cf_t)+[](cdims_t) { static UInt16RefConverter c{};      return &c; };
+        gf["uint32_t"] =                    (cf_t)+[](cdims_t) { static UInt32Converter c{};         return &c; };
+        gf["const uint32_t&"] =             (cf_t)+[](cdims_t) { static ConstUInt32RefConverter c{}; return &c; };
+        gf["uint32_t&"] =                   (cf_t)+[](cdims_t) { static UInt32RefConverter c{};      return &c; };
         gf["short"] =                       (cf_t)+[](cdims_t) { static ShortConverter c{};          return &c; };
         gf["const short&"] =                (cf_t)+[](cdims_t) { static ConstShortRefConverter c{};  return &c; };
         gf["short&"] =                      (cf_t)+[](cdims_t) { static ShortRefConverter c{};       return &c; };
@@ -3521,7 +3574,11 @@ public:
         gf["std::byte ptr"] =               (cf_t)+[](cdims_t d) { return new ByteArrayConverter{d}; };
 #endif
         gf["int8_t ptr"] =                  (cf_t)+[](cdims_t d) { return new Int8ArrayConverter{d}; };
+        gf["int16_t ptr"] =                 (cf_t)+[](cdims_t d) { return new Int16ArrayConverter{d}; };
+        gf["int32_t ptr"] =                 (cf_t)+[](cdims_t d) { return new Int32ArrayConverter{d}; };
         gf["uint8_t ptr"] =                 (cf_t)+[](cdims_t d) { return new UInt8ArrayConverter{d}; };
+        gf["uint16_t ptr"] =                (cf_t)+[](cdims_t d) { return new UInt16ArrayConverter{d}; };
+        gf["uint32_t ptr"] =                (cf_t)+[](cdims_t d) { return new UInt32ArrayConverter{d}; };
         gf["short ptr"] =                   (cf_t)+[](cdims_t d) { return new ShortArrayConverter{d}; };
         gf["unsigned short ptr"] =          (cf_t)+[](cdims_t d) { return new UShortArrayConverter{d}; };
         gf["int ptr"] =                     (cf_t)+[](cdims_t d) { return new IntArrayConverter{d}; };

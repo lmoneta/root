@@ -55,6 +55,7 @@ class RNTupleDS final : public ROOT::RDF::RDataSource {
       ULong64_t fFirstEntry = 0; ///< First entry index in fSource
       /// End entry index in fSource, e.g. the number of entries in the range is fLastEntry - fFirstEntry
       ULong64_t fLastEntry = 0;
+      std::string_view fFileName; ///< Storage location of the current RNTuple
    };
 
    /// A clone of the first pages source's descriptor.
@@ -109,6 +110,8 @@ class RNTupleDS final : public ROOT::RDF::RDataSource {
    /// the fCurrentRanges vectors.  This is necessary because the returned ranges get distributed arbitrarily
    /// onto slots.  In the InitSlot method, the column readers use this map to find the correct range to connect to.
    std::unordered_map<ULong64_t, std::size_t> fFirstEntry2RangeIdx;
+   /// One element per slot, corresponding to the current range index for that slot, as filled by InitSlot
+   std::vector<std::size_t> fSlotsToRangeIdxs;
 
    /// The background thread that runs StageNextSources()
    std::thread fThreadStaging;
@@ -167,9 +170,10 @@ class RNTupleDS final : public ROOT::RDF::RDataSource {
 
    explicit RNTupleDS(std::unique_ptr<ROOT::Internal::RPageSource> pageSource);
 
+   ROOT::RFieldBase *GetFieldWithTypeChecks(std::string_view fieldName, const std::type_info &tid);
+
 public:
    RNTupleDS(std::string_view ntupleName, std::string_view fileName);
-   RNTupleDS(ROOT::RNTuple *ntuple);
    RNTupleDS(std::string_view ntupleName, const std::vector<std::string> &fileNames);
    // Rule of five
    RNTupleDS(const RNTupleDS &) = delete;
@@ -193,6 +197,10 @@ public:
 
    std::unique_ptr<ROOT::Detail::RDF::RColumnReaderBase>
    GetColumnReaders(unsigned int /*slot*/, std::string_view /*name*/, const std::type_info &) final;
+
+   ROOT::RDF::RSampleInfo
+   CreateSampleInfo(unsigned int,
+                    const std::unordered_map<std::string, ROOT::RDF::Experimental::RSample *> &) const final;
 
    // Old API, unused
    bool SetEntry(unsigned int, ULong64_t) final { return true; }

@@ -176,10 +176,19 @@ if(builtin_llvm)
     if(CMAKE_BUILD_TYPE MATCHES "Debug"
      OR LLVM_BUILD_TYPE MATCHES "(Debug|RelWithDebInfo)")
       set(LLVM_ENABLE_ASSERTIONS TRUE)
+      if(NOT DEFINED LLVM_ENABLE_DUMP)
+        set(LLVM_ENABLE_DUMP TRUE)
+      endif()
     else()
       set(LLVM_ENABLE_ASSERTIONS FALSE)
+      set(LLVM_ENABLE_DUMP FALSE)
     endif()
   endif()
+
+  # Regardless of LLVM_BUILD_TYPE and LLVM_ENABLE_ASSERTIONS, we never want to
+  # "optimize llvm_unreachable() as undefined behavior" but trap if we hit this
+  # in production builds.
+  set(LLVM_UNREACHABLE_OPTIMIZE FALSE)
 
   # Multi-configuration generators ignore CMAKE_BUILD_TYPE, so
   # in that case we set the flags for all configurations to the
@@ -552,6 +561,6 @@ else()
 endif()
 
 add_subdirectory(CppInterOp)
-if(testing)
+if(TARGET CppInterOpUnitTests)
   set_target_properties(CppInterOpUnitTests PROPERTIES EXCLUDE_FROM_ALL OFF)
 endif()

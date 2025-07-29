@@ -619,7 +619,14 @@ double RooAbsPdf::getLogVal(const RooArgSet* nset) const
 {
   return getLog(getVal(nset), this);
 }
-
+////////////////////////////////////////////////////////////////////////////////
+/// This function returns the penalty term.
+/// Penalty terms modify the likelihood,during model parameter estimation.This penalty term is usually
+//  a function of the model parameters
+double RooAbsPdf::getCorrection() const
+{
+   return 0;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Check for infinity or NaN.
@@ -2557,8 +2564,8 @@ RooFit::OwningPtr<RooAbsReal> RooAbsPdf::createScanCdf(const RooArgSet& iset, co
 /// This helper function finds and collects all constraints terms of all component p.d.f.s
 /// and returns a RooArgSet with all those terms.
 
-RooArgSet* RooAbsPdf::getAllConstraints(const RooArgSet& observables, RooArgSet& constrainedParams,
-                                        bool stripDisconnected) const
+std::unique_ptr<RooArgSet>
+RooAbsPdf::getAllConstraints(const RooArgSet &observables, RooArgSet &constrainedParams, bool stripDisconnected) const
 {
   RooArgSet constraints;
   RooArgSet pdfParams;
@@ -2567,9 +2574,7 @@ RooArgSet* RooAbsPdf::getAllConstraints(const RooArgSet& observables, RooArgSet&
   for (const auto arg : *comps) {
     auto pdf = dynamic_cast<const RooAbsPdf*>(arg) ;
     if (pdf && !constraints.find(pdf->GetName())) {
-      std::unique_ptr<RooArgSet> compRet(
-              pdf->getConstraints(observables,constrainedParams, pdfParams));
-      if (compRet) {
+      if (auto compRet = pdf->getConstraints(observables,constrainedParams, pdfParams)) {
         constraints.add(*compRet,false) ;
       }
     }
@@ -2578,7 +2583,7 @@ RooArgSet* RooAbsPdf::getAllConstraints(const RooArgSet& observables, RooArgSet&
   RooArgSet conParams;
 
   // Strip any constraints that are completely decoupled from the other product terms
-  RooArgSet* finalConstraints = new RooArgSet("AllConstraints") ;
+  auto finalConstraints = std::make_unique<RooArgSet>("AllConstraints");
   for(auto * pdf : static_range_cast<RooAbsPdf*>(constraints)) {
 
     RooArgSet tmp;
@@ -2646,11 +2651,10 @@ RooNumGenConfig* RooAbsPdf::specialGeneratorConfig(bool createOnTheFly)
 /// a specialized configuration was associated with this object, that configuration
 /// is returned, otherwise the default configuration for all RooAbsReals is returned
 
-const RooNumGenConfig* RooAbsPdf::getGeneratorConfig() const
+const RooNumGenConfig *RooAbsPdf::getGeneratorConfig() const
 {
-  const RooNumGenConfig* config = specialGeneratorConfig() ;
-  if (config) return config ;
-  return defaultGeneratorConfig() ;
+   const RooNumGenConfig *config = specialGeneratorConfig();
+   return config ? config : defaultGeneratorConfig();
 }
 
 
@@ -2723,11 +2727,7 @@ void sterilizeClientCaches(RooAbsArg & arg) {
 
 void RooAbsPdf::setNormRange(const char* rangeName)
 {
-  if (rangeName) {
-    _normRange = rangeName ;
-  } else {
-    _normRange.Clear() ;
-  }
+  _normRange = rangeName ? rangeName : "";
 
   // the stuff that the clients have cached may depend on the normalization range
   sterilizeClientCaches(*this);
@@ -2743,11 +2743,7 @@ void RooAbsPdf::setNormRange(const char* rangeName)
 
 void RooAbsPdf::setNormRangeOverride(const char* rangeName)
 {
-  if (rangeName) {
-    _normRangeOverride = rangeName ;
-  } else {
-    _normRangeOverride.Clear() ;
-  }
+  _normRangeOverride = rangeName ? rangeName : "";
 
   // the stuff that the clients have cached may depend on the normalization range
   sterilizeClientCaches(*this);

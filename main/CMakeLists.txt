@@ -16,27 +16,28 @@ if(NOT WIN32)
   endif()
   ROOT_EXECUTABLE(roots.exe roots.cxx LIBRARIES Core MathCore CMAKENOEXPORT)
 endif()
-ROOT_EXECUTABLE(root.exe rmain.cxx LIBRARIES Core Rint CMAKENOEXPORT)
+ROOT_EXECUTABLE(root.exe rmain.cxx LIBRARIES Core Rint)
 if(MSVC)
   set(root_exports "/EXPORT:_Init_thread_abort /EXPORT:_Init_thread_epoch \
       /EXPORT:_Init_thread_footer /EXPORT:_Init_thread_header /EXPORT:_tls_index \
       /STACK:4000000 setargv.obj")
+  if(MSVC_VERSION GREATER_EQUAL 1933)
+    set(root_exports "${root_exports} /EXPORT:__std_find_trivial_1 \
+        /EXPORT:__std_find_trivial_2 /EXPORT:__std_find_trivial_4 \
+        /EXPORT:__std_find_trivial_8")
+  endif()
   set_property(TARGET root.exe APPEND_STRING PROPERTY LINK_FLAGS ${root_exports})
   add_custom_command(TARGET root.exe POST_BUILD
                      COMMAND mt -manifest ${ROOT_MANIFEST} -outputresource:${CMAKE_BINARY_DIR}/bin/root.exe)
 endif()
-if(proof)
-  ROOT_EXECUTABLE(proofserv.exe pmain.cxx LIBRARIES Core MathCore CMAKENOEXPORT)
-endif()
-
 
 if(MSVC)
   ROOT_EXECUTABLE(hadd hadd.cxx LIBRARIES Core RIO Net Hist Graf Graf3d Gpad Tree Matrix MathCore CMAKENOEXPORT)
   set_property(TARGET hadd APPEND_STRING PROPERTY LINK_FLAGS "setargv.obj")
 else()
   ROOT_EXECUTABLE(hadd hadd.cxx LIBRARIES Core RIO Net Hist Graf Graf3d Gpad Tree Matrix MathCore MultiProc CMAKENOEXPORT)
-  if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
-    target_link_libraries(hadd stdc++fs)
+  if(ROOT_NEED_STDCXXFS)
+    target_link_libraries(hadd PRIVATE stdc++fs)
   endif()
 endif()
 ROOT_EXECUTABLE(rootnb.exe nbmain.cxx LIBRARIES Core CMAKENOEXPORT)
@@ -109,6 +110,8 @@ if(WIN32)
   set_target_properties(rootcling PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)
   set_property(TARGET rootcling APPEND_STRING PROPERTY LINK_FLAGS " -STACK:4000000")
 endif()
+
+ROOT_EXECUTABLE(rootls src/rootls.cxx LIBRARIES RIO Tree Core Rint ROOTNTuple)
 
 # Create aliases: rootcint, genreflex.
 if(WIN32)

@@ -131,7 +131,7 @@ public:
    ~RNTupleViewBase() = default;
 
    const ROOT::RFieldBase &GetField() const { return *fField; }
-   ROOT::RFieldBase::RBulk CreateBulk() { return fField->CreateBulk(); }
+   ROOT::RFieldBase::RBulkValues CreateBulk() { return fField->CreateBulk(); }
 
    const ROOT::RFieldBase::RValue &GetValue() const { return fValue; }
    /// Returns the global field range of this view.
@@ -345,6 +345,13 @@ private:
       return fieldId;
    }
 
+   std::uint64_t GetCardinalityValue() const
+   {
+      // We created the RValue and know its type, avoid extra checks.
+      void *ptr = fValue.GetPtr<void>().get();
+      return *static_cast<RNTupleCardinality<std::uint64_t> *>(ptr);
+   }
+
 public:
    RNTupleCollectionView(const RNTupleCollectionView &other) = delete;
    RNTupleCollectionView(RNTupleCollectionView &&other) = default;
@@ -413,14 +420,14 @@ public:
    std::uint64_t operator()(ROOT::NTupleSize_t globalIndex)
    {
       fValue.Read(globalIndex);
-      return fValue.GetRef<std::uint64_t>();
+      return GetCardinalityValue();
    }
 
    /// \see RNTupleView::operator()(RNTupleLocalIndex)
    std::uint64_t operator()(RNTupleLocalIndex localIndex)
    {
       fValue.Read(localIndex);
-      return fValue.GetRef<std::uint64_t>();
+      return GetCardinalityValue();
    }
 };
 

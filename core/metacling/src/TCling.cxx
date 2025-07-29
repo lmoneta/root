@@ -115,7 +115,7 @@ clang/LLVM technology.
 #include "cling/Utils/SourceNormalization.h"
 #include "cling/Interpreter/Exception.h"
 
-#include "clang/Interpreter/CppInterOp.h"
+#include <CppInterOp/CppInterOp.h>
 
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
@@ -304,7 +304,21 @@ private: \
 public: \
    static TClass *Class() { static TClass* sIsA = 0; if (!sIsA) sIsA = TClass::GetClass(#name); return sIsA; } \
    static const char *Class_Name() { return #name; } \
-   virtual_keyword Bool_t CheckTObjectHashConsistency() const overrd { return true; } \
+   virtual_keyword Bool_t CheckTObjectHashConsistency() const overrd {                         \
+      static std::atomic<UChar_t> recurseBlocker(0);                                           \
+      if (R__likely(recurseBlocker >= 2)) {                                                    \
+         return ::ROOT::Internal::THashConsistencyHolder<decltype(*this)>::fgHashConsistency;  \
+      } else if (recurseBlocker == 1) {                                                        \
+         return false;                                                                         \
+      } else if (recurseBlocker++ == 0) {                                                      \
+         ::ROOT::Internal::THashConsistencyHolder<decltype(*this)>::fgHashConsistency =        \
+            ::ROOT::Internal::HasConsistentHashMember(_QUOTE_(name)) ||                        \
+            ::ROOT::Internal::HasConsistentHashMember(*IsA());                                 \
+         ++recurseBlocker;                                                                     \
+         return ::ROOT::Internal::THashConsistencyHolder<decltype(*this)>::fgHashConsistency;  \
+      }                                                                                        \
+      return false; /* unreachable */                                                          \
+   }                                                                                           \
    static Version_t Class_Version() { return id; } \
    static TClass *Dictionary() { return 0; } \
    virtual_keyword TClass *IsA() const overrd { return name::Class(); } \
@@ -997,6 +1011,24 @@ bool TClingLookupHelper__ExistingTypeCheck(const std::string &tname,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+/// Check if the class name is present in TClassTable.
+///
+/// \param[in] tname class name to check.
+/// \param[out] result If a class name has an alternative name registered in
+///                    TClassTable, it will be copied into this string.
+bool TClingLookupHelper__CheckInClassTable(const std::string &tname, std::string &result)
+{
+   result.clear();
+
+   if (gROOT->GetListOfClasses()->FindObject(tname.c_str()) || TClassTable::Check(tname.c_str(), result)) {
+      // This is a known class.
+      return true;
+   }
+
+   return false;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 TCling::TUniqueString::TUniqueString(Long64_t size)
 {
@@ -1394,6 +1426,7 @@ TCling::TCling(const char *name, const char *title, const char* const argv[], vo
 
       clingArgsStorage.push_back("-Wno-undefined-inline");
       clingArgsStorage.push_back("-fsigned-char");
+      clingArgsStorage.push_back("-fsized-deallocation");
       // The -O1 optimization flag has nasty side effects on Windows (32 and 64 bit)
       // See the GitHub issues #9809 and #9944
       // TODO: to be reviewed after the upgrade of LLVM & Clang
@@ -1571,10 +1604,9 @@ TCling::TCling(const char *name, const char *title, const char* const argv[], vo
 
    // We are now ready (enough is loaded) to init the list of opaque typedefs.
    fNormalizedCtxt = new ROOT::TMetaUtils::TNormalizedCtxt(fInterpreter->getLookupHelper());
-   fLookupHelper = new ROOT::TMetaUtils::TClingLookupHelper(*fInterpreter, *fNormalizedCtxt,
-                                                            TClingLookupHelper__ExistingTypeCheck,
-                                                            TClingLookupHelper__AutoParse,
-                                                            &fIsShuttingDown);
+   fLookupHelper = new ROOT::TMetaUtils::TClingLookupHelper(
+      *fInterpreter, *fNormalizedCtxt, TClingLookupHelper__ExistingTypeCheck, TClingLookupHelper__CheckInClassTable,
+      TClingLookupHelper__AutoParse, &fIsShuttingDown);
    TClassEdit::Init(fLookupHelper);
 
    // Disallow auto-parsing in rootcling
@@ -1705,6 +1737,7 @@ void TCling::RegisterRdictForLoadPCM(const std::string &pcmFileNameFullPath, llv
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Tries to load a PCM from TFile; returns true on success.
+/// The caller of this function should be holding the ROOT Write lock.
 
 void TCling::LoadPCMImpl(TFile &pcmFile)
 {
@@ -1820,6 +1853,7 @@ void TCling::LoadPCMImpl(TFile &pcmFile)
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Tries to load a rdict PCM, issues diagnostics if it fails.
+/// The caller of this function should be holding the ROOT Write lock.
 
 void TCling::LoadPCM(std::string pcmFileNameFullPath)
 {
@@ -2019,6 +2053,7 @@ void TCling::ProcessClassesToUpdate()
 /// libraries.
 /// The payload code is injected "as is" in the interpreter.
 /// The value of 'triggerFunc' is used to find the shared library location.
+/// The caller of this function should be holding the ROOT Write lock.
 
 void TCling::RegisterModule(const char* modulename,
                             const char** headers,
@@ -7712,6 +7747,8 @@ void TCling::CodeComplete(const std::string& line, size_t& cursor,
 /// Get the interpreter value corresponding to the statement.
 int TCling::Evaluate(const char* code, TInterpreterValue& value)
 {
+   R__LOCKGUARD_CLING(gInterpreterMutex);
+
    auto V = reinterpret_cast<cling::Value*>(value.GetValAddr());
    auto compRes = fInterpreter->evaluate(code, *V);
    return compRes!=cling::Interpreter::kSuccess ? 0 : 1 ;
@@ -8932,6 +8969,10 @@ Long_t TCling::FuncTempInfo_Property(FuncTempInfo_t *ft_info) const
    }
 
    const clang::FunctionDecl *fd = ft->getTemplatedDecl();
+
+   if (fd && fd->getStorageClass() == clang::SC_Static)
+      property |= kIsStatic;
+
    if (const clang::CXXMethodDecl *md =
        llvm::dyn_cast<clang::CXXMethodDecl>(fd)) {
       if (md->getMethodQualifiers().hasConst()) {

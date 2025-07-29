@@ -13,6 +13,7 @@
 
 #include <ROOT/RDF/RColumnReaderBase.hxx>
 #include <ROOT/RDataFrame.hxx>
+#include <ROOT/RDF/Utils.hxx>
 #include <ROOT/RField.hxx>
 #include <ROOT/RFieldUtils.hxx>
 #include <ROOT/RPageStorageFile.hxx>
@@ -79,7 +80,7 @@ public:
       return representations;
    }
    // Field is only used for reading
-   void GenerateColumns() final { assert(false && "Cardinality fields must only be used for reading"); }
+   void GenerateColumns() final { throw RException(R__FAIL("Cardinality fields must only be used for reading")); }
    void GenerateColumns(const ROOT::RNTupleDescriptor &desc) final
    {
       GenerateColumnsImpl<ROOT::Internal::RColumnIndex>(desc);
@@ -121,7 +122,7 @@ private:
    {
       return std::make_unique<RArraySizeField>(fArrayLength);
    }
-   void GenerateColumns() final { assert(false && "RArraySizeField fields must only be used for reading"); }
+   void GenerateColumns() final { throw RException(R__FAIL("RArraySizeField fields must only be used for reading")); }
    void GenerateColumns(const ROOT::RNTupleDescriptor &) final {}
    void ReadGlobalImpl(ROOT::NTupleSize_t /*globalIndex*/, void *to) final
    {
@@ -411,10 +412,7 @@ std::unique_ptr<ROOT::Internal::RPageSource> CreatePageSource(std::string_view n
 ROOT::RDF::RNTupleDS::RNTupleDS(std::string_view ntupleName, std::string_view fileName)
    : RNTupleDS(CreatePageSource(ntupleName, fileName))
 {
-}
-
-ROOT::RDF::RNTupleDS::RNTupleDS(RNTuple *ntuple) : RNTupleDS(ROOT::Internal::RPageSourceFile::CreateFromAnchor(*ntuple))
-{
+   fFileNames = std::vector<std::string>{std::string{fileName}};
 }
 
 ROOT::RDF::RNTupleDS::RNTupleDS(std::string_view ntupleName, const std::vector<std::string> &fileNames)
@@ -432,39 +430,58 @@ ROOT::RDF::RNTupleDS::GetColumnReadersImpl(std::string_view /* name */, const st
    return {};
 }
 
-std::unique_ptr<ROOT::Detail::RDF::RColumnReaderBase>
-ROOT::RDF::RNTupleDS::GetColumnReaders(unsigned int slot, std::string_view name, const std::type_info &tid)
+ROOT::RFieldBase *ROOT::RDF::RNTupleDS::GetFieldWithTypeChecks(std::string_view fieldName, const std::type_info &tid)
 {
    // At this point we can assume that `name` will be found in fColumnNames
-   const auto index = std::distance(fColumnNames.begin(), std::find(fColumnNames.begin(), fColumnNames.end(), name));
+   const auto index =
+      std::distance(fColumnNames.begin(), std::find(fColumnNames.begin(), fColumnNames.end(), fieldName));
+
+   // A reader was requested but we don't have RTTI for it, this is encoded with the tag UseNativeDataType. We can just
+   // return the available protofield
+   if (tid == typeid(ROOT::Internal::RDF::UseNativeDataType)) {
+      return fProtoFields[index].get();
+   }
+
+   // The user explicitly requested a type
    const auto requestedType = ROOT::Internal::GetRenormalizedTypeName(ROOT::Internal::RDF::TypeID2TypeName(tid));
 
-   ROOT::RFieldBase *field;
    // If the field corresponding to the provided name is not a cardinality column and the requested type is different
    // from the proto field that was created when the data source was constructed, we first have to create an
    // alternative proto field for the column reader. Otherwise, we can directly use the existing proto field.
-   if (name.substr(0, 13) != "R_rdf_sizeof_" && requestedType != fColumnTypes[index]) {
+   if (fieldName.substr(0, 13) != "R_rdf_sizeof_" && requestedType != fColumnTypes[index]) {
       auto &altProtoFields = fAlternativeProtoFields[index];
-      auto altProtoField = std::find_if(altProtoFields.begin(), altProtoFields.end(),
-                                        [&requestedType](const std::unique_ptr<ROOT::RFieldBase> &fld) {
-                                           return fld->GetTypeName() == requestedType;
-                                        });
-      if (altProtoField != altProtoFields.end()) {
-         field = altProtoField->get();
-      } else {
-         auto newAltProtoFieldOrException = ROOT::RFieldBase::Create(std::string(name), requestedType);
-         if (!newAltProtoFieldOrException) {
-            throw std::runtime_error("RNTupleDS: Could not create field with type \"" + requestedType +
-                                     "\" for column \"" + std::string(name));
-         }
-         auto newAltProtoField = newAltProtoFieldOrException.Unwrap();
-         newAltProtoField->SetOnDiskId(fProtoFields[index]->GetOnDiskId());
-         field = newAltProtoField.get();
-         altProtoFields.emplace_back(std::move(newAltProtoField));
+
+      // If we can find the requested type in the registered alternative protofields, return the corresponding field
+      if (auto altProtoField = std::find_if(altProtoFields.begin(), altProtoFields.end(),
+                                            [&requestedType](const std::unique_ptr<ROOT::RFieldBase> &fld) {
+                                               return fld->GetTypeName() == requestedType;
+                                            });
+          altProtoField != altProtoFields.end()) {
+         return altProtoField->get();
       }
-   } else {
-      field = fProtoFields[index].get();
+
+      // Otherwise, create a new protofield and register it in the alternatives before returning
+      auto newAltProtoFieldOrException = ROOT::RFieldBase::Create(std::string(fieldName), requestedType);
+      if (!newAltProtoFieldOrException) {
+         throw std::runtime_error("RNTupleDS: Could not create field with type \"" + requestedType +
+                                  "\" for column \"" + std::string(fieldName) + "\"");
+      }
+      auto newAltProtoField = newAltProtoFieldOrException.Unwrap();
+      newAltProtoField->SetOnDiskId(fProtoFields[index]->GetOnDiskId());
+      auto *newField = newAltProtoField.get();
+      altProtoFields.emplace_back(std::move(newAltProtoField));
+      return newField;
    }
+
+   // General case: there was a correspondence between the user-requested type and the corresponding column type
+   return fProtoFields[index].get();
+}
+
+std::unique_ptr<ROOT::Detail::RDF::RColumnReaderBase>
+ROOT::RDF::RNTupleDS::GetColumnReaders(unsigned int slot, std::string_view name, const std::type_info &tid)
+{
+   ROOT::RFieldBase *field = GetFieldWithTypeChecks(name, tid);
+   assert(field != nullptr);
 
    // Map the field's and subfields' IDs to qualified names so that we can later connect the fields to
    // other page sources from the chain
@@ -534,6 +551,7 @@ void ROOT::RDF::RNTupleDS::PrepareNextRanges()
             // to open and attach files here.
             range.fSource = CreatePageSource(fNTupleName, fFileNames[fNextFileIndex]);
          }
+         range.fFileName = fFileNames[fNextFileIndex];
          range.fSource->Attach();
          fNextFileIndex++;
 
@@ -553,6 +571,8 @@ void ROOT::RDF::RNTupleDS::PrepareNextRanges()
    unsigned int nSlotsPerFile = fNSlots / nRemainingFiles;
    for (std::size_t i = 0; (fNextRanges.size() < fNSlots) && (fNextFileIndex < nFiles); ++i) {
       std::unique_ptr<ROOT::Internal::RPageSource> source;
+      // Need to look for the file name to populate the sample info later
+      const auto &sourceFileName = fFileNames[fNextFileIndex];
       std::swap(fStagingArea[fNextFileIndex], source);
       if (!source) {
          // Empty files trigger this condition
@@ -595,6 +615,7 @@ void ROOT::RDF::RNTupleDS::PrepareNextRanges()
          auto end = rangesByCluster[iRange - 1].second;
 
          REntryRangeDS range;
+         range.fFileName = sourceFileName;
          // The last range for this file just takes the already opened page source. All previous ranges clone.
          if (iSlot == N - 1) {
             range.fSource = std::move(source);
@@ -689,10 +710,20 @@ std::vector<std::pair<ULong64_t, ULong64_t>> ROOT::RDF::RNTupleDS::GetEntryRange
 
 void ROOT::RDF::RNTupleDS::InitSlot(unsigned int slot, ULong64_t firstEntry)
 {
-   if (fNSlots == 1)
+   if (fNSlots == 1) {
+      // Ensure the connection between slot and range is valid also in single-thread mode
+      fSlotsToRangeIdxs[0] = 0;
       return;
+   }
 
+   // The same slot ID could be picked multiple times in the same execution, thus
+   // ending up processing different page sources. Here we re-establish the
+   // connection between the slot and the correct page source by finding which
+   // range index corresponds to the first entry passed.
    auto idxRange = fFirstEntry2RangeIdx.at(firstEntry);
+   // We also remember this connection so it can later be retrieved in CreateSampleInfo
+   fSlotsToRangeIdxs[slot * ROOT::Internal::RDF::CacheLineStep<std::size_t>()] = idxRange;
+
    for (auto r : fActiveColumnReaders[slot]) {
       r->Connect(*fCurrentRanges[idxRange].fSource, firstEntry - fCurrentRanges[idxRange].fFirstEntry);
    }
@@ -777,6 +808,7 @@ void ROOT::RDF::RNTupleDS::SetNSlots(unsigned int nSlots)
    assert(nSlots > 0);
    fNSlots = nSlots;
    fActiveColumnReaders.resize(fNSlots);
+   fSlotsToRangeIdxs.resize(fNSlots * ROOT::Internal::RDF::CacheLineStep<std::size_t>());
 }
 
 ROOT::RDataFrame ROOT::RDF::FromRNTuple(std::string_view ntupleName, std::string_view fileName)
@@ -787,4 +819,35 @@ ROOT::RDataFrame ROOT::RDF::FromRNTuple(std::string_view ntupleName, std::string
 ROOT::RDataFrame ROOT::RDF::FromRNTuple(std::string_view ntupleName, const std::vector<std::string> &fileNames)
 {
    return ROOT::RDataFrame(std::make_unique<ROOT::RDF::RNTupleDS>(ntupleName, fileNames));
+}
+
+ROOT::RDF::RSampleInfo ROOT::Internal::RDF::RNTupleDS::CreateSampleInfo(
+   unsigned int slot, const std::unordered_map<std::string, ROOT::RDF::Experimental::RSample *> &sampleMap) const
+{
+   // The same slot ID could be picked multiple times in the same execution, thus
+   // ending up processing different page sources. Here we re-establish the
+   // connection between the slot and the correct page source by retrieving
+   // which range is connected currently to the slot
+   const auto &rangeIdx = fSlotsToRangeIdxs.at(slot * ROOT::Internal::RDF::CacheLineStep<std::size_t>());
+
+   // Missing source if a file does not exist
+   if (!fCurrentRanges[rangeIdx].fSource)
+      return ROOT::RDF::RSampleInfo{};
+
+   const auto &ntupleName = fCurrentRanges[rangeIdx].fSource->GetNTupleName();
+   const auto &ntuplePath = fCurrentRanges[rangeIdx].fFileName;
+   const auto ntupleID = std::string(ntuplePath) + '/' + ntupleName;
+
+   // TODO: There is no support for RNTuple in RDatasetSpec, thus the sample map
+   // is always empty at the moment.
+   if (sampleMap.empty())
+      return ROOT::RDF::RSampleInfo(
+         ntupleID, std::make_pair(fCurrentRanges[rangeIdx].fFirstEntry, fCurrentRanges[rangeIdx].fLastEntry));
+
+   if (sampleMap.find(ntupleID) == sampleMap.end())
+      throw std::runtime_error("Full sample identifier '" + ntupleID + "' cannot be found in the available samples.");
+
+   return ROOT::RDF::RSampleInfo(
+      ntupleID, std::make_pair(fCurrentRanges[rangeIdx].fFirstEntry, fCurrentRanges[rangeIdx].fLastEntry),
+      sampleMap.at(ntupleName));
 }

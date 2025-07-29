@@ -59,7 +59,6 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/rootlogon.C "{
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/rootalias.C "")
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/rootlogoff.C "{}")
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/.rootrc "
-Proof.Sandbox: /tmp/proof
 Rint.History:  .root_hist
 ACLiC.LinkLibs:  1
 ")
@@ -127,6 +126,9 @@ if(NOT davix)
     list(APPEND dataframe_veto analysis/dataframe/df028_SQliteIPLocation.C)
     list(APPEND dataframe_veto analysis/dataframe/df029_SQlitePlatformDistribution.C)
     list(APPEND dataframe_veto analysis/dataframe/df030_SQliteVersionsOfROOT.C)
+    set(davix_veto
+        legacy/hist040_TH2Poly_europe.C hist/hist039_TH2Poly_usa.*
+        legacy/multicore/mp104_processH1.C analysis/parallel/mp_processSelector.C)
 endif()
 
 if(MACOSX_VERSION VERSION_EQUAL 10.13)
@@ -134,11 +136,7 @@ if(MACOSX_VERSION VERSION_EQUAL 10.13)
 endif()
 
 if(NOT geom)
-  set(geom_veto visualisation/geom/*.C geom/*.C visualisation/geom/gdml/*.C)
-endif()
-
-if(NOT ROOT_proof_FOUND)
-   set(proof_veto roofit/roostats/StandardFrequentistDiscovery.C)
+  set(geom_veto visualisation/geom/*.C geom/*.C visualisation/geom/gdml/*.C legacy/g3d/shapes.* legacy/g3d/na49view.*)
 endif()
 
 if(NOT ROOT_spectrum_FOUND)
@@ -312,35 +310,30 @@ else()
     list(APPEND tmva_veto machine_learning/envelope/classification.C)
   endif()
   #these depends on external packages
-  if (machine_learning-pymva)
-    ROOT_FIND_PYTHON_MODULE(torch QUIET)
-    ROOT_FIND_PYTHON_MODULE(keras QUIET)
-    ROOT_FIND_PYTHON_MODULE(sonnet QUIET)
-    ROOT_FIND_PYTHON_MODULE(graph_nets QUIET)
-    ROOT_FIND_PYTHON_MODULE(sklearn QUIET)
-  endif()
+  ROOT_FIND_PYTHON_MODULE(torch QUIET)
+  ROOT_FIND_PYTHON_MODULE(keras QUIET)
+  ROOT_FIND_PYTHON_MODULE(sonnet QUIET)
+  ROOT_FIND_PYTHON_MODULE(graph_nets QUIET)
   if (NOT BLAS_FOUND)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_GNN_Application.C)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RDataFrame.C)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RSofieReader.C)
   endif()
-  if (NOT ROOT_KERAS_FOUND)
+  if (NOT tmva-pymva OR NOT ROOT_KERAS_FOUND)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_Keras.C)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_Keras_HiggsModel.C)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RDataFrame.C)
-    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RDataFrame.py)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RDataFrame_JIT.C)
+    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RSofieReader.C)
+  endif()
+  if (NOT tmva-pymva OR NOT ROOT_TORCH_FOUND)
+    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_PyTorch.C)
+  endif()
+  # The following tutorials use PyMVA functionality
+  if (NOT tmva-pymva)
+    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RDataFrame.py)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_Models.py)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_Inference.py)
-    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RSofieReader.C)
-    list(APPEND tmva_veto machine_learning/RBatchGenerator_TensorFlow.py)
-  endif()
-  if (NOT ROOT_SKLEARN_FOUND)
-    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_Models.py roofit/roofit/rf617_simulation_based_inference_multidimensional.py)
-  endif()
-  if (NOT ROOT_TORCH_FOUND)
-    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_PyTorch.C)
-    list(APPEND tmva_veto machine_learning/RBatchGenerator_PyTorch.py)
   endif()
   #veto this tutorial since it is added directly
   list(APPEND tmva_veto machine_learning/TMVA_SOFIE_GNN_Parser.py)
@@ -348,11 +341,11 @@ else()
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_GNN.py)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_GNN_Application.C)
   endif()
-  if (NOT machine_learning-sofie)
+  if (NOT tmva-sofie)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_ONNX.C)
   else()
     #copy ONNX file needed for the tutorial
-    configure_file(${CMAKE_SOURCE_DIR}/machine_learning/sofie/test/input_models/Linear_16.onnx ${CMAKE_BINARY_DIR}/tutorials/machine_learning/Linear_16.onnx COPYONLY)
+    configure_file(${CMAKE_SOURCE_DIR}/tmva/sofie/test/input_models/Linear_16.onnx ${CMAKE_BINARY_DIR}/tutorials/machine_learning/Linear_16.onnx COPYONLY)
   endif()
 
 endif()
@@ -427,7 +420,6 @@ set(extra_veto
   legacy/multicore/mp_H1_lambdas.C # not a tutorial; used by mp104_processH1.C et al.
   html/*.C
   legacy/net/*.C
-  legacy/proof/*.C
   io/sql/*.C
   io/tree/hsimpleProxy.C # A driver uses this macro which cannot be executed directly
   io/tree/tree103_tree.C
@@ -443,7 +435,8 @@ set(extra_veto
   analysis/tree/h1chain.C
   http/*.C
   visualisation/eve7/*.C
-  math/r/rootlogon.C)
+  math/r/rootlogon.C
+  roofit/roostats/StandardFrequentistDiscovery.C)
 
 if(MSVC)
   # disable run_h1analysis.C because of Endpoint Security HTTP traffic scanning,
@@ -503,7 +496,7 @@ set(all_veto hsimple.C
              ${dataframe_veto}
              ${macm1_veto}
              ${clad_veto}
-             ${proof_veto}
+             ${davix_veto}
              )
 
 file(GLOB_RECURSE tutorials RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.C)
@@ -612,24 +605,18 @@ set (machine_learning-tmva101_Training-depends tutorial-machine_learning-tmva100
 set (machine_learning-tmva102_Testing-depends tutorial-machine_learning-tmva101_Training-py)
 set (machine_learning-tmva003_RReader-depends tutorial-machine_learning-TMVAClassification)
 set (machine_learning-tmva004_RStandardScaler-depends tutorial-machine_learning-tmva003_RReader)
-if (ROOT_TORCH_FOUND)
-  set (machine_learning-pytorch-ApplicationClassificationPyTorch-depends tutorial-machine_learning-pytorch-ClassificationPyTorch-py)
-  set (machine_learning-pytorch-RegressionPyTorch-depends tutorial-machine_learning-pytorch-ApplicationClassificationPyTorch-py)
-  set (machine_learning-pytorch-ApplicationRegressionPyTorch-depends tutorial-machine_learning-pytorch-RegressionPyTorch-py)
-endif()
-if (ROOT_KERAS_FOUND)
-  set (machine_learning-TMVA_SOFIE_RSofieReader-depends tutorial-machine_learning-TMVA_Higgs_Classification)
-  set (machine_learning-TMVA_SOFIE_RDataFrame_JIT-depends tutorial-machine_learning-TMVA_SOFIE_RSofieReader)
-  set (machine_learning-TMVA_SOFIE_Keras_HiggsModel-depends tutorial-machine_learning-TMVA_SOFIE_RDataFrame_JIT)
-  set (machine_learning-TMVA_SOFIE_RDataFrame-depends tutorial-machine_learning-TMVA_SOFIE_Keras_HiggsModel)
-  set (machine_learning-TMVA_SOFIE_Inference-depends tutorial-machine_learning-TMVA_SOFIE_RDataFrame)
-  if (ROOT_TORCH_FOUND)
-    set (machine_learning-keras-RegressionKeras-depends tutorial-machine_learning-pytorch-RegressionPyTorch-py)
-    set (machine_learning-keras-ClassificationKeras-depends tutorial-machine_learning-pytorch-ClassificationPyTorch-py)
-  endif()
-  set (machine_learning-keras-ApplicationRegressionKeras-depends tutorial-machine_learning-keras-RegressionKeras-py)
-  set (machine_learning-keras-ApplicationClassificationKeras-depends tutorial-machine_learning-keras-ClassificationKeras-py)
-endif()
+set (machine_learning-pytorch-ApplicationClassificationPyTorch-depends tutorial-machine_learning-pytorch-ClassificationPyTorch-py)
+set (machine_learning-pytorch-RegressionPyTorch-depends tutorial-machine_learning-pytorch-ApplicationClassificationPyTorch-py)
+set (machine_learning-pytorch-ApplicationRegressionPyTorch-depends tutorial-machine_learning-pytorch-RegressionPyTorch-py)
+set (machine_learning-TMVA_SOFIE_RSofieReader-depends tutorial-machine_learning-TMVA_Higgs_Classification)
+set (machine_learning-TMVA_SOFIE_RDataFrame_JIT-depends tutorial-machine_learning-TMVA_SOFIE_RSofieReader)
+set (machine_learning-TMVA_SOFIE_Keras_HiggsModel-depends tutorial-machine_learning-TMVA_SOFIE_RDataFrame_JIT)
+set (machine_learning-TMVA_SOFIE_RDataFrame-depends tutorial-machine_learning-TMVA_SOFIE_Keras_HiggsModel)
+set (machine_learning-TMVA_SOFIE_Inference-depends tutorial-machine_learning-TMVA_SOFIE_RDataFrame)
+set (machine_learning-keras-RegressionKeras-depends tutorial-machine_learning-pytorch-RegressionPyTorch-py)
+set (machine_learning-keras-ClassificationKeras-depends tutorial-machine_learning-pytorch-ClassificationPyTorch-py)
+set (machine_learning-keras-ApplicationRegressionKeras-depends tutorial-machine_learning-keras-RegressionKeras-py)
+set (machine_learning-keras-ApplicationClassificationKeras-depends tutorial-machine_learning-keras-ClassificationKeras-py)
 
 #--List long-running tutorials to label them as "longtest"
 set (long_running
@@ -701,10 +688,8 @@ foreach(t ${tutorials})
     # pool in case the tutorial invokes ROOT::EnableImplicitMT(), which by
     # default creates a thread pool of the size of the total number of cores.
     if(${t} IN_LIST multithreaded_all_cores)
-      set(createThreadPool "-e \"ROOT::EnableImplicitMT(${NProcessors})\"")
+      set(ROOT_MAX_THREADS "ROOT_MAX_THREADS=${NProcessors}")
     endif()
-  else()
-    unset(createThreadPool)
   endif()
 
   if(${t} IN_LIST need_network)
@@ -719,18 +704,15 @@ foreach(t ${tutorials})
    endif()
 
   ROOT_ADD_TEST(tutorial-${tname}
-                COMMAND ${ROOT_root_CMD} -b -l -q ${createThreadPool} ${CMAKE_CURRENT_SOURCE_DIR}/${t}${${tname}-aclic}
+                COMMAND ${ROOT_root_CMD} -b -l -q ${CMAKE_CURRENT_SOURCE_DIR}/${t}${${tname}-aclic}
                 PASSRC ${rc} FAILREGEX "Error in <" ": error:" "segmentation violation" "FROM HESSE     STATUS=FAILED" "warning: Failed to call"
                 LABELS ${labels}
                 DEPENDS tutorial-hsimple ${${tname}-depends}
-                ENVIRONMENT ${TUTORIAL_ENV}
+                ENVIRONMENT ${TUTORIAL_ENV} ${ROOT_MAX_THREADS}
                 TIMEOUT ${thisTestTimeout})
 
   if(${t} IN_LIST multithreaded)
-    # Makes sure that this doesn't run in parallel with other multithreaded tutorials, and that cmake doesn't start too
-    # many other tests. That we use 4 processors is actually a lie, because IMT takes whatever it finds.
-    # However, even this poor indication of MT behaviour is a good hint for cmake to reduce congestion.
-    set_tests_properties(tutorial-${tname} PROPERTIES RESOURCE_LOCK multithreaded PROCESSORS ${NProcessors})
+    set_tests_properties(tutorial-${tname} PROPERTIES PROCESSORS ${NProcessors})
   endif()
 endforeach()
 
@@ -772,8 +754,6 @@ if(ROOT_pyroot_FOUND)
 
   # Copy .rootlogon.py file into the build directory. It disables graphics for the Python tutorials
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/.rootlogon.py ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
-  # Copy .enableImplicitMTWrapper.py file into the build directory. It can limit the size of the thread pool
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/.enableImplicitMTWrapper.py ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
   file(GLOB_RECURSE pytutorials RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.py)
 
@@ -793,7 +773,6 @@ if(ROOT_pyroot_FOUND)
              io/sql/sqlfilldb.py       # same as the C++ case
              io/sql/sqlselect.py       # same as the C++ case
              launcher.py            # Not a tutorial
-             .enableImplicitMTWrapper.py # Not a tutorial
              )
 
   if(NOT dataframe
@@ -838,11 +817,12 @@ if(ROOT_pyroot_FOUND)
     list(APPEND pyveto ${tmva_veto_py})
   endif()
 
-  if(NOT ROOT_KERAS_FOUND)
+  if(NOT tmva-pymva)
     file(GLOB tmva_veto_py RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} machine_learning/keras/*.py)
     list(APPEND pyveto ${tmva_veto_py})
   elseif(ROOT_ARCHITECTURE MATCHES macosx)
-    #veto also keras tutorial on macos due to issue in disabling eager execution on macos
+    # Veto also keras tutorial on macos due to issue in disabling eager execution on macos
+    # TODO: fix these tutorials on macOS
     list(APPEND pyveto machine_learning/keras/RegressionKeras.py)
     list(APPEND pyveto machine_learning/keras/ApplicationRegressionKeras.py)
     list(APPEND pyveto machine_learning/keras/MultiClassKeras.py)
@@ -852,7 +832,7 @@ if(ROOT_pyroot_FOUND)
     set (machine_learning-TMVA_SOFIE_RDataFrame-py-depends tutorial-machine_learning-TMVA_SOFIE_Keras_HiggsModel)
   endif()
 
-  if(NOT ROOT_TORCH_FOUND)
+  if(NOT tmva-pymva)
     file(GLOB tmva_veto_py RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} machine_learning/pytorch/*.py)
     list(APPEND pyveto ${tmva_veto_py})
   endif()
@@ -900,8 +880,10 @@ if(ROOT_pyroot_FOUND)
   # To add a new requirement, add a glob expression that's named requires_<packageName>,
   # and add it to the list "fixtureLists" below.
   file(GLOB requires_numpy   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+      analysis/dataframe/df017_vecOpsHEP.py
       analysis/dataframe/df026_AsNumpyArrays.py
       analysis/dataframe/df032_RDFFromNumpy.py
+      hist/hist010_TH1_two_scales.py
       math/fit/NumericalMinimization.py
       math/fit/combinedFit.py
       math/fit/fitConvolution.py
@@ -923,15 +905,41 @@ if(ROOT_pyroot_FOUND)
       visualisation/graphs/gr013_polar2.py
       visualisation/graphs/gr014_polar3.py
   )
-  file(GLOB requires_numba   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} analysis/dataframe/df038_NumbaDeclare.py)
+  file(GLOB requires_numba   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+      analysis/dataframe/df038_NumbaDeclare.py
+      analysis/dataframe/df101_h1Analysis.py)
   file(GLOB requires_pandas  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
       analysis/dataframe/df026_AsNumpyArrays.py
       analysis/dataframe/df035_RDFFromPandas.py
       roofit/roofit/rf409_NumPyPandasToRooFit.py)
-  file(GLOB requires_keras   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} machine_learning/keras/*.py)
-  file(GLOB requires_torch   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} machine_learning/pytorch/*.py)
+  file(GLOB requires_keras   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+      machine_learning/TMVA_SOFIE_Inference.py
+      machine_learning/TMVA_SOFIE_Models.py
+      machine_learning/TMVA_SOFIE_RDataFrame.py
+      machine_learning/keras/*.py
+  )
+  file(GLOB requires_torch   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+      machine_learning/pytorch/*.py
+      machine_learning/RBatchGenerator_PyTorch.py
+  )
   file(GLOB requires_xgboost RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} machine_learning/tmva10*.py)
-  set(fixtureLists requires_numpy requires_numba requires_pandas requires_keras requires_xgboost requires_torch)
+  file(GLOB requires_sklearn RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+      machine_learning/TMVA_SOFIE_Models.py
+      roofit/roofit/rf617_simulation_based_inference_multidimensional.py
+  )
+  file(GLOB requires_tensorflow RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+      machine_learning/RBatchGenerator_TensorFlow.py
+  )
+  set(fixtureLists
+      requires_keras
+      requires_numba
+      requires_numpy
+      requires_pandas
+      requires_sklearn
+      requires_tensorflow
+      requires_torch
+      requires_xgboost
+  )
 
   # Now set up all the tests
   foreach(t ${pytutorials})
@@ -951,12 +959,8 @@ if(ROOT_pyroot_FOUND)
       # pool in case the tutorial invokes ROOT::EnableImplicitMT(), which by
       # default creates a thread pool of the size of the total number of cores.
       if(${t} IN_LIST multithreaded_all_cores)
-        set(setThreadPoolSize ".enableImplicitMTWrapper.py")
-        set(thisTestPoolSize ${NProcessors})
+        set(ROOT_MAX_THREADS "ROOT_MAX_THREADS=${NProcessors}")
       endif()
-    else()
-      unset(setThreadPoolSize)
-      unset(thisTestPoolSize)
     endif()
 
     string(REPLACE ".py" "" tname ${t})
@@ -988,11 +992,11 @@ if(ROOT_pyroot_FOUND)
     endif()
 
     ROOT_ADD_TEST(${tutorial_name}
-                COMMAND ${Python3_EXECUTABLE} ${setThreadPoolSize} ${thisTestPoolSize} ${CMAKE_CURRENT_SOURCE_DIR}/${t}
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${t}
                 PASSRC ${rc} FAILREGEX "Error in" ": error:" "segmentation violation"
                 LABELS ${labels}
                 DEPENDS ${tutorial_dependency}
-                ENVIRONMENT ${TUTORIAL_ENV}
+                ENVIRONMENT ${TUTORIAL_ENV} ${ROOT_MAX_THREADS}
                 PYTHON_DEPS ${python_deps}
                 ${py_will_fail})
 

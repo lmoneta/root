@@ -704,13 +704,8 @@ namespace {
 #elif __APPLE__
     if (Triple.isMacOSX()) {
       if (CI.getTarget().getSDKVersion() < VersionTuple(14, 4)) {
-        maybeAppendOverlayEntry(stdIncLoc.str(), "std_darwin.MacOSX14.2.sdk.modulemap",
-                                clingIncLoc.str().str(), MOverlay,
-                                /*RegisterModuleMap=*/ true,
-                                /*AllowModulemapOverride=*/ false);
-      } else if (CI.getTarget().getSDKVersion() < VersionTuple(15, 4)) {
         maybeAppendOverlayEntry(stdIncLoc.str(),
-                                "std_darwin.MacOSX15.2.sdk.modulemap",
+                                "std_darwin.MacOSX14.2.sdk.modulemap",
                                 clingIncLoc.str().str(), MOverlay,
                                 /*RegisterModuleMap=*/true,
                                 /*AllowModulemapOverride=*/false);
@@ -854,6 +849,9 @@ namespace {
     PPOpts.addMacroDef("__CLING__GNUC_MINOR__=" ClingStringify(__GNUC_MINOR__));
 #elif defined(_MSC_VER)
     PPOpts.addMacroDef("__CLING__MSVC__=" ClingStringify(_MSC_VER));
+#if defined(_WIN64) && defined(_DEBUG)
+    PPOpts.addMacroDef("_ITERATOR_DEBUG_LEVEL=0");
+#endif
 #endif
 
 // https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
@@ -1387,11 +1385,6 @@ namespace {
       argvCompile.push_back("-fno-omit-frame-pointer");
 #endif
 
-#ifdef __cpp_sized_deallocation
-      // Propagate the setting of the compiler to the interpreter
-      argvCompile.push_back("-fsized-deallocation");
-#endif
-
     // Disable optimizations and keep frame pointer when debugging, overriding
     // other optimization options that might be in argv
     if (debuggingEnabled) {
@@ -1417,10 +1410,6 @@ namespace {
 #endif
 
     if (!COpts.HasOutput || !HasInput) {
-      // suppress the warning "argument unused during compilation: -c" of the
-      // device interpreter instance
-      if (!COpts.CUDADevice)
-        argvCompile.push_back("-c");
       argvCompile.push_back("-");
     }
 

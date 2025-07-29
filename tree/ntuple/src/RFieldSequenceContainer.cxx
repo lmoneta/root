@@ -104,12 +104,12 @@ std::unique_ptr<ROOT::RFieldBase::RDeleter> ROOT::RArrayField::GetDeleter() cons
 
 std::vector<ROOT::RFieldBase::RValue> ROOT::RArrayField::SplitValue(const RValue &value) const
 {
-   auto arrayPtr = value.GetPtr<unsigned char>().get();
+   auto valuePtr = value.GetPtr<void>();
+   auto arrayPtr = static_cast<unsigned char *>(valuePtr.get());
    std::vector<RValue> result;
    result.reserve(fArrayLength);
    for (unsigned i = 0; i < fArrayLength; ++i) {
-      result.emplace_back(
-         fSubfields[0]->BindValue(std::shared_ptr<void>(value.GetPtr<void>(), arrayPtr + (i * fItemSize))));
+      result.emplace_back(fSubfields[0]->BindValue(std::shared_ptr<void>(valuePtr, arrayPtr + (i * fItemSize))));
    }
    return result;
 }
@@ -160,12 +160,7 @@ std::size_t EvalRVecValueSize(std::size_t alignOfT, std::size_t sizeOfT, std::si
 
    // mimic the logic of RVecInlineStorageSize, but at runtime
    const auto inlineStorageSz = [&] {
-#ifdef R__HAS_HARDWARE_INTERFERENCE_SIZE
-      // hardware_destructive_interference_size is a C++17 feature but many compilers do not implement it yet
-      constexpr unsigned cacheLineSize = std::hardware_destructive_interference_size;
-#else
-      constexpr unsigned cacheLineSize = 64u;
-#endif
+      constexpr unsigned cacheLineSize = R__HARDWARE_INTERFERENCE_SIZE;
       const unsigned elementsPerCacheLine = (cacheLineSize - dataMemberSz) / sizeOfT;
       constexpr unsigned maxInlineByteSize = 1024;
       const unsigned nElements =
@@ -605,15 +600,15 @@ std::unique_ptr<ROOT::RFieldBase::RDeleter> ROOT::RVectorField::GetDeleter() con
 
 std::vector<ROOT::RFieldBase::RValue> ROOT::RVectorField::SplitValue(const RValue &value) const
 {
-   auto vec = value.GetPtr<std::vector<char>>();
+   auto valuePtr = value.GetPtr<void>();
+   auto *vec = static_cast<std::vector<char> *>(valuePtr.get());
    R__ASSERT(fItemSize > 0);
    R__ASSERT((vec->size() % fItemSize) == 0);
    auto nItems = vec->size() / fItemSize;
    std::vector<RValue> result;
    result.reserve(nItems);
    for (unsigned i = 0; i < nItems; ++i) {
-      result.emplace_back(
-         fSubfields[0]->BindValue(std::shared_ptr<void>(value.GetPtr<void>(), vec->data() + (i * fItemSize))));
+      result.emplace_back(fSubfields[0]->BindValue(std::shared_ptr<void>(valuePtr, vec->data() + (i * fItemSize))));
    }
    return result;
 }

@@ -142,9 +142,11 @@ RooFuncWrapper::loadParamsAndData(RooArgSet const &paramSet, const RooAbsData *d
       idx += n;
    }
 
-   // Extract parameters
    for (auto *param : paramSet) {
       if (!dynamic_cast<RooAbsReal *>(param)) {
+         if (param->isConstant()) {
+            continue;
+         }
          std::stringstream errorMsg;
          errorMsg << "In creation of function " << GetName()
                   << " wrapper: input param expected to be of type RooAbsReal.";

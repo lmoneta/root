@@ -448,9 +448,20 @@ PyObject* VectorIAdd(PyObject* self, PyObject* args, PyObject* /* kwds */)
         if (PyObject_CheckBuffer(fi) && !(CPyCppyy_PyText_Check(fi) || PyBytes_Check(fi))) {
             PyObject* vend = PyObject_CallMethodNoArgs(self, PyStrings::gEnd);
             if (vend) {
-                PyObject* result = PyObject_CallMethodObjArgs(self, PyStrings::gInsert, vend, fi, nullptr);
+            // when __iadd__ is overriden, the operation does not end with
+            // calling the __iadd__ method, but also assigns the result to the
+            // lhs of the iadd. For example, performing vec += arr, Python
+            // first calls our override, and then does vec = vec.iadd(arr).
+                PyObject *it = PyObject_CallMethodObjArgs(self, PyStrings::gInsert, vend, fi, nullptr);
                 Py_DECREF(vend);
-                return result;
+
+                if (!it)
+                    return nullptr;
+
+                Py_DECREF(it);
+            // Assign the result of the __iadd__ override to the std::vector
+                Py_INCREF(self);
+                return self;
             }
         }
     }
@@ -551,13 +562,18 @@ static PyObject* vector_iter(PyObject* v) {
     vectoriterobject* vi = PyObject_GC_New(vectoriterobject, &VectorIter_Type);
     if (!vi) return nullptr;
 
-    Py_INCREF(v);
     vi->ii_container = v;
 
 // tell the iterator code to set a life line if this container is a temporary
     vi->vi_flags = vectoriterobject::kDefault;
-    if (Py_REFCNT(v) <= 2 || (((CPPInstance*)v)->fFlags & CPPInstance::kIsValue))
+#if PY_VERSION_HEX >= 0x030e0000
+    if (PyUnstable_Object_IsUniqueReferencedTemporary(v) || (((CPPInstance*)v)->fFlags & CPPInstance::kIsValue))
+#else
+    if (Py_REFCNT(v) <= 1 || (((CPPInstance*)v)->fFlags & CPPInstance::kIsValue))
+#endif
         vi->vi_flags = vectoriterobject::kNeedLifeLine;
+
+    Py_INCREF(v);
 
     PyObject* pyvalue_type = PyObject_GetAttr((PyObject*)Py_TYPE(v), PyStrings::gValueType);
     if (pyvalue_type) {
@@ -1633,8 +1649,12 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, const std::string& name)
     }
 
 // for STL containers, and user classes modeled after them
-    if (HasAttrDirect(pyclass, PyStrings::gSize))
+// the attribute must be a CPyCppyy overload, otherwise the check gives false
+// positives in the case where the class has a non-function attribute that is
+// called "size".
+    if (HasAttrDirect(pyclass, PyStrings::gSize, /*mustBeCPyCppyy=*/ true)) {
         Utility::AddToClass(pyclass, "__len__", "size");
+    }
 
     if (!IsTemplatedSTLClass(name, "vector")  &&      // vector is dealt with below
            !((PyTypeObject*)pyclass)->tp_iter) {
@@ -1815,6 +1835,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, const std::string& name)
 
         // data with size
             Utility::AddToClass(pyclass, "__real_data", "data");
+            PyErr_Clear(); // AddToClass might have failed for data
             Utility::AddToClass(pyclass, "data", (PyCFunction)VectorData);
 
         // The addition of the __array__ utility to std::vector Python proxies causes a

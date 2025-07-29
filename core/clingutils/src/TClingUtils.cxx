@@ -522,17 +522,16 @@ AnnotatedRecordDecl::AnnotatedRecordDecl(long index,
 
 ////////////////////////////////////////////////////////////////////////////////
 
-TClingLookupHelper::TClingLookupHelper(cling::Interpreter &interpreter,
-                                       TNormalizedCtxt &normCtxt,
-                                       ExistingTypeCheck_t existingTypeCheck,
-                                       AutoParse_t autoParse,
-                                       bool *shuttingDownPtr,
-                                       const int* pgDebug /*= 0*/):
-   fInterpreter(&interpreter),fNormalizedCtxt(&normCtxt),
-   fExistingTypeCheck(existingTypeCheck),
-   fAutoParse(autoParse),
-   fInterpreterIsShuttingDownPtr(shuttingDownPtr),
-   fPDebug(pgDebug)
+TClingLookupHelper::TClingLookupHelper(cling::Interpreter &interpreter, TNormalizedCtxt &normCtxt,
+                                       ExistingTypeCheck_t existingTypeCheck, CheckInClassTable_t CheckInClassTable,
+                                       AutoParse_t autoParse, bool *shuttingDownPtr, const int *pgDebug /*= 0*/)
+   : fInterpreter(&interpreter),
+     fNormalizedCtxt(&normCtxt),
+     fExistingTypeCheck(existingTypeCheck),
+     fCheckInClassTable(CheckInClassTable),
+     fAutoParse(autoParse),
+     fInterpreterIsShuttingDownPtr(shuttingDownPtr),
+     fPDebug(pgDebug)
 {
 }
 
@@ -547,6 +546,17 @@ bool TClingLookupHelper::ExistingTypeCheck(const std::string &tname,
 
    if (fExistingTypeCheck) return fExistingTypeCheck(tname,result);
    else return false;
+}
+
+bool TClingLookupHelper::CheckInClassTable(const std::string &tname, std::string &result)
+{
+   if (tname.empty())
+      return false;
+
+   if (fCheckInClassTable)
+      return fCheckInClassTable(tname, result);
+   else
+      return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -4184,10 +4194,18 @@ void ROOT::TMetaUtils::GetNormalizedName(std::string &norm_name, const clang::Qu
    cling::Interpreter::PushTransactionRAII clingRAII(const_cast<cling::Interpreter*>(&interpreter));
    normalizedType.getAsStringInternal(normalizedNameStep1,policy);
 
+   // Remove the _Atomic type specifyier if present before normalising
+   TClassEdit::AtomicTypeNameHandlerRAII atomicTypeNameHandler_step1(
+      normalizedNameStep1, TClassEdit::AtomicTypeNameHandlerRAII::EBehavior::kDetectStrip);
+
    // Still remove the std:: and default template argument for STL container and
    // normalize the location and amount of white spaces.
    TClassEdit::TSplitType splitname(normalizedNameStep1.c_str(),(TClassEdit::EModType)(TClassEdit::kLong64 | TClassEdit::kDropStd | TClassEdit::kDropStlDefault | TClassEdit::kKeepOuterConst));
    splitname.ShortType(norm_name,TClassEdit::kDropStd | TClassEdit::kDropStlDefault );
+
+   TClassEdit::AtomicTypeNameHandlerRAII atomicTypeNameHandler_norm_name(
+      norm_name, atomicTypeNameHandler_step1.IsAtomic() ? TClassEdit::AtomicTypeNameHandlerRAII::EBehavior::kReadd
+                                                        : TClassEdit::AtomicTypeNameHandlerRAII::EBehavior::kNoOp);
 
    // The result of this routine is by definition a fully qualified name.  There is an implicit starting '::' at the beginning of the name.
    // Depending on how the user typed their code, in particular typedef declarations, we may end up with an explicit '::' being
@@ -4922,10 +4940,7 @@ clang::QualType ROOT::TMetaUtils::ReSubstTemplateArg(clang::QualType input, cons
          replacedCtxt = nullptr;
       }
 
-      if ((replacedCtxt && replacedCtxt->getCanonicalDecl() == TSTdecl->getSpecializedTemplate()->getCanonicalDecl())
-          || /* the following is likely just redundant */
-          substType->getReplacedParameter()
-          == TSTdecl->getSpecializedTemplate ()->getTemplateParameters()->getParam(index))
+      if (replacedCtxt && replacedCtxt->getCanonicalDecl() == TSTdecl->getSpecializedTemplate()->getCanonicalDecl())
       {
          const auto &TAs = TST->template_arguments();
          if (index >= TAs.size()) {

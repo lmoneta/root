@@ -12,7 +12,6 @@
 #include <utility>
 #include <vector>
 
-
 //- basic example class
 class just_a_class {
 public:

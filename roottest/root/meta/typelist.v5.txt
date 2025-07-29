@@ -68,7 +68,6 @@ TKDTreeID
 basic_ios<char,char_traits<char> >::traits_type
 Short_t
 TKDTreeIF
-ROOT::Math::TDataPointN<double>::value_type
 basic_stringbuf<char,char_traits<char>,allocator<char> >::pos_type
 Version_t
 basic_ifstream<char,char_traits<char> >::char_type
@@ -134,7 +133,6 @@ basic_istream<char,char_traits<char> >::traits_type
 vector<pair<int,int>,allocator<pair<int,int> > >::size_type
 ROOT::Fit::DataRange::RangeSet
 TVirtualCollectionProxy::CreateIterators_t
-ROOT::Math::IGradientFunctionMultiDim::BaseFunc
 timespec_t
 Float_t
 ROOT::Fit::LogLikelihoodFCN<ROOT::Math::IGradientFunctionMultiDim>::BaseObjFunction
@@ -181,7 +179,6 @@ vector<string,allocator<string> >::reference
 vector<TString,allocator<TString> >::const_pointer
 vector<double,allocator<double> >::const_iterator
 string::pointer
-ROOT::Math::TDataPointN<float>::value_type
 TColorGradient::SizeType_t
 vector<string,allocator<string> >::iterator::reference
 vector<double,allocator<double> >::difference_type
@@ -271,7 +268,6 @@ FontH_t
 ROOT::Math::KDTree<ROOT::Math::TDataPoint<1,double> >::value_type
 char*
 vector<double,allocator<double> >::value_type
-ROOT::Math::IGradientFunctionOneDim::BaseFunc
 istream
 TTabCom::TContainer
 Ssiz_t
@@ -299,14 +295,12 @@ basic_stringbuf<char,char_traits<char>,allocator<char> >::char_type
 ROOT::TSchemaRule::RuleType_t
 vector<TString,allocator<TString> >::value_type
 UShort_t
-ROOT::Math::IGradientFunctionMultiDim::BaseGrad
 ROOT::Math::BasicFitMethodFunction<ROOT::Math::IBaseFunctionMultiDim>::BaseFunction
 basic_ostream<char,char_traits<char> >::char_type
 vector<int,allocator<int> >::const_reference
 string::const_iterator
 ROOT::Fit::PoissonLLFunction
 vector<string,allocator<string> >::const_iterator
-ROOT::Math::IGradientFunctionOneDim::BaseGrad
 TVirtualFitter::FCNFunc_t
 KeySym_t
 string::difference_type

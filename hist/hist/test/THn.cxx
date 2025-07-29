@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "THn.h"
+#include "THnSparse.h"
 #include "TH1.h"
 #include "TH2.h"
 
@@ -143,4 +144,47 @@ TEST(THn, GetBinCenter)
    auto centers = hn.GetBinCenter({1, 1});
    EXPECT_DOUBLE_EQ(centers.at(0), 2.5);
    EXPECT_DOUBLE_EQ(centers.at(1), -1.5);
+}
+
+TEST(THn, ErrorsOfProjection)
+{
+   const int bins[] = {10, 10, 10, 10};
+   const double xmin[] = {0, 0, 0, 0};
+   const double xmax[] = {10, 10, 10, 10};
+   THnF thn("thn", "", 4, bins, xmin, xmax);
+   thn.Sumw2();
+
+   const double coordinates1[]{0.5, 0.5, 0.5, 0.5};
+
+   for (int i = 0; i < 9; i++) {
+      thn.Fill(coordinates1, 0.1);
+      const double coordinates2[]{1.5, 1.5, 0.5 + i, 0.5 + i};
+      thn.Fill(coordinates2, 2.);
+   }
+
+   const Int_t dimensions[] = {0, 1};
+   // Despite the option "E", the errors are resetted to sqrt(N) instead of keeping the original ones
+   std::unique_ptr<THnBase> proj{thn.ProjectionND(2, dimensions, "E")};
+
+   const auto projectedBin = proj->GetBin(coordinates1);
+   EXPECT_FLOAT_EQ(proj->GetBinContent(projectedBin), 0.9);
+   EXPECT_FLOAT_EQ(proj->GetBinError(projectedBin), 0.3);
+
+   const double coordinates2[]{1.5, 1.5};
+   const auto projectedBin2 = proj->GetBin(coordinates2);
+   EXPECT_FLOAT_EQ(proj->GetBinContent(projectedBin2), 18.);
+   EXPECT_FLOAT_EQ(proj->GetBinError(projectedBin2), 6.);
+}
+
+// https://github.com/root-project/root/issues/19366
+TEST(THn, CreateSparse)
+{
+   Int_t bins[1] = {5};
+   Double_t xmin[1] = {0.};
+   Double_t xmax[1] = {1.};
+   THnD hn("hn", "hn", 1, bins, xmin, xmax);
+   hn.Fill(0.5);
+   auto hn_sparse = THnSparseD::CreateSparse("", "", &hn);
+   EXPECT_EQ(hn_sparse->GetNbins(), 1);
+   EXPECT_FLOAT_EQ(hn_sparse->GetSparseFractionBins(), 1. / 7); // 5 + under/overflows
 }

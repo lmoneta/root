@@ -16,24 +16,16 @@ namespace MySpace {
   public:
     int a;
     //    ClassDef(MySpace::A,1)
-    ClassDef(A,1)
+    ClassDefOverride(A,1)
   };
 
   class MyClass : public TObject {
   public:
     int a;
-    MyClass() {};
-    MyClass(int a_) : a(a_) {};
-#ifdef NESTING_PROBLEM_SOLVED
+    MyClass() {}
+    MyClass(int a_) : a(a_) {}
     std::vector<A> member;
-#else
-#ifdef R__GLOBALSTL
-    vector<MySpace::A> member;
-#else
-    std::vector<MySpace::A> member;
-#endif
-#endif
-    ClassDef(MyClass,1)
+    ClassDefOverride(MyClass,1)
   };
 
 } // end namespace

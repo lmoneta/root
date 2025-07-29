@@ -22,8 +22,13 @@
 #       macro, the connection check will not run again.
 #----------------------------------------------------------------------------
 macro(ROOT_CHECK_CONNECTION option)
-    # Do something only if connection check is not already done
+  # Do something only if connection check is not already done
   if(NOT DEFINED NO_CONNECTION)
+    if(NOT check_connection)
+      # If the connection check is disabled, just assume there is internet
+      # connection
+      set(NO_CONNECTION FALSE)
+    endif()
     message(STATUS "Checking internet connectivity")
     file(DOWNLOAD https://root.cern/files/cmake_connectivity_test.txt ${CMAKE_CURRENT_BINARY_DIR}/cmake_connectivity_test.txt
       TIMEOUT 10 STATUS DOWNLOAD_STATUS
@@ -32,7 +37,7 @@ macro(ROOT_CHECK_CONNECTION option)
     list(GET DOWNLOAD_STATUS 0 STATUS_CODE)
     # Check if download was successful.
     if(${STATUS_CODE} EQUAL 0)
-      # Succcess
+      # Success
       message(STATUS "Checking internet connectivity - found")
       # Now let's delete the file
       file(REMOVE ${CMAKE_CURRENT_BINARY_DIR}/cmake_connectivity_test.txt)
@@ -40,9 +45,9 @@ macro(ROOT_CHECK_CONNECTION option)
     else()
       # Error
       if(fail-on-missing)
-        message(FATAL_ERROR "No internet connection. Please check your connection, set '-D${option}' or disable 'fail-on-missing' to automatically disable options requiring internet access")
+        message(FATAL_ERROR "No internet connection. Please check your connection, set '-D${option}' or disable 'fail-on-missing' to automatically disable options requiring internet access. You can also bypass the connection check with -Dcheck_connection=OFF.")
       endif()
-      message(STATUS "Checking internet connectivity - failed: will not automatically download external dependencies")
+      message(STATUS "Checking internet connectivity - failed: will not automatically download external dependencies. You can bypass the connection check with -Dcheck_connection=OFF.")
       set(NO_CONNECTION TRUE)
     endif()
   endif()
@@ -143,6 +148,16 @@ if(NOT builtin_nlohmannjson)
       message(STATUS "nlohmann/json.hpp not found. Switching on builtin_nlohmannjson option")
       set(builtin_nlohmannjson ON CACHE BOOL "Enabled because nlohmann/json.hpp not found" FORCE)
     endif()
+  endif()
+
+  # ROOTEve wants to know if it comes with json_fwd.hpp:
+  if(TARGET nlohmann_json::nlohmann_json)
+    get_target_property(inc_dirs nlohmann_json::nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
+    foreach(dir ${inc_dirs})
+      if(EXISTS "${dir}/nlohmann/json_fwd.hpp")
+        target_compile_definitions(nlohmann_json::nlohmann_json INTERFACE NLOHMANN_JSON_PROVIDES_FWD_HPP)
+      endif()
+    endforeach()
   endif()
 endif()
 
@@ -342,6 +357,11 @@ if(builtin_lzma)
     )
     set(LIBLZMA_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
   endif()
+
+  add_library(LibLZMA STATIC IMPORTED GLOBAL)
+  add_library(LibLZMA::LibLZMA ALIAS LibLZMA)
+  target_include_directories(LibLZMA INTERFACE ${LIBLZMA_INCLUDE_DIR})
+  set_target_properties(LibLZMA PROPERTIES IMPORTED_LOCATION ${LIBLZMA_LIBRARIES})
 endif()
 
 #---Check for xxHash-----------------------------------------------------------------
@@ -658,8 +678,6 @@ set(Python3_FIND_FRAMEWORK LAST)
 list(APPEND python_components Interpreter)
 if(pyroot OR tmva-pymva)
   list(APPEND python_components Development)
-endif()
-if(tmva-pymva)
   list(APPEND python_components NumPy)
 endif()
 find_package(Python3 3.8 COMPONENTS ${python_components})
@@ -818,20 +836,6 @@ if(builtin_openssl)
   endif()
 endif()
 
-#---Check for MySQL-------------------------------------------------------------------
-if(mysql)
-  message(STATUS "Looking for MySQL")
-  find_package(MySQL)
-  if(NOT MYSQL_FOUND)
-    if(fail-on-missing)
-      message(SEND_ERROR "MySQL libraries not found and they are required (mysql option enabled)")
-    else()
-      message(STATUS "MySQL not found. Switching off mysql option")
-      set(mysql OFF CACHE BOOL "Disabled because MySQL not found (${mysql_description})" FORCE)
-    endif()
-  endif()
-endif()
-
 #---Check for FastCGI-----------------------------------------------------------
 if(fcgi)
   message(STATUS "Looking for FastCGI")
@@ -842,35 +846,6 @@ if(fcgi)
     else()
       message(STATUS "FastCGI not found. Switching off fcgi option")
       set(fcgi OFF CACHE BOOL "Disabled because FastCGI not found" FORCE)
-    endif()
-  endif()
-endif()
-
-
-#---Check for ODBC-------------------------------------------------------------------
-if(odbc)
-  message(STATUS "Looking for ODBC")
-  find_package(ODBC)
-  if(NOT ODBC_FOUND)
-    if(fail-on-missing)
-      message(SEND_ERROR "ODBC libraries not found and they are required (odbc option enabled)")
-    else()
-      message(STATUS "ODBC not found. Switching off odbc option")
-      set(odbc OFF CACHE BOOL "Disabled because ODBC not found (${odbc_description})" FORCE)
-    endif()
-  endif()
-endif()
-
-#---Check for PostgreSQL-------------------------------------------------------------------
-if(pgsql)
-  message(STATUS "Looking for PostgreSQL")
-  find_package(PostgreSQL)
-  if(NOT PostgreSQL_FOUND)
-    if(fail-on-missing)
-      message(SEND_ERROR "PostgreSQL libraries not found and they are required (pgsql option enabled)")
-    else()
-      message(STATUS "PostgreSQL not found. Switching off pgsql option")
-      set(pgsql OFF CACHE BOOL "Disabled because PostgreSQL not found (${pgsql_description})" FORCE)
     endif()
   endif()
 endif()
@@ -985,13 +960,6 @@ foreach(suffix FOUND INCLUDE_DIR INCLUDE_DIRS LIBRARY LIBRARIES)
   unset(XROOTD_${suffix} CACHE)
 endforeach()
 
-if(xrootd OR builtin_xrootd)
-  # This is the target that ROOT will use, irrespective of whether XRootD is a builtin or in the system.
-  # All targets should only link to ROOT::XRootD. Refrain from using XRootD variables.
-  add_library(XRootD INTERFACE IMPORTED GLOBAL)
-  add_library(ROOT::XRootD ALIAS XRootD)
-endif()
-
 if(xrootd AND NOT builtin_xrootd)
   message(STATUS "Looking for XROOTD")
   find_package(XRootD)
@@ -1011,6 +979,17 @@ if(xrootd AND NOT builtin_xrootd)
       endif()
     endif()
   endif()
+
+  if(XRootD_VERSION VERSION_LESS 5.8.4)
+    # Remove -D from XRootD's exported compile definitions. https://github.com/xrootd/xrootd/issues/2543
+    foreach(XRDTarget XRootD::XrdCl XRootD::XrdUtils)
+      if(TARGET ${XRDTarget})
+        get_target_property(PROP ${XRDTarget} INTERFACE_COMPILE_DEFINITIONS)
+        list(TRANSFORM PROP REPLACE "^-D" "")
+        set_property(TARGET ${XRDTarget} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${PROP})
+      endif()
+    endforeach()
+  endif()
 endif()
 
 if(builtin_xrootd)
@@ -1019,30 +998,28 @@ if(builtin_xrootd)
     message(FATAL_ERROR "No internet connection. Please check your connection, or either disable the 'builtin_xrootd'"
       " option or the 'fail-on-missing' to automatically disable options requiring internet access")
   endif()
+  if(NOT ssl AND NOT builtin_openssl)
+    message(FATAL_ERROR "Building XRootD ('builtin_xrootd'=On) requires ssl support ('ssl' or 'builtin_openssl').")
+  endif()
   list(APPEND ROOT_BUILTINS BUILTIN_XROOTD)
-  # The builtin XRootD requires OpenSSL.
-  # We have to find it here, such that OpenSSL is available in this scope to
-  # finalize the XRootD target configuration.
-  # See also: https://github.com/root-project/root/issues/16374
-  find_package(OpenSSL REQUIRED)
   add_subdirectory(builtins/xrootd)
   set(xrootd ON CACHE BOOL "Enabled because builtin_xrootd requested (${xrootd_description})" FORCE)
 endif()
 
-# Finalise the XRootD target configuration
-if(TARGET XRootD)
-
-  # The XROOTD_INCLUDE_DIRS provided by XRootD is actually a list with two
-  # paths, like:
+# Backward compatibility for XRootD <v5.8 without CMake targets:
+if(xrootd AND NOT TARGET XRootD::XrdCl)
+  # Before v5.7.0, XROOTD_INCLUDE_DIRS includes private headers, like:
   #   <xrootd_include_dir>;<xrootd_include_dir>/private
-  # We don't need the private headers, and we have to exclude this path from
-  # the build configuration if we don't want it to fail on systems were the
-  # private headers are not installed (most linux distributions).
-  list(GET XROOTD_INCLUDE_DIRS 0 XROOTD_INCLUDE_DIR_PRIMARY)
+  # The private headers are not always installed, so the configure step might fail.
+  # ROOT doesn't need these headers, so it's best to remove them.
+  list(FILTER XROOTD_INCLUDE_DIRS EXCLUDE REGEX .*/private)
 
-  target_include_directories(XRootD SYSTEM INTERFACE "$<BUILD_INTERFACE:${XROOTD_INCLUDE_DIR_PRIMARY}>")
-  target_link_libraries(XRootD INTERFACE $<BUILD_INTERFACE:${XROOTD_CLIENT_LIBRARIES}>)
-  target_link_libraries(XRootD INTERFACE $<BUILD_INTERFACE:${XROOTD_UTILS_LIBRARIES}>)
+  add_library(XRootD::XrdCl SHARED IMPORTED)
+  set_target_properties(XRootD::XrdCl PROPERTIES IMPORTED_LOCATION ${XROOTD_CLIENT_LIBRARIES})
+  target_include_directories(XRootD::XrdCl SYSTEM INTERFACE $<BUILD_INTERFACE:${XROOTD_INCLUDE_DIRS}>)
+
+  add_library(XRootD::XrdUtils SHARED IMPORTED)
+  set_target_properties(XRootD::XrdUtils PROPERTIES IMPORTED_LOCATION ${XROOTD_UTILS_LIBRARIES})
 endif()
 
 #---check if netxng can be built-------------------------------
@@ -1073,16 +1050,6 @@ if(arrow)
       message(STATUS "For the time being switching OFF 'arrow' option")
       set(arrow OFF CACHE BOOL "Disabled because Apache Arrow API not found (${arrow_description})" FORCE)
     endif()
-  else()
-    if(${ARROW_VERSION} VERSION_GREATER_EQUAL 10.0.0 AND CMAKE_CXX_STANDARD LESS 17)
-      if(fail-on-missing)
-        message(SEND_ERROR "The Apache Arrow version found on the system (${ARROW_VERSION}) requires at least CMAKE_CXX_STANDARD=17")
-      else()
-        message(STATUS "The Apache Arrow version found on the system (${ARROW_VERSION}) requires at least CMAKE_CXX_STANDARD=17")
-        message(STATUS "For the time being switching OFF 'arrow' option")
-        set(arrow OFF CACHE BOOL "Disabled because Apache Arrow Version ${ARROW_VERSION} requires CMAKE_CXX_STANDARD=17)" FORCE)
-      endif()
-    endif()
   endif()
 
 endif()
@@ -1106,7 +1073,7 @@ if(opengl AND NOT builtin_ftgl)
   find_package(FTGL)
   if(NOT FTGL_FOUND)
     if(fail-on-missing)
-      message(SEND_ERROR "ftgl library not found and is required ('builtin_ftgl' is OFF). Set varible FTGL_ROOT_DIR to installation location")
+      message(SEND_ERROR "ftgl library not found and is required ('builtin_ftgl' is OFF). Set variable FTGL_ROOT_DIR to installation location")
     else()
       message(STATUS "ftgl library not found. Set variable FTGL_ROOT_DIR to point to your installation")
       message(STATUS "For the time being switching ON 'builtin_ftgl' option")
@@ -1582,7 +1549,7 @@ if(vdt OR builtin_vdt)
     set(VDT_FOUND True)
     set(VDT_LIBRARIES ${CMAKE_BINARY_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}vdt${CMAKE_SHARED_LIBRARY_SUFFIX})
     ExternalProject_Add(
-      VDT
+      BUILTIN_VDT
       URL ${lcgpackages}/vdt-${vdt_version}.tar.gz
       URL_HASH SHA256=1820feae446780763ec8bbb60a0dbcf3ae1ee548bdd01415b1fb905fd4f90c54
       INSTALL_DIR ${CMAKE_BINARY_DIR}
@@ -1600,24 +1567,23 @@ if(vdt OR builtin_vdt)
       TIMEOUT 600
     )
     ExternalProject_Add_Step(
-       VDT copy2externals
+       BUILTIN_VDT copy2externals
        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/include/vdt ${CMAKE_BINARY_DIR}/ginclude/vdt
        DEPENDEES install
     )
     set(VDT_INCLUDE_DIR ${CMAKE_BINARY_DIR}/ginclude)
     set(VDT_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/ginclude)
-    install(FILES ${CMAKE_BINARY_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}vdt${CMAKE_SHARED_LIBRARY_SUFFIX}
+
+    add_library(VDT::VDT SHARED IMPORTED GLOBAL)
+    add_dependencies(VDT::VDT BUILTIN_VDT)
+    set_target_properties(VDT::VDT PROPERTIES IMPORTED_LOCATION "${VDT_LIBRARIES}")
+    target_include_directories(VDT::VDT INTERFACE $<BUILD_INTERFACE:${VDT_INCLUDE_DIR}> $<INSTALL_INTERFACE:include/>)
+
+    install(FILES ${VDT_LIBRARIES}
             DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT libraries)
     install(DIRECTORY ${CMAKE_BINARY_DIR}/include/vdt
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT extra-headers)
-    set(vdt ON CACHE BOOL "Enabled because builtin_vdt enabled (${vdt_description})" FORCE)
-    set_property(GLOBAL APPEND PROPERTY ROOT_BUILTIN_TARGETS VDT)
-    add_library(VDT::VDT STATIC IMPORTED GLOBAL)
-    set_target_properties(VDT::VDT
-      PROPERTIES
-        IMPORTED_LOCATION "${VDT_LIBRARIES}"
-        INTERFACE_INCLUDE_DIRECTORIES "${VDT_INCLUDE_DIRS}"
-    )
+    set_property(GLOBAL APPEND PROPERTY ROOT_BUILTIN_TARGETS VDT::VDT)
   endif()
 endif()
 
@@ -1652,7 +1618,11 @@ if(tmva-sofie)
     message(STATUS "Looking for BLAS as an optional testing dependency of TMVA-SOFIE")
     find_package(BLAS)
     if(NOT BLAS_FOUND)
-      message(WARNING "BLAS not found: TMVA-SOFIE will not be fully tested")
+      if(fail-on-missing)
+        message(FATAL_ERROR "BLAS not found, but it's required for TMVA-SOFIE testing")
+      else()
+        message(WARNING "BLAS not found: TMVA-SOFIE will not be fully tested")
+      endif()
     endif()
   endif()
   message(STATUS "Looking for Protobuf")
@@ -1871,8 +1841,15 @@ if (roofit_multiprocess)
   endif()
 
   if(builtin_zeromq)
-    list(APPEND ROOT_BUILTINS ZeroMQ)
-    add_subdirectory(builtins/zeromq/libzmq)
+    ROOT_CHECK_CONNECTION("builtin_zeromq=OFF")
+    if(NO_CONNECTION)
+      message(STATUS "No internet connection, disabling the `builtin_zeromq` and `roofit_multiprocess` options")
+      set(builtin_zeromq OFF CACHE BOOL "Disabled because there is no internet connection" FORCE)
+      set(roofit_multiprocess OFF CACHE BOOL "Disabled because there is no internet connection" FORCE)
+    else()
+      list(APPEND ROOT_BUILTINS ZeroMQ)
+      add_subdirectory(builtins/zeromq/libzmq)
+    endif()
   endif()
 
   if(NOT builtin_cppzmq)
@@ -1895,8 +1872,15 @@ if (roofit_multiprocess)
   endif()
 
   if(builtin_cppzmq)
-    list(APPEND ROOT_BUILTINS cppzmq)
-    add_subdirectory(builtins/zeromq/cppzmq)
+    ROOT_CHECK_CONNECTION("builtin_cppzmq=OFF")
+    if(NO_CONNECTION)
+      message(STATUS "No internet connection, disabling the `builtin_cppzmq` and `roofit_multiprocess` options")
+      set(builtin_cppzmq OFF CACHE BOOL "Disabled because there is no internet connection" FORCE)
+      set(roofit_multiprocess OFF CACHE BOOL "Disabled because there is no internet connection" FORCE)
+    else()
+      list(APPEND ROOT_BUILTINS cppzmq)
+      add_subdirectory(builtins/zeromq/cppzmq)
+    endif()
   endif()
 endif (roofit_multiprocess)
 
@@ -1904,9 +1888,9 @@ endif (roofit_multiprocess)
 if (testing OR testsupport)
   if (NOT builtin_gtest)
     if(fail-on-missing)
-      find_package(GTest REQUIRED)
+      find_package(GTest 1.10 REQUIRED)
     else()
-      find_package(GTest)
+      find_package(GTest 1.10)
       if(NOT GTEST_FOUND)
         ROOT_CHECK_CONNECTION("testing=OFF")
         if(NO_CONNECTION)
@@ -1931,7 +1915,6 @@ if (testing OR testsupport)
 endif()
 
 if (builtin_gtest)
-  # FIXME: Remove our version of gtest in roottest. We can reuse this one.
   # Add googletest
   # http://stackoverflow.com/questions/9689183/cmake-googletest
 
@@ -2024,7 +2007,7 @@ if (builtin_gtest)
   set(_G_LIBRARY_PATH ${binary_dir}/lib/)
 
   # Use gmock_main instead of gtest_main because it initializes gtest as well.
-  # Note: The libraries are listed in reverse order of their dependancies.
+  # Note: The libraries are listed in reverse order of their dependencies.
   foreach(lib gtest gtest_main gmock gmock_main)
     add_library(${lib} IMPORTED STATIC GLOBAL)
     set_target_properties(${lib} PROPERTIES
@@ -2046,6 +2029,15 @@ if (builtin_gtest)
 
 endif()
 
+# Starting from cmake 3.23, the GTest targets will have stable names.
+# ROOT was updated to use those, but for older CMake versions, we have to declare the aliases:
+foreach(LIBNAME gtest_main gmock_main gtest gmock)
+  if(NOT TARGET GTest::${LIBNAME} AND TARGET ${LIBNAME})
+    add_library(GTest::${LIBNAME} ALIAS ${LIBNAME})
+  endif()
+endforeach()
+
+#------------------------------------------------------------------------------------
 if(webgui AND NOT builtin_openui5)
   ROOT_CHECK_CONNECTION("builtin_openui5=ON")
   if(NO_CONNECTION)
@@ -2140,6 +2132,24 @@ if(NOT ROOT_HAVE_CXX_ATOMICS_WITHOUT_LIB)
   mark_as_advanced(ROOT_ATOMIC_LIB)
   if(ROOT_ATOMIC_LIB)
     set(ROOT_ATOMIC_LIBS ${ROOT_ATOMIC_LIB})
+  endif()
+endif()
+
+#------------------------------------------------------------------------------------
+# Check if we need to link -lstdc++fs to use <filesystem> (libstdc++ 8 and older).
+set(_filesystem_source "
+#include <filesystem>
+int main(void) {
+   std::filesystem::path p = \"path\";
+   return 0;
+}
+")
+check_cxx_source_compiles("${_filesystem_source}" ROOT_HAVE_NATIVE_CXX_FILESYSTEM)
+if(NOT ROOT_HAVE_NATIVE_CXX_FILESYSTEM)
+  set(CMAKE_REQUIRED_LIBRARIES stdc++fs)
+  check_cxx_source_compiles("${_filesystem_source}" ROOT_NEED_STDCXXFS)
+  if(NOT ROOT_NEED_STDCXXFS)
+    message(FATAL_ERROR "Could not determine how to use C++17 <filesystem>")
   endif()
 endif()
 
