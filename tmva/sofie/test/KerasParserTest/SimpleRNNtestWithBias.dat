@@ -1,0 +1,6 @@
+tensor_simplernn2simplernncellrecurrentkernel0 4
+-0.99989295 -0.0146312313 -0.0146312313 0.99989295
+tensor_simplernn2simplernncellkernel0 4
+-0.855728626 -0.582831502 -0.582416296 0.151278377
+tensor_simplernn2simplernncellbias0 4
+1 1 1 1
