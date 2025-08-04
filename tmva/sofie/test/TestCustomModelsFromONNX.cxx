@@ -327,6 +327,9 @@
 
 #include "ScatterElements_FromONNX.hxx"
 
+#include "NonZero_FromONNX.hxx"
+#include "NonZero_Constant_FromONNX.hxx"
+
 #include "gtest/gtest.h"
 
 constexpr float DEFAULT_TOLERANCE = 1e-3f;
@@ -3282,4 +3285,43 @@ TEST(ONNX, GatherND_3)
       EXPECT_EQ(output[i] , correct_output[i]);
    }
 }
+
+TEST(ONNX, NonZero)
+{
+   // test GatherND elements using batch size as first dim (bs=2)
+   std::vector<int8_t> input = {0,1,0, 1,1,0, 0,0,1, 0,1,1 }; // shape is (2x2x3)
+   // output is tensor shape { 3, number of non zeros}
+   std::vector<int32_t> correct_output = { 0,0,0,1,1,1 ,   0,1,1,0,1,1 ,    1,0,1,2,1,2 };
+
+   TMVA_SOFIE_NonZero::Session s("NonZero_FromONNX.dat");
+
+   auto output = s.infer(input.data());
+
+   // Checking output size
+   EXPECT_EQ(output.size(), correct_output.size());
+   // Checking output
+   for (size_t i = 0; i < output.size(); ++i) {
+      EXPECT_EQ(output[i] , correct_output[i]);
+   }
+}
+
+TEST(ONNX, NonZero_Constant)
+{
+   // test GatherND elements using batch size as first dim (bs=2)
+   //std::vector<int8_t> input = {0,1,0, 1,1,0, 0,0,1, 0,1,1 }; // shape is (2x2x3)
+   // output is tensor shape { 3, number of non zeros}
+   std::vector<int32_t> correct_output = { 0,0,0,1,1,1 ,   0,1,1,0,1,1 ,    1,0,1,2,1,2 };
+
+   TMVA_SOFIE_NonZero_Constant::Session s("NonZero_Constant_FromONNX.dat");
+
+   auto output = s.infer();
+
+   // Checking output size
+   EXPECT_EQ(output.size(), correct_output.size());
+   // Checking output
+   for (size_t i = 0; i < output.size(); ++i) {
+      EXPECT_EQ(output[i] , correct_output[i]);
+   }
+}
+
 
