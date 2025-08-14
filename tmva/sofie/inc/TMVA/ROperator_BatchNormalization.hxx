@@ -119,7 +119,7 @@ public:
 
       auto original_S = model.GetInitializedTensorData(fNScale);
       auto original_V = model.GetInitializedTensorData(fNVar);
-      
+
       auto shape_S = model.GetTensorShape(fNScale);
       if (shape_S.size() != 1) {
           throw std::runtime_error("TMVA SOFIE BatchNormalization 'scale' tensor must be 1D (per-channel).");
@@ -135,7 +135,7 @@ public:
             // Calculate scale * (1 / sqrt(variance + epsilon))
             fused_scale_data[i] = original_scale_ptr[i] / std::sqrt(original_var_ptr[i] + fepsilon);
          }
-         
+
          std::shared_ptr<void> fused_scale_ptr(fused_scale_data, std::default_delete<float[]>());
          model.AddInitializedTensor(fNFusedScale, model.GetTensorType(fNScale), {channels}, fused_scale_ptr);
       }
@@ -149,11 +149,14 @@ public:
 
       std::stringstream out;
       //// Batch Norm op
-      size_t batchSize = fShapeX[0];
-      size_t channels = fShapeX[1];
-      size_t height = (fShapeX.size() > 2) ? fShapeX[2] : 1;
-      size_t width = (fShapeX.size() > 3) ? fShapeX[3] : 1;
-      size_t spatial_dim = height * width;
+      auto batchSize = fShapeX[0].GetVal();
+      auto channels = fShapeX[1].GetVal();
+      std::string spatial_dim = "1";
+      if (fShapeX.size() > 2) {
+         auto spatialShape = fShapeX;
+         spatialShape.erase(spatialShape.begin(), spatialShape.begin()+2);
+         spatial_dim = ConvertDimShapeToLength( spatialShape);
+      }
 
       out << "\n\n//---- BatchNorm" << (fActivation == EActivationType::RELU ? " + ReLU" : "") << "\n";
       out << SP << "{\n";
@@ -165,7 +168,7 @@ public:
       out << SP << "         const float bias_val = tensor_" << fNB << "[c];\n";
       out << SP << "         for (size_t sp = 0; sp < " << spatial_dim << "; ++sp) {\n";
       out << SP << "            float val = (tensor_" << fNX << "[i] - mean_val) * fused_scale_val + bias_val;\n";
-      
+
       if (fActivation == EActivationType::RELU) {
          out << SP << "            tensor_" << fNY << "[i] = (val > 0.0f) ? val : 0.0f;\n";
       } else {
