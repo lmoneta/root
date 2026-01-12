@@ -38,7 +38,7 @@ void CompileModelForRDF(const std::string & headerModelFile, unsigned int ninput
    return;
 }
 
-void TMVA_SOFIE_RDataFrame_JIT(std::string modelFile = "Higgs_trained_model.h5"){
+void TMVA_SOFIE_RDataFrame_JIT(std::string modelFile = "Higgs_trained_model.keras"){
 
     TMVA::PyMethodBase::PyInitialize();
 
@@ -51,7 +51,7 @@ void TMVA_SOFIE_RDataFrame_JIT(std::string modelFile = "Higgs_trained_model.h5")
     // parse the input Keras model into RModel object
     SOFIE::RModel model = SOFIE::PyKeras::Parse(modelFile);
 
-    std::string modelName = modelFile.substr(0,modelFile.find(".h5"));
+    std::string modelName = modelFile.substr(0,modelFile.find(".keras"));
     std::string modelHeaderFile = modelName + std::string(".hxx");
     //Generating inference code
     model.Generate();
