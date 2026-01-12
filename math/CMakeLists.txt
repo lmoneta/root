@@ -37,4 +37,6 @@ if(r)
   add_subdirectory(rtools)
 endif()
 
+add_subdirectory(scipy)
+
 add_subdirectory(vecops)
