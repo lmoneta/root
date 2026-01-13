@@ -18,13 +18,10 @@ if(DEFINED ROOT_SOURCE_DIR)  # Testing using the binary tree
   set(ROOT_root_CMD root.exe)
   if(NOT MSVC)  # Ignore environment on Windows
     set(ROOT_environ PATH=${CMAKE_BINARY_DIR}/bin:$ENV{PATH}
-                     ${ld_library_path}=${CMAKE_BINARY_DIR}/lib:$ENV{${ld_library_path}}
-                     ROOTSYS=${CMAKE_BINARY_DIR}
                      ROOT_INCLUDE_PATH=${CMAKE_BINARY_DIR}/tutorials/io/tree:${DEFAULT_ROOT_INCLUDE_PATH}
                      PYTHONPATH=${CMAKE_BINARY_DIR}/lib:$ENV{PYTHONPATH})
   else()
-    set(ROOT_environ ROOTSYS=${CMAKE_BINARY_DIR}
-                     ROOT_INCLUDE_PATH=${CMAKE_BINARY_DIR}/tutorials/io/tree:${DEFAULT_ROOT_INCLUDE_PATH}
+    set(ROOT_environ ROOT_INCLUDE_PATH=${CMAKE_BINARY_DIR}/tutorials/io/tree:${DEFAULT_ROOT_INCLUDE_PATH}
                      PYTHONPATH=${CMAKE_BINARY_DIR}/bin;$ENV{PYTHONPATH})
   endif()
 else()                       # testing using an installation
@@ -39,10 +36,11 @@ endif()
 
 # - Set the environment for the tutorials, which is the eventual ROOT_environ
 # plus some environment variables related to limiting the number of threads
-# used by NumPy.
+# used by NumPy and enabling batch mode.
 # See: https://stackoverflow.com/questions/30791550/limit-number-of-threads-in-numpy
 # - For matplotlib, disable a blocking event loop on show() using a non-interactive backend
-set(TUTORIAL_ENV ${ROOT_environ} OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 MPLBACKEND=AGG)
+set(TUTORIAL_ENV ${ROOT_environ} ROOT_BATCH=1 OMP_NUM_THREADS=1
+                 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 MPLBACKEND=AGG)
 
 #---Copy the CTestCustom.cmake file into the build directory--------
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/CTestCustom.cmake ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
@@ -218,6 +216,7 @@ if(NOT xrootd)
                   roofit/roofit/rf618_mixture_models.py # depends on df106_HiggsToFourLeptons.py
                   visualisation/rcanvas/df104.py
                   visualisation/rcanvas/df105.py
+                  io/tree/imt_parTreeProcessing.C
                   )
 endif()
 
@@ -283,8 +282,6 @@ endif()
 if(MSVC)
   #---Multiproc is not supported on Windows
   set(imt_veto ${imt_veto} analysis/parallel/mp*.C io/tree/mp*.C legacy/multicore/mp*.C  multicore/mp*.C ./analysis/parallel/mtbb_parallelHistoFill.C)
-  #---XRootD is not supported on Windows
-  set(imt_veto ${imt_veto} io/tree/imt_parTreeProcessing.C)
 endif()
 
 if(ROOT_CLASSIC_BUILD)
@@ -343,30 +340,41 @@ else()
     list(APPEND tmva_veto machine_learning/envelope/classification.C)
   endif()
   #these depends on external packages
-  ROOT_FIND_PYTHON_MODULE(torch QUIET)
-  ROOT_FIND_PYTHON_MODULE(keras QUIET)
-  ROOT_FIND_PYTHON_MODULE(sonnet QUIET)
-  ROOT_FIND_PYTHON_MODULE(graph_nets QUIET)
+  ROOT_FIND_PYTHON_MODULE(torch)
+  ROOT_FIND_PYTHON_MODULE(keras)
+  ROOT_FIND_PYTHON_MODULE(sonnet)
+  ROOT_FIND_PYTHON_MODULE(graph_nets)
+
+  # Check if we support the installed Keras version. Otherwise, veto SOFIE
+  # Keras tutorials. This mirrors the logic in tmva/sofie/test/CMakeLists.txt.
+  # TODO: make sure we also support the newest Keras
+  set(unsupported_keras_version "3.5.0")
+  if (ROOT_KERAS_FOUND AND NOT DEFINED ROOT_KERAS_VERSION)
+    message(WARNING "Keras found, but version unknown — cannot verify compatibility.")
+  elseif (ROOT_KERAS_FOUND AND NOT ROOT_KERAS_VERSION VERSION_LESS ${unsupported_keras_version})
+      message(WARNING "Keras version ${ROOT_KERAS_VERSION} is too new for the SOFIE Keras parser (only supports < ${unsupported_keras_version}). Corresponding tutorials will not be tested.")
+    set(keras_unsupported TRUE)
+  endif()
+
   if (NOT BLAS_FOUND)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_GNN_Application.C)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RDataFrame.C)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RSofieReader.C)
   endif()
-  if (NOT tmva-pymva OR NOT ROOT_KERAS_FOUND)
+  # These SOFIE tutorials take models trained via PyMVA-PyKeras as input
+  if (NOT tmva-pymva OR NOT tmva-sofie OR NOT ROOT_KERAS_FOUND OR keras_unsupported)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_Keras.C)
+    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_Models.py)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_Keras_HiggsModel.C)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RDataFrame.C)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RDataFrame_JIT.C)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RSofieReader.C)
-  endif()
-  if (NOT tmva-pymva OR NOT ROOT_TORCH_FOUND)
-    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_PyTorch.C)
-  endif()
-  # The following tutorials use PyMVA functionality
-  if (NOT tmva-pymva)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RDataFrame.py)
-    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_Models.py)
+    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_RSofieReader.C)
     list(APPEND tmva_veto machine_learning/TMVA_SOFIE_Inference.py)
+  endif()
+  if (NOT tmva-sofie OR NOT ROOT_TORCH_FOUND)
+    list(APPEND tmva_veto machine_learning/TMVA_SOFIE_PyTorch.C)
   endif()
   #veto this tutorial since it is added directly
   list(APPEND tmva_veto machine_learning/TMVA_SOFIE_GNN_Parser.py)
@@ -424,6 +432,12 @@ else()
   # This depends on RCanvas
   list(APPEND root7_veto io/ntuple/ntpl011_global_temperatures.C)
 endif()
+
+#---These do not run with minimal
+if(minimal)
+  set(minimal_veto visualisation/graphics/formula1.C)  # relies on unstable ROOT::Detail::HasBeenDeleted
+endif()
+
 
 #---These ones are disabled !!! ------------------------------------
 set(extra_veto
@@ -516,6 +530,7 @@ set(all_veto hsimple.C
              ${spectrum_veto}
              ${dataframe_veto}
              ${davix_veto}
+             ${minimal_veto}
              )
 
 file(GLOB_RECURSE tutorials RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.C)
@@ -768,9 +783,6 @@ endforeach()
 #---Python tutorials-----------------------------------------------------
 if(ROOT_pyroot_FOUND)
 
-  # Copy .rootlogon.py file into the build directory. It disables graphics for the Python tutorials
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/.rootlogon.py ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
-
   file(GLOB_RECURSE pytutorials RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.py)
 
   # Now python-specific vetos:
@@ -866,6 +878,7 @@ if(ROOT_pyroot_FOUND)
                                 tutorial-legacy-g3d-na49view-py
                                 tutorial-hist-hist015_TH1_read_and_draw-py
                                 tutorial-io-tree-ntuple1-py)
+  set(hist-hist015_TH1_read_and_draw_uhi-depends tutorial-hsimple-py)
   set(math-fit-fit1-depends tutorial-hist-hist001_TH1_fillrandom-py)
   set(legacy-g3d-na49view-depends tutorial-legacy-g3d-geometry-py)
   set(roofit-roofit-rf503_wspaceread-depends tutorial-roofit-roofit-rf502_wspacewrite-py)
@@ -884,6 +897,9 @@ if(ROOT_pyroot_FOUND)
   # To add a new requirement, add a glob expression that's named requires_<packageName>,
   # and add it to the list "fixtureLists" below.
   file(GLOB requires_numpy   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+      hsimple.py
+      io/tree/ntuple1.py # indirect dependency from hsimple.py
+      hist/hist015_TH1_read_and_draw.py # indirect dependency from hsimple.py
       analysis/dataframe/df017_vecOpsHEP.py
       analysis/dataframe/df026_AsNumpyArrays.py
       analysis/dataframe/df032_RDFFromNumpy.py

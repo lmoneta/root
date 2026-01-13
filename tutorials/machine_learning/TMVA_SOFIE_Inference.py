@@ -23,9 +23,9 @@ ROOT.TMVA.PyMethodBase.PyInitialize()
 
 # check if the input file exists
 modelFile = "Higgs_trained_model.keras"
-if (ROOT.gSystem.AccessPathName(modelFile)) :
-    ROOT.Info("TMVA_SOFIE_RDataFrame","You need to run TMVA_Higgs_Classification.C to generate the Keras trained model")
-    exit()
+
+if not exists(modelFile):
+    raise FileNotFoundError("You need to run TMVA_Higgs_Classification.C to generate the Keras trained model")
 
 
 # parse the input Keras model into RModel object
