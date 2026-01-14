@@ -4,10 +4,10 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- *                                             *
+ *                                                                                *
  *                                                                                *
  * Description:                                                                   *
- *      Functionality for parsing a saved PyTorch .PT model into RModel object    *
+ *      Functionality for parsing a saved Keras .H5 model into RModel object      *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Sanjiban Sengupta <sanjiban.sg@gmail.com>                                 *
@@ -18,43 +18,31 @@
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
- * (see tmva/doc/LICENSE)                                          *
+ * (see tmva/doc/LICENSE)                                                         *
  **********************************************************************************/
 
 
-#ifndef TMVA_SOFIE_RMODELPARSER_PYTORCH
-#define TMVA_SOFIE_RMODELPARSER_PYTORCH
+#ifndef TMVA_SOFIE_RMODELPARSER_KERAS
+#define TMVA_SOFIE_RMODELPARSER_KERAS
 
 #include "TMVA/RModel.hxx"
 #include "TMVA/SOFIE_common.hxx"
 #include "TMVA/Types.h"
 #include "TMVA/OperatorList.hxx"
 
-#include "TMVA/PyMethodBase.h"
-
 #include "Rtypes.h"
 #include "TString.h"
 
 
-namespace TMVA{
-namespace Experimental{
-namespace SOFIE{
-namespace PyTorch{
+namespace TMVA::Experimental::SOFIE::PyKeras {
 
-/// Parser function for translating PyTorch .pt model into a RModel object.
-/// Accepts the file location of a PyTorch model, shapes and data-types of input tensors
-/// and returns the equivalent RModel object.
-RModel Parse(std::string filepath,std::vector<std::vector<size_t>> inputShapes, std::vector<ETensorType> dtype);
+/// Parser function for translating Keras .h5 model into a RModel object.
+/// Accepts the file location of a Keras model and returns the
+/// equivalent RModel object.
+/// One can specify as option a batch size that can be used when the input Keras model
+/// has not a defined input batch size : e.g. for input = (input_dim,)
+RModel Parse(std::string filename, int batch_size = -1);
 
-/// Overloaded Parser function for translating PyTorch .pt model into a RModel object.
-/// Accepts the file location of a PyTorch model and the shapes of input tensors.
-/// Builds the vector of data-types for input tensors and calls the `Parse()` function to
-/// return the equivalent RModel object.
-RModel Parse(std::string filepath,std::vector<std::vector<size_t>> inputShapes);
+} // namespace TMVA::Experimental::SOFIE::PyKeras
 
-}//PyTorch
-}//SOFIE
-}//Experimental
-}//TMVA
-
-#endif //TMVA_PYMVA_RMODELPARSER_PYTORCH
+#endif //TMVA_PYMVA_RMODELPARSER_KERAS

@@ -21,8 +21,10 @@ import numpy as np
 ROOT.TMVA.PyMethodBase.PyInitialize()
 
 
+from os.path import exists
+
 # check if the input file exists
-modelFile = "Higgs_trained_model.keras"
+modelFile = "HiggsModel.keras"
 
 if not exists(modelFile):
     raise FileNotFoundError("You need to run TMVA_Higgs_Classification.C to generate the Keras trained model")
@@ -67,7 +69,10 @@ dataset_size = xsig.shape[0]
 print("size of data", dataset_size)
 
 #instantiate SOFIE session class
-session = ROOT.TMVA_SOFIE_Higgs_trained_model.Session()
+#session = ROOT.TMVA_SOFIE_HiggsModel.Session()
+#get the sofie session namespace
+sofie = getattr(ROOT, 'TMVA_SOFIE_' + modelName)
+session = sofie.Session()
 
 hs = ROOT.TH1D("hs","Signal result",100,0,1)
 for i in range(0,dataset_size):
