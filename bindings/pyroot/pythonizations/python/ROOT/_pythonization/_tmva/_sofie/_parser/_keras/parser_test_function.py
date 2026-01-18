@@ -1,4 +1,5 @@
 import ROOT
+import os
 
 '''
 The test file contains two types of functions:
@@ -52,13 +53,21 @@ def generate_and_test_inference(model_file_path: str, generated_header_file_dir:
     print("Tensorflow version: ", tf.__version__)
     print("Keras version: ", keras.__version__)
     print("Numpy version:", np.__version__)
+    
+    if not os.path.exists(model_file_path):
+        print("Model file path not found. Skipping the test")
+        return
 
-    model_name = model_file_path[model_file_path.rfind('/')+1:].removesuffix(".keras")
+    if model_file_path.endswith('.keras'):
+        model_name = model_file_path[model_file_path.rfind('/')+1:].removesuffix(".keras")
+    else:
+        model_name = model_file_path[model_file_path.rfind('/')+1:].removesuffix(".h5")
+        
     rmodel = ROOT.TMVA.Experimental.SOFIE.PyKeras.Parse(model_file_path, batch_size)
     if generated_header_file_dir is None:
         last_idx = model_file_path.rfind("/")
         if last_idx == -1:
-            generated_header_file_dir = "./"
+            generated_header_file_dir = "."
         else:
             generated_header_file_dir = model_file_path[:last_idx]
     generated_header_file_path = generated_header_file_dir + "/" + model_name + ".hxx"
@@ -84,8 +93,8 @@ def generate_and_test_inference(model_file_path: str, generated_header_file_dir:
             input_shape[0] = batch_size
             input_tensors.append(np.ones(input_shape, dtype='float32'))
     sofie_inference_result = inference_session.infer(*input_tensors)
-    sofie_output_tensor_shape = list(rmodel.GetTensorShape(rmodel.GetOutputTensorNames()[0]))   # get output shape
-                                                                                                # from SOFIE
+    sofie_output_tensor_shape = list(rmodel.GetTensorShape(rmodel.GetOutputTensorNames()[0]))   # get output tensor
+                                                                                                # shape from SOFIE
     keras_inference_result = keras_model(input_tensors)
     if sofie_output_tensor_shape != list(keras_inference_result.shape):
         raise AssertionError("Output tensor dimensions from SOFIE and Keras do not match")

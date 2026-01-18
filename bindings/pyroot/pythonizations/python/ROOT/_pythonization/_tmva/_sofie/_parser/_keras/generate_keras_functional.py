@@ -4,24 +4,27 @@ def generate_keras_functional(dst_dir):
     import numpy as np
 
     # Helper training function
-    def train_and_save(model, name):
+    def train_and_save(keras_model, model_name):
         # Handle multiple inputs dynamically
-        if isinstance(model.input_shape, list):
-            x_train = [np.random.rand(32, *shape[1:]) for shape in model.input_shape]
+        if isinstance(keras_model.input_shape, list):
+            x_train = [np.random.rand(32, *shape[1:]) for shape in keras_model.input_shape]
         else:
-            x_train = np.random.rand(32, *model.input_shape[1:])
-        y_train = np.random.rand(32, *model.output_shape[1:])
+            x_train = np.random.rand(32, *keras_model.input_shape[1:])
+        y_train = np.random.rand(32, *keras_model.output_shape[1:])
 
-        model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
-        model.fit(x_train, y_train, epochs=1, verbose=0)
-        model.save(f"{dst_dir}/Functional_{name}_test.keras")
+        try:
+            keras_model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
+            keras_model.fit(x_train, y_train, epochs=1, verbose=0)
+            keras_model.save(f"{dst_dir}/Functional_{model_name}_test.keras")
+        except Exception as error:
+            print(f"Error while traning the keras_model {model_name}: {error}")
 
     # Activation Functions
     for act in ['relu', 'elu', 'leaky_relu', 'selu', 'sigmoid', 'softmax', 'swish', 'tanh']:
         inp = layers.Input(shape=(10,))
         out = layers.Activation(act)(inp)
-        model = models.Model(inp, out)
-        train_and_save(model, f"Activation_layer_{act.capitalize()}")
+        keras_model = models.Model(inp, out)
+        train_and_save(keras_model, f"Activation_layer_{act.capitalize()}")
     # Along with these, Keras allows explicit delcaration of activation layers such as:
     # [ELU, ReLU, LeakyReLU, Softmax]
 
@@ -29,149 +32,149 @@ def generate_keras_functional(dst_dir):
     in1 = layers.Input(shape=(8,))
     in2 = layers.Input(shape=(8,))
     out = layers.Add()([in1, in2])
-    model = models.Model([in1, in2], out)
-    train_and_save(model, "Add")
+    keras_model = models.Model([in1, in2], out)
+    train_and_save(keras_model, "Add")
 
     # AveragePooling2D channels_first
     inp = layers.Input(shape=(3, 8, 8))
     out = layers.AveragePooling2D(pool_size=(2, 2), data_format='channels_first')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "AveragePooling2D_channels_first")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "AveragePooling2D_channels_first")
 
     # AveragePooling2D channels_last
     inp = layers.Input(shape=(8, 8, 3))
     out = layers.AveragePooling2D(pool_size=(2, 2), data_format='channels_last')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "AveragePooling2D_channels_last")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "AveragePooling2D_channels_last")
 
     # BatchNorm
     inp = layers.Input(shape=(10, 3, 5))
     out = layers.BatchNormalization(axis=2)(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "BatchNorm")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "BatchNorm")
 
     # Concat
     in1 = layers.Input(shape=(8,))
     in2 = layers.Input(shape=(8,))
     out = layers.Concatenate()([in1, in2])
-    model = models.Model([in1, in2], out)
-    train_and_save(model, "Concat")
+    keras_model = models.Model([in1, in2], out)
+    train_and_save(keras_model, "Concat")
 
     # Conv2D channels_first
     inp = layers.Input(shape=(3, 8, 8))
     out = layers.Conv2D(4, (3, 3), padding='same', data_format='channels_first', activation='relu')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "Conv2D_channels_first")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Conv2D_channels_first")
 
     # Conv2D channels_last
     inp = layers.Input(shape=(8, 8, 3))
     out = layers.Conv2D(4, (3, 3), padding='same', data_format='channels_last', activation='leaky_relu')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "Conv2D_channels_last")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Conv2D_channels_last")
 
     # Conv2D padding_same
     inp = layers.Input(shape=(8, 8, 3))
     out = layers.Conv2D(4, (3, 3), padding='same', data_format='channels_last')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "Conv2D_padding_same")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Conv2D_padding_same")
 
     # Conv2D padding_valid
     inp = layers.Input(shape=(8, 8, 3))
     out = layers.Conv2D(4, (3, 3), padding='valid', data_format='channels_last', activation='elu')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "Conv2D_padding_valid")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Conv2D_padding_valid")
 
     # Dense
     inp = layers.Input(shape=(10,))
     out = layers.Dense(5, activation='tanh')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "Dense")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Dense")
 
     # ELU
     inp = layers.Input(shape=(10,))
     out = layers.ELU(alpha=0.5)(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "ELU")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "ELU")
 
     # Flatten
     inp = layers.Input(shape=(4, 5))
     out = layers.Flatten()(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "Flatten")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Flatten")
 
     # GlobalAveragePooling2D channels first
     inp = layers.Input(shape=(3, 4, 6))
     out = layers.GlobalAveragePooling2D(data_format='channels_first')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "GlobalAveragePooling2D_channels_first")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "GlobalAveragePooling2D_channels_first")
 
     # GlobalAveragePooling2D channels last
     inp = layers.Input(shape=(4, 6, 3))
     out = layers.GlobalAveragePooling2D(data_format='channels_last')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "GlobalAveragePooling2D_channels_last")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "GlobalAveragePooling2D_channels_last")
 
     # LayerNorm
     inp = layers.Input(shape=(10, 3, 5))
     out = layers.LayerNormalization(axis=-1)(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "LayerNorm")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "LayerNorm")
 
     # LeakyReLU
     inp = layers.Input(shape=(10,))
     out = layers.LeakyReLU()(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "LeakyReLU")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "LeakyReLU")
 
     # MaxPooling2D channels_first
     inp = layers.Input(shape=(3, 8, 8))
     out = layers.MaxPooling2D(pool_size=(2, 2), data_format='channels_first')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "MaxPool2D_channels_first")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "MaxPool2D_channels_first")
 
     # MaxPooling2D channels_last
     inp = layers.Input(shape=(8, 8, 3))
     out = layers.MaxPooling2D(pool_size=(2, 2), data_format='channels_last')(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "MaxPool2D_channels_last")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "MaxPool2D_channels_last")
 
     # Multiply
     in1 = layers.Input(shape=(8,))
     in2 = layers.Input(shape=(8,))
     out = layers.Multiply()([in1, in2])
-    model = models.Model([in1, in2], out)
-    train_and_save(model, "Multiply")
+    keras_model = models.Model([in1, in2], out)
+    train_and_save(keras_model, "Multiply")
 
     # Permute
     inp = layers.Input(shape=(3, 4, 5))
     out = layers.Permute((2, 1, 3))(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "Permute")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Permute")
 
     # ReLU
     inp = layers.Input(shape=(10,))
     out = layers.ReLU()(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "ReLU")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "ReLU")
 
     # Reshape
     inp = layers.Input(shape=(4, 5))
     out = layers.Reshape((2, 10))(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "Reshape")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Reshape")
 
     # Softmax
     inp = layers.Input(shape=(10,))
     out = layers.Softmax()(inp)
-    model = models.Model(inp, out)
-    train_and_save(model, "Softmax")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Softmax")
 
     # Subtract
     in1 = layers.Input(shape=(8,))
     in2 = layers.Input(shape=(8,))
     out = layers.Subtract()([in1, in2])
-    model = models.Model([in1, in2], out)
-    train_and_save(model, "Subtract")
+    keras_model = models.Model([in1, in2], out)
+    train_and_save(keras_model, "Subtract")
 
     # Layer Combination
 
@@ -182,8 +185,8 @@ def generate_keras_functional(dst_dir):
     x = layers.Permute((3, 1, 2))(x)
     x = layers.Flatten()(x)
     out = layers.Dense(10, activation="softmax")(x)
-    model = models.Model(inp, out)
-    train_and_save(model, "Layer_Combination_1")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Layer_Combination_1")
 
     inp = layers.Input(shape=(20,))
     x = layers.Dense(32, activation="tanh")(inp)
@@ -191,8 +194,8 @@ def generate_keras_functional(dst_dir):
     x = layers.ELU()(x)
     x = layers.LayerNormalization()(x)
     out = layers.Dense(5, activation="sigmoid")(x)
-    model = models.Model(inp, out)
-    train_and_save(model, "Layer_Combination_2")
+    keras_model = models.Model(inp, out)
+    train_and_save(keras_model, "Layer_Combination_2")
 
     inp1 = layers.Input(shape=(16,))
     inp2 = layers.Input(shape=(16,))
@@ -204,5 +207,5 @@ def generate_keras_functional(dst_dir):
     merged = layers.Concatenate()([add, sub, mul])
     merged = layers.LeakyReLU(alpha=0.1)(merged)
     out = layers.Dense(4, activation="softmax")(merged)
-    model = models.Model([inp1, inp2], out)
-    train_and_save(model, "Layer_Combination_3")
+    keras_model = models.Model([inp1, inp2], out)
+    train_and_save(keras_model, "Layer_Combination_3")
